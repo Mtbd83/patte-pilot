@@ -17,6 +17,7 @@ export default defineConfig({
   // default 30s when a fresh server has to cold-compile many routes.
   timeout: 90_000,
   globalSetup: "./e2e/global-setup.ts",
+  globalTeardown: "./e2e/global-teardown.ts",
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
     trace: "on-first-retry",
