@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PawPrint } from "lucide-react";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { AdoptionApplicationForm } from "./adoption-application-form";
 
@@ -12,13 +13,18 @@ export default async function AdopterPage({
   if (!organization) notFound();
 
   return (
-    <main style={{ maxWidth: 720, margin: "60px auto", fontFamily: "sans-serif", padding: "0 16px" }}>
-      <h1>Adopter chez {organization.name}</h1>
-      <p>
-        Merci de votre intérêt pour l&apos;adoption ! Remplissez ce formulaire, notre équipe
-        reviendra vers vous rapidement.
-      </p>
-      <AdoptionApplicationForm organizationId={organization.id} />
-    </main>
+    <div className="min-h-dvh bg-background">
+      <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-10 sm:px-6">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <PawPrint className="size-8 text-primary" />
+          <h1 className="text-2xl font-semibold">Adopter chez {organization.name}</h1>
+          <p className="text-sm text-muted-foreground">
+            Merci de votre intérêt pour l&apos;adoption ! Remplissez ce formulaire, notre équipe reviendra vers
+            vous rapidement.
+          </p>
+        </div>
+        <AdoptionApplicationForm organizationId={organization.id} />
+      </main>
+    </div>
   );
 }

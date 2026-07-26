@@ -14,3 +14,13 @@ export const INVENTORY_STATUS_LABELS: Record<InventoryStatus, string> = {
   expire: "Expiré",
   rupture: "Rupture",
 };
+
+export const INVENTORY_STATUS_BADGE_VARIANT: Record<
+  InventoryStatus,
+  "default" | "secondary" | "outline" | "success" | "warning" | "destructive"
+> = {
+  ok: "success",
+  stock_bas: "warning",
+  expire: "destructive",
+  rupture: "destructive",
+};

@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 /**
  * Deliberately a plain <form method="post"> (no onSubmit/preventDefault) so
@@ -29,35 +32,31 @@ export function ConnexionForm() {
   }, []);
 
   return (
-    <form method="POST" action="/api/auth/callback/credentials" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <form method="POST" action="/api/auth/callback/credentials" className="flex flex-col gap-4">
       <input type="hidden" name="csrfToken" value={csrfToken ?? ""} />
       <input type="hidden" name="callbackUrl" value={callbackUrl} />
-      <label htmlFor="connexion-email">
-        Email
-        <input
-          id="connexion-email"
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          style={{ display: "block", width: "100%" }}
-        />
-      </label>
-      <label htmlFor="connexion-password">
-        Mot de passe
-        <input
+
+      <Field label="Email" htmlFor="connexion-email">
+        <Input id="connexion-email" name="email" type="email" required autoComplete="email" />
+      </Field>
+
+      <Field label="Mot de passe" htmlFor="connexion-password">
+        <Input
           id="connexion-password"
           name="password"
           type="password"
           required
           autoComplete="current-password"
-          style={{ display: "block", width: "100%" }}
         />
-      </label>
-      {authError && <p style={{ color: "crimson" }}>Email ou mot de passe incorrect.</p>}
-      <button type="submit" disabled={!csrfToken}>
+      </Field>
+
+      {authError && (
+        <p className="text-sm text-destructive">Email ou mot de passe incorrect.</p>
+      )}
+
+      <Button type="submit" disabled={!csrfToken} className="w-full">
         Se connecter
-      </button>
+      </Button>
     </form>
   );
 }

@@ -13,6 +13,16 @@ export const ADOPTION_STATUS_LABELS: Record<AdoptionApplicationStatus, string> =
   retire: "Retirée",
 };
 
+export const ADOPTION_STATUS_BADGE_VARIANT: Record<
+  AdoptionApplicationStatus,
+  "default" | "secondary" | "outline" | "success" | "warning" | "destructive"
+> = {
+  en_attente: "warning",
+  retenu: "success",
+  refuse: "destructive",
+  retire: "secondary",
+};
+
 export const HOUSING_ZONE_LABELS: Record<HousingZone, string> = {
   urbaine: "Urbaine",
   peri_urbaine: "Péri-urbaine",

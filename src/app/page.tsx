@@ -1,152 +1,107 @@
-// app/page.tsx
 import Link from "next/link";
+import { PawPrint, Home, Package, HeartHandshake, Wallet, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const features = [
   {
-    icon: "🏠",
+    icon: Home,
     title: "Familles d'accueil",
     description:
       "Gérez vos familles d'accueil, suivez leurs disponibilités et les animaux qui leur sont confiés.",
   },
   {
-    icon: "📦",
-    title: "Stock & Matériel",
-    description:
-      "Suivez votre inventaire de nourriture, médicaments et équipements en temps réel.",
+    icon: Package,
+    title: "Stock & matériel",
+    description: "Suivez votre inventaire de nourriture, médicaments et équipements en temps réel.",
   },
   {
-    icon: "🐾",
-    title: "Prise en charge",
+    icon: HeartHandshake,
+    title: "Prise en charge & adoption",
     description:
-      "Enregistrez et suivez chaque animal pris en charge, de l'arrivée jusqu'à l'adoption.",
+      "Enregistrez chaque animal de l'arrivée à l'adoption, avec formulaire public et contrats générés.",
   },
   {
-    icon: "💰",
+    icon: Wallet,
     title: "Finances",
-    description:
-      "Gérez vos dons, dépenses et générez des rapports financiers clairs.",
+    description: "Gérez vos dons, dépenses et générez des rapports financiers clairs.",
   },
 ];
 
-// const stats = [
-//   { value: "200+", label: "Animaux sauvés" },
-//   { value: "80+", label: "Familles d'accueil" },
-//   { value: "50+", label: "Adoptions réussies" },
-//   { value: "15k€", label: "Dons collectés" },
-// ];
-
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
-      {/* NAVBAR */}
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🐾</span>
-            <span className="text-xl font-bold text-gray-800">
-              Anim<span className="text-emerald-500">Admin</span>
-            </span>
+    <div className="min-h-dvh bg-background">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-2 font-semibold">
+            <PawPrint className="size-5 text-primary" />
+            Anim Admin
           </div>
-          <Link
-            href="/connexion"
-            className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-2 rounded-full transition-colors duration-200"
-          >
-            Connexion
-          </Link>
+          <Button asChild size="sm">
+            <Link href="/connexion">Connexion</Link>
+          </Button>
         </div>
-      </nav>
+      </header>
 
-      {/* HERO */}
-      <section className="bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-24 flex flex-col items-center text-center gap-6">
-          <span className="bg-emerald-100 text-emerald-700 text-sm font-medium px-4 py-1 rounded-full">
+      <section className="border-b border-border">
+        <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-16 text-center sm:px-6 sm:py-24">
+          <span className="rounded-full bg-secondary px-4 py-1 text-sm font-medium text-secondary-foreground">
             Outil dédié aux associations de protection animale
           </span>
-          <h1 className="text-5xl font-extrabold text-gray-900 leading-tight max-w-3xl">
-            Gérez votre association{" "}
-            <span className="text-emerald-500">simplement</span> et{" "}
-            <span className="text-emerald-500">efficacement</span>
+          <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-5xl">
+            Gérez votre association simplement et efficacement
           </h1>
-          <p className="text-gray-500 text-lg max-w-xl">
-            Une plateforme tout-en-un pour suivre vos familles d'accueil, vos
-            animaux, votre stock et vos finances — pour vous concentrer sur
-            l'essentiel.
+          <p className="max-w-xl text-balance text-muted-foreground sm:text-lg">
+            Une plateforme tout-en-un pour suivre vos familles d&apos;accueil, vos animaux, votre
+            stock et vos finances — pour vous concentrer sur l&apos;essentiel.
           </p>
-          <Link
-            href="/login"
-            className="mt-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-10 py-4 rounded-full text-lg transition-colors duration-200 shadow-md hover:shadow-lg"
-          >
-            Accéder à mon espace →
-          </Link>
+          <Button asChild size="lg" className="mt-2">
+            <Link href="/connexion">
+              Accéder à mon espace <ArrowRight />
+            </Link>
+          </Button>
         </div>
       </section>
 
-      {/* STATS */}
-      <section className="bg-emerald-500">
-        <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {/* {stats.map((stat) => (
-            <div key={stat.label}>
-              <p className="text-4xl font-extrabold text-white">{stat.value}</p>
-              <p className="text-emerald-100 mt-1 text-sm">{stat.label}</p>
-            </div>
-          ))} */}
-        </div>
-      </section>
-
-      {/* FEATURES */}
-      <section className="max-w-6xl mx-auto px-6 py-24">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray-900">
-            Tout ce dont vous avez besoin
-          </h2>
-          <p className="text-gray-500 mt-3">
-            Quatre modules pensés pour le quotidien de votre association.
+      <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mb-10 text-center sm:mb-16">
+          <h2 className="text-2xl font-bold sm:text-3xl">Tout ce dont vous avez besoin</h2>
+          <p className="mt-2 text-muted-foreground">
+            Des modules pensés pour le quotidien de votre association.
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col gap-4"
+              className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-sm"
             >
-              <div className="text-4xl">{feature.icon}</div>
-              <h3 className="text-lg font-bold text-gray-800">
-                {feature.title}
-              </h3>
-              <p className="text-gray-500 text-sm leading-relaxed">
-                {feature.description}
-              </p>
+              <feature.icon className="size-6 text-primary" />
+              <h3 className="text-base font-semibold">{feature.title}</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="bg-gray-900 text-white">
-        <div className="max-w-6xl mx-auto px-6 py-20 flex flex-col items-center text-center gap-6">
-          <span className="text-5xl">🐶🐱</span>
-          <h2 className="text-3xl font-bold">
+      <section className="border-t border-border bg-secondary/50">
+        <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 px-4 py-16 text-center sm:px-6">
+          <h2 className="text-2xl font-bold sm:text-3xl">
             Prêt à simplifier la gestion de votre association ?
           </h2>
-          <p className="text-gray-400 max-w-md">
-            Connectez-vous dès maintenant et retrouvez toutes vos informations
-            en un seul endroit.
+          <p className="max-w-md text-muted-foreground">
+            Connectez-vous dès maintenant et retrouvez toutes vos informations en un seul endroit.
           </p>
-          <Link
-            href="/login"
-            className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-10 py-4 rounded-full text-lg transition-colors duration-200"
-          >
-            Se connecter
-          </Link>
+          <Button asChild size="lg" className="mt-2">
+            <Link href="/connexion">Se connecter</Link>
+          </Button>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="bg-gray-800 text-gray-400 text-sm">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:px-6">
           <div className="flex items-center gap-2">
-            <span>🐾</span>
-            <span className="font-semibold text-white">AnimAdmin</span>
+            <PawPrint className="size-4" />
+            <span className="font-semibold text-foreground">Anim Admin</span>
           </div>
           <p>© {new Date().getFullYear()} — Fait avec ❤️ pour les animaux</p>
         </div>

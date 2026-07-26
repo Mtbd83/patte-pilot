@@ -1,10 +1,26 @@
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { PawPrint } from "lucide-react";
 import { db } from "@/db";
 import { invitations, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { acceptInvitation } from "@/server/actions/invitations";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { InviteSignupForm } from "./invite-signup-form";
+
+function InviteShell({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-12">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 flex flex-col items-center gap-2 text-center">
+          <PawPrint className="size-8 text-primary" />
+          <h1 className="text-xl font-semibold">Anim Admin</h1>
+        </div>
+        <Card>{children}</Card>
+      </div>
+    </main>
+  );
+}
 
 export default async function InvitePage({
   params,
@@ -19,10 +35,14 @@ export default async function InvitePage({
 
   if (!invitation || invitation.status !== "pending" || invitation.expiresAt < new Date()) {
     return (
-      <main style={{ maxWidth: 480, margin: "80px auto", fontFamily: "sans-serif" }}>
-        <h1>Invitation</h1>
-        <p style={{ color: "crimson" }}>Cette invitation n&apos;est plus valide.</p>
-      </main>
+      <InviteShell>
+        <CardHeader>
+          <CardTitle>Invitation</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-destructive">Cette invitation n&apos;est plus valide.</p>
+        </CardContent>
+      </InviteShell>
     );
   }
 
@@ -49,10 +69,14 @@ export default async function InvitePage({
     }
 
     return (
-      <main style={{ maxWidth: 480, margin: "80px auto", fontFamily: "sans-serif" }}>
-        <h1>Invitation</h1>
-        <p style={{ color: "crimson" }}>{error}</p>
-      </main>
+      <InviteShell>
+        <CardHeader>
+          <CardTitle>Invitation</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-destructive">{error}</p>
+        </CardContent>
+      </InviteShell>
     );
   }
 
@@ -65,10 +89,14 @@ export default async function InvitePage({
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: "80px auto", fontFamily: "sans-serif" }}>
-      <h1>Invitation</h1>
-      <p>Créez votre compte pour rejoindre l&apos;association.</p>
-      <InviteSignupForm token={params.token} email={invitation.email} />
-    </main>
+    <InviteShell>
+      <CardHeader>
+        <CardTitle>Invitation</CardTitle>
+        <CardDescription>Créez votre compte pour rejoindre l&apos;association.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <InviteSignupForm token={params.token} email={invitation.email} />
+      </CardContent>
+    </InviteShell>
   );
 }

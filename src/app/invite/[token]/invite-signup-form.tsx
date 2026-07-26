@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { createAccountAndAcceptInvitation } from "@/server/actions/invitations";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export function InviteSignupForm({ token, email: invitedEmail }: { token: string; email: string }) {
   const router = useRouter();
@@ -34,34 +37,30 @@ export function InviteSignupForm({ token, email: invitedEmail }: { token: string
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
-      <label htmlFor="signup-email">
-        Email
-        <input
+    <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+      <Field label="Email" htmlFor="signup-email">
+        <Input
           id="signup-email"
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={{ display: "block", width: "100%" }}
         />
-      </label>
-      <label htmlFor="signup-password">
-        Mot de passe
-        <input
+      </Field>
+      <Field label="Mot de passe" htmlFor="signup-password">
+        <Input
           id="signup-password"
           type="password"
           required
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={{ display: "block", width: "100%" }}
         />
-      </label>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      <button type="submit" disabled={pending}>
+      </Field>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <Button type="submit" disabled={pending} className="w-full">
         Créer mon compte
-      </button>
+      </Button>
     </form>
   );
 }

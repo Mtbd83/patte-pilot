@@ -22,3 +22,16 @@ export const STATUS_LABELS: Record<AnimalStatus, string> = {
   adopte: "Adopté",
   archive: "Archivé",
 };
+
+export const STATUS_BADGE_VARIANT: Record<
+  AnimalStatus,
+  "default" | "secondary" | "outline" | "success" | "warning"
+> = {
+  quarantaine: "warning",
+  en_soins: "warning",
+  en_famille_accueil: "default",
+  visite_en_cours: "default",
+  reserve: "default",
+  adopte: "success",
+  archive: "secondary",
+};

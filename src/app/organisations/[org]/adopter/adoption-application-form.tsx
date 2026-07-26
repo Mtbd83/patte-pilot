@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PartyPopper } from "lucide-react";
 import { submitAdoptionApplication } from "@/server/actions/adoption-applications";
 import {
   HOUSING_ZONE_LABELS,
@@ -16,6 +17,13 @@ import type {
   LivingSituation,
   ResidencyStatus,
 } from "@/db/schema";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldRow } from "@/components/ui/field";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 const HOUSING_ZONE_OPTIONS = Object.entries(HOUSING_ZONE_LABELS) as [HousingZone, string][];
 const HOUSING_TYPE_OPTIONS = Object.entries(HOUSING_TYPE_LABELS) as [HousingType, string][];
@@ -175,136 +183,84 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
 
   if (submitted) {
     return (
-      <div>
-        <h2>Merci !</h2>
-        <p>
-          Votre candidature a bien été envoyée. L&apos;association reviendra vers vous
-          prochainement.
-        </p>
-      </div>
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+          <PartyPopper className="size-8 text-primary" />
+          <h2 className="text-lg font-semibold">Merci !</h2>
+          <p className="text-sm text-muted-foreground">
+            Votre candidature a bien été envoyée. L&apos;association reviendra vers vous prochainement.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 640 }}
-    >
-      <fieldset style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16 }}>
-        <legend>Vos coordonnées</legend>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", gap: 12 }}>
-            <label htmlFor="ad-first-name" style={{ flex: 1 }}>
-              Prénom
-              <input
-                id="ad-first-name"
-                required
-                value={form.firstName}
-                onChange={(e) => set("firstName", e.target.value)}
-                style={{ display: "block", width: "100%" }}
-              />
-            </label>
-            <label htmlFor="ad-last-name" style={{ flex: 1 }}>
-              Nom
-              <input
-                id="ad-last-name"
-                required
-                value={form.lastName}
-                onChange={(e) => set("lastName", e.target.value)}
-                style={{ display: "block", width: "100%" }}
-              />
-            </label>
-          </div>
-          <label htmlFor="ad-city">
-            Ville
-            <input
-              id="ad-city"
-              value={form.city}
-              onChange={(e) => set("city", e.target.value)}
-              style={{ display: "block", width: "100%" }}
-            />
-          </label>
-          <div style={{ display: "flex", gap: 12 }}>
-            <label htmlFor="ad-phone" style={{ flex: 1 }}>
-              Téléphone
-              <input
-                id="ad-phone"
-                required
-                value={form.phone}
-                onChange={(e) => set("phone", e.target.value)}
-                style={{ display: "block", width: "100%" }}
-              />
-            </label>
-            <label htmlFor="ad-email" style={{ flex: 1 }}>
-              Adresse mail
-              <input
-                id="ad-email"
-                type="email"
-                required
-                value={form.email}
-                onChange={(e) => set("email", e.target.value)}
-                style={{ display: "block", width: "100%" }}
-              />
-            </label>
-          </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            <label htmlFor="ad-age" style={{ flex: 1 }}>
-              Quel âge avez-vous ?
-              <input
-                id="ad-age"
-                type="number"
-                min="0"
-                value={form.age}
-                onChange={(e) => set("age", e.target.value)}
-                style={{ display: "block", width: "100%" }}
-              />
-            </label>
-            <label htmlFor="ad-spouse-age" style={{ flex: 1 }}>
-              Ainsi que votre conjoint·e ? (si applicable)
-              <input
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Vos coordonnées</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <FieldRow>
+            <Field label="Prénom" htmlFor="ad-first-name" className="flex-1">
+              <Input id="ad-first-name" required value={form.firstName} onChange={(e) => set("firstName", e.target.value)} />
+            </Field>
+            <Field label="Nom" htmlFor="ad-last-name" className="flex-1">
+              <Input id="ad-last-name" required value={form.lastName} onChange={(e) => set("lastName", e.target.value)} />
+            </Field>
+          </FieldRow>
+          <Field label="Ville" htmlFor="ad-city">
+            <Input id="ad-city" value={form.city} onChange={(e) => set("city", e.target.value)} />
+          </Field>
+          <FieldRow>
+            <Field label="Téléphone" htmlFor="ad-phone" className="flex-1">
+              <Input id="ad-phone" required value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+            </Field>
+            <Field label="Adresse mail" htmlFor="ad-email" className="flex-1">
+              <Input id="ad-email" type="email" required value={form.email} onChange={(e) => set("email", e.target.value)} />
+            </Field>
+          </FieldRow>
+          <FieldRow>
+            <Field label="Quel âge avez-vous ?" htmlFor="ad-age" className="flex-1">
+              <Input id="ad-age" type="number" min="0" value={form.age} onChange={(e) => set("age", e.target.value)} />
+            </Field>
+            <Field label="Ainsi que votre conjoint·e ? (si applicable)" htmlFor="ad-spouse-age" className="flex-1">
+              <Input
                 id="ad-spouse-age"
                 type="number"
                 min="0"
                 value={form.spouseAge}
                 onChange={(e) => set("spouseAge", e.target.value)}
-                style={{ display: "block", width: "100%" }}
               />
-            </label>
-          </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            <label htmlFor="ad-profession" style={{ flex: 1 }}>
-              Quelle est votre profession ?
-              <input
-                id="ad-profession"
-                value={form.profession}
-                onChange={(e) => set("profession", e.target.value)}
-                style={{ display: "block", width: "100%" }}
-              />
-            </label>
-            <label htmlFor="ad-spouse-profession" style={{ flex: 1 }}>
-              Et celle de votre conjoint·e ? (si applicable)
-              <input
+            </Field>
+          </FieldRow>
+          <FieldRow>
+            <Field label="Quelle est votre profession ?" htmlFor="ad-profession" className="flex-1">
+              <Input id="ad-profession" value={form.profession} onChange={(e) => set("profession", e.target.value)} />
+            </Field>
+            <Field label="Et celle de votre conjoint·e ? (si applicable)" htmlFor="ad-spouse-profession" className="flex-1">
+              <Input
                 id="ad-spouse-profession"
                 value={form.spouseProfession}
                 onChange={(e) => set("spouseProfession", e.target.value)}
-                style={{ display: "block", width: "100%" }}
               />
-            </label>
-          </div>
-        </div>
-      </fieldset>
+            </Field>
+          </FieldRow>
+        </CardContent>
+      </Card>
 
-      <fieldset style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16 }}>
-        <legend>Votre logement</legend>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="ad-housing-zone">Votre logement est en zone</label>
-              <select
+      <Card>
+        <CardHeader>
+          <CardTitle>Votre logement</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <FieldRow>
+            <Field label="Votre logement est en zone" htmlFor="ad-housing-zone" className="flex-1">
+              <Select
                 id="ad-housing-zone"
                 value={form.housingZone}
                 onChange={(e) => set("housingZone", e.target.value as HousingZone)}
-                style={{ display: "block", width: "100%" }}
               >
                 <option value="">—</option>
                 {HOUSING_ZONE_OPTIONS.map(([value, label]) => (
@@ -312,15 +268,13 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
                     {label}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="ad-housing-type">Votre logement est un/une</label>
-              <select
+              </Select>
+            </Field>
+            <Field label="Votre logement est un/une" htmlFor="ad-housing-type" className="flex-1">
+              <Select
                 id="ad-housing-type"
                 value={form.housingType}
                 onChange={(e) => set("housingType", e.target.value as HousingType)}
-                style={{ display: "block", width: "100%" }}
               >
                 <option value="">—</option>
                 {HOUSING_TYPE_OPTIONS.map(([value, label]) => (
@@ -328,49 +282,39 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
                     {label}
                   </option>
                 ))}
-              </select>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            <label htmlFor="ad-garden-area" style={{ flex: 1 }}>
-              Superficie du jardin (m²)
-              <input
+              </Select>
+            </Field>
+          </FieldRow>
+          <FieldRow>
+            <Field label="Superficie du jardin (m²)" htmlFor="ad-garden-area" className="flex-1">
+              <Input
                 id="ad-garden-area"
                 type="number"
                 min="0"
                 value={form.gardenAreaM2}
                 onChange={(e) => set("gardenAreaM2", e.target.value)}
-                style={{ display: "block", width: "100%" }}
               />
-            </label>
-            <label htmlFor="ad-fence-height" style={{ flex: 1 }}>
-              Hauteur des clôtures (précisez si pas clôturé)
-              <input
-                id="ad-fence-height"
-                value={form.fenceHeight}
-                onChange={(e) => set("fenceHeight", e.target.value)}
-                style={{ display: "block", width: "100%" }}
-              />
-            </label>
-          </div>
-          <label htmlFor="ad-garden-access">
-            Votre animal aura-t-il accès à votre jardin ? Si NAC, pourra-t-il être mis en liberté
-            ?
-            <textarea
+            </Field>
+            <Field label="Hauteur des clôtures (précisez si pas clôturé)" htmlFor="ad-fence-height" className="flex-1">
+              <Input id="ad-fence-height" value={form.fenceHeight} onChange={(e) => set("fenceHeight", e.target.value)} />
+            </Field>
+          </FieldRow>
+          <Field
+            label="Votre animal aura-t-il accès à votre jardin ? Si NAC, pourra-t-il être mis en liberté ?"
+            htmlFor="ad-garden-access"
+          >
+            <Textarea
               id="ad-garden-access"
               value={form.gardenAccessDetails}
               onChange={(e) => set("gardenAccessDetails", e.target.value)}
-              style={{ display: "block", width: "100%" }}
             />
-          </label>
-          <div style={{ display: "flex", gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="ad-residency-status">Vous êtes</label>
-              <select
+          </Field>
+          <FieldRow>
+            <Field label="Vous êtes" htmlFor="ad-residency-status" className="flex-1">
+              <Select
                 id="ad-residency-status"
                 value={form.residencyStatus}
                 onChange={(e) => set("residencyStatus", e.target.value as ResidencyStatus)}
-                style={{ display: "block", width: "100%" }}
               >
                 <option value="">—</option>
                 {RESIDENCY_STATUS_OPTIONS.map(([value, label]) => (
@@ -378,25 +322,21 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
                     {label}
                   </option>
                 ))}
-              </select>
-            </div>
-            <label htmlFor="ad-residency-duration" style={{ flex: 1 }}>
-              Depuis combien de temps vivez-vous à cet endroit ?
-              <input
+              </Select>
+            </Field>
+            <Field label="Depuis combien de temps vivez-vous à cet endroit ?" htmlFor="ad-residency-duration" className="flex-1">
+              <Input
                 id="ad-residency-duration"
                 value={form.residencyDuration}
                 onChange={(e) => set("residencyDuration", e.target.value)}
-                style={{ display: "block", width: "100%" }}
               />
-            </label>
-          </div>
-          <div>
-            <label htmlFor="ad-living-situation">Vivez-vous</label>
-            <select
+            </Field>
+          </FieldRow>
+          <Field label="Vivez-vous" htmlFor="ad-living-situation">
+            <Select
               id="ad-living-situation"
               value={form.livingSituation}
               onChange={(e) => set("livingSituation", e.target.value as LivingSituation)}
-              style={{ display: "block", width: "100%" }}
             >
               <option value="">—</option>
               {LIVING_SITUATION_OPTIONS.map(([value, label]) => (
@@ -404,187 +344,144 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
                   {label}
                 </option>
               ))}
-            </select>
-          </div>
-        </div>
-      </fieldset>
+            </Select>
+          </Field>
+        </CardContent>
+      </Card>
 
-      <fieldset style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16 }}>
-        <legend>Votre foyer</legend>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", gap: 12 }}>
-            <label htmlFor="ad-family-size" style={{ flex: 1 }}>
-              De combien de personnes se compose la famille ?
-              <input
+      <Card>
+        <CardHeader>
+          <CardTitle>Votre foyer</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <FieldRow>
+            <Field label="De combien de personnes se compose la famille ?" htmlFor="ad-family-size" className="flex-1">
+              <Input
                 id="ad-family-size"
                 type="number"
                 min="1"
                 value={form.familySize}
                 onChange={(e) => set("familySize", e.target.value)}
-                style={{ display: "block", width: "100%" }}
               />
-            </label>
-            <label htmlFor="ad-children-count" style={{ flex: 1 }}>
-              Dont combien d&apos;enfants ?
-              <input
+            </Field>
+            <Field label="Dont combien d'enfants ?" htmlFor="ad-children-count" className="flex-1">
+              <Input
                 id="ad-children-count"
                 type="number"
                 min="0"
                 value={form.childrenCount}
                 onChange={(e) => set("childrenCount", e.target.value)}
-                style={{ display: "block", width: "100%" }}
               />
-            </label>
-          </div>
-          <label htmlFor="ad-allergies">
-            <input
-              id="ad-allergies"
-              type="checkbox"
-              checked={form.hasAllergies}
-              onChange={(e) => set("hasAllergies", e.target.checked)}
-            />{" "}
+            </Field>
+          </FieldRow>
+          <label htmlFor="ad-allergies" className="flex items-center gap-2 text-sm">
+            <Checkbox id="ad-allergies" checked={form.hasAllergies} onChange={(e) => set("hasAllergies", e.target.checked)} />
             Y a-t-il des cas d&apos;allergie dans la famille ?
           </label>
-          <label htmlFor="ad-activity-level">
-            Quel est le niveau d&apos;activité de la famille ?
-            <input
-              id="ad-activity-level"
-              value={form.activityLevel}
-              onChange={(e) => set("activityLevel", e.target.value)}
-              style={{ display: "block", width: "100%" }}
-            />
-          </label>
-          <div>
-            <label htmlFor="ad-family-agrees">
-              Toute la famille est-elle d&apos;accord pour accueillir l&apos;animal ?
-            </label>
-            <select
+          <Field label="Quel est le niveau d'activité de la famille ?" htmlFor="ad-activity-level">
+            <Input id="ad-activity-level" value={form.activityLevel} onChange={(e) => set("activityLevel", e.target.value)} />
+          </Field>
+          <Field label="Toute la famille est-elle d'accord pour accueillir l'animal ?" htmlFor="ad-family-agrees">
+            <Select
               id="ad-family-agrees"
               value={form.familyAgrees ? "oui" : "non"}
               onChange={(e) => set("familyAgrees", e.target.value === "oui")}
-              style={{ display: "block", width: "100%" }}
             >
               <option value="oui">Oui</option>
               <option value="non">Non</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
           {!form.familyAgrees && (
-            <label htmlFor="ad-family-disagreement">
-              Si non, pourquoi ?
-              <textarea
+            <Field label="Si non, pourquoi ?" htmlFor="ad-family-disagreement">
+              <Textarea
                 id="ad-family-disagreement"
                 value={form.familyDisagreementReason}
                 onChange={(e) => set("familyDisagreementReason", e.target.value)}
-                style={{ display: "block", width: "100%" }}
               />
-            </label>
+            </Field>
           )}
-        </div>
-      </fieldset>
+        </CardContent>
+      </Card>
 
-      <fieldset style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16 }}>
-        <legend>Animaux déjà présents</legend>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <label htmlFor="ad-has-other-animals">
-            <input
+      <Card>
+        <CardHeader>
+          <CardTitle>Animaux déjà présents</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <label htmlFor="ad-has-other-animals" className="flex items-center gap-2 text-sm">
+            <Checkbox
               id="ad-has-other-animals"
-              type="checkbox"
               checked={form.hasOtherAnimals}
               onChange={(e) => set("hasOtherAnimals", e.target.checked)}
-            />{" "}
+            />
             Avez-vous d&apos;autres animaux ?
           </label>
           {form.hasOtherAnimals && (
-            <label htmlFor="ad-other-animals-details">
-              Précisez vos animaux (type / race / âge / si stérilisé / dernière date de vaccin)
-              <textarea
+            <Field
+              label="Précisez vos animaux (type / race / âge / si stérilisé / dernière date de vaccin)"
+              htmlFor="ad-other-animals-details"
+            >
+              <Textarea
                 id="ad-other-animals-details"
                 value={form.otherAnimalsDetails}
                 onChange={(e) => set("otherAnimalsDetails", e.target.value)}
-                style={{ display: "block", width: "100%" }}
               />
-            </label>
+            </Field>
           )}
-        </div>
-      </fieldset>
+        </CardContent>
+      </Card>
 
-      <fieldset style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16 }}>
-        <legend>Organisation du quotidien</legend>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <label htmlFor="ad-caretaker">
-            Qui se chargera de soigner (et sortir si chien) l&apos;animal ?
-            <input
-              id="ad-caretaker"
-              value={form.caretakerPerson}
-              onChange={(e) => set("caretakerPerson", e.target.value)}
-              style={{ display: "block", width: "100%" }}
-            />
-          </label>
-          <label htmlFor="ad-sleeping-area">
-            Dans quel espace l&apos;animal dormira ?
-            <input
-              id="ad-sleeping-area"
-              value={form.sleepingArea}
-              onChange={(e) => set("sleepingArea", e.target.value)}
-              style={{ display: "block", width: "100%" }}
-            />
-          </label>
-          <label htmlFor="ad-alone-time">
-            Combien de temps l&apos;animal restera seul par jour ?
-            <input
-              id="ad-alone-time"
-              value={form.aloneTimePerDay}
-              onChange={(e) => set("aloneTimePerDay", e.target.value)}
-              style={{ display: "block", width: "100%" }}
-            />
-          </label>
+      <Card>
+        <CardHeader>
+          <CardTitle>Organisation du quotidien</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Field label="Qui se chargera de soigner (et sortir si chien) l'animal ?" htmlFor="ad-caretaker">
+            <Input id="ad-caretaker" value={form.caretakerPerson} onChange={(e) => set("caretakerPerson", e.target.value)} />
+          </Field>
+          <Field label="Dans quel espace l'animal dormira ?" htmlFor="ad-sleeping-area">
+            <Input id="ad-sleeping-area" value={form.sleepingArea} onChange={(e) => set("sleepingArea", e.target.value)} />
+          </Field>
+          <Field label="Combien de temps l'animal restera seul par jour ?" htmlFor="ad-alone-time">
+            <Input id="ad-alone-time" value={form.aloneTimePerDay} onChange={(e) => set("aloneTimePerDay", e.target.value)} />
+          </Field>
           {form.desiredSpecies === "chien" && (
             <>
-              <label htmlFor="ad-dog-walks">
-                Si c&apos;est un chien : combien de fois par jour allez-vous le promener ?
-                <input
+              <Field label="Si c'est un chien : combien de fois par jour allez-vous le promener ?" htmlFor="ad-dog-walks">
+                <Input
                   id="ad-dog-walks"
                   type="number"
                   min="0"
                   value={form.dogWalksPerDay}
                   onChange={(e) => set("dogWalksPerDay", e.target.value)}
-                  style={{ display: "block", width: "100%" }}
                 />
-              </label>
-              <label htmlFor="ad-dog-midday">
-                <input
+              </Field>
+              <label htmlFor="ad-dog-midday" className="flex items-center gap-2 text-sm">
+                <Checkbox
                   id="ad-dog-midday"
-                  type="checkbox"
                   checked={form.dogMiddayWalkPossible}
                   onChange={(e) => set("dogMiddayWalkPossible", e.target.checked)}
-                />{" "}
-                Si vous travaillez toute la journée, quelqu&apos;un pourra-t-il le sortir entre
-                midi et deux ?
+                />
+                Si vous travaillez toute la journée, quelqu&apos;un pourra-t-il le sortir entre midi et deux ?
               </label>
             </>
           )}
-          <label htmlFor="ad-vacation-plan">
-            Que ferez-vous de votre animal pendant les weekends / vacances ?
-            <textarea
-              id="ad-vacation-plan"
-              value={form.vacationPlan}
-              onChange={(e) => set("vacationPlan", e.target.value)}
-              style={{ display: "block", width: "100%" }}
-            />
-          </label>
-        </div>
-      </fieldset>
+          <Field label="Que ferez-vous de votre animal pendant les weekends / vacances ?" htmlFor="ad-vacation-plan">
+            <Textarea id="ad-vacation-plan" value={form.vacationPlan} onChange={(e) => set("vacationPlan", e.target.value)} />
+          </Field>
+        </CardContent>
+      </Card>
 
-      <fieldset style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16 }}>
-        <legend>Votre souhait d&apos;adoption</legend>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div>
-            <label htmlFor="ad-desired-species">Type d&apos;animal souhaité</label>
-            <select
+      <Card>
+        <CardHeader>
+          <CardTitle>Votre souhait d&apos;adoption</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Field label="Type d'animal souhaité" htmlFor="ad-desired-species">
+            <Select
               id="ad-desired-species"
               value={form.desiredSpecies}
               onChange={(e) => set("desiredSpecies", e.target.value as AnimalSpecies)}
-              style={{ display: "block", width: "100%" }}
             >
               <option value="">—</option>
               {SPECIES_OPTIONS.map(([value, label]) => (
@@ -592,36 +489,30 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
                   {label}
                 </option>
               ))}
-            </select>
-          </div>
-          <label htmlFor="ad-specific-animal">
-            Un coup de cœur pour un animal précis ? Précisez son prénom
-            <input
+            </Select>
+          </Field>
+          <Field label="Un coup de cœur pour un animal précis ? Précisez son prénom" htmlFor="ad-specific-animal">
+            <Input
               id="ad-specific-animal"
               value={form.specificAnimalName}
               onChange={(e) => set("specificAnimalName", e.target.value)}
-              style={{ display: "block", width: "100%" }}
             />
-          </label>
-          <label htmlFor="ad-additional-comments">
-            Si vous souhaitez nous partager quelque chose, c&apos;est le moment !
-            <textarea
+          </Field>
+          <Field label="Si vous souhaitez nous partager quelque chose, c'est le moment !" htmlFor="ad-additional-comments">
+            <Textarea
               id="ad-additional-comments"
               value={form.additionalComments}
               onChange={(e) => set("additionalComments", e.target.value)}
-              style={{ display: "block", width: "100%" }}
             />
-          </label>
-        </div>
-      </fieldset>
+          </Field>
+        </CardContent>
+      </Card>
 
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div>
-        <button type="submit" disabled={pending}>
-          Envoyer ma candidature
-        </button>
-      </div>
+      <Button type="submit" disabled={pending} size="lg" className="self-start">
+        Envoyer ma candidature
+      </Button>
     </form>
   );
 }
