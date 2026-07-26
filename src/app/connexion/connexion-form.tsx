@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
  */
 export function ConnexionForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/apres-connexion";
   const authError = searchParams.get("error");
 
   const [csrfToken, setCsrfToken] = useState<string | null>(null);

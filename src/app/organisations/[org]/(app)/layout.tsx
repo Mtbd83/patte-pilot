@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
-import { OrgNav } from "./org-nav";
+import { OrgSidebar } from "./org-sidebar";
 
 /**
  * Shared shell for every /organisations/[org]/* page: authenticates,
@@ -40,9 +40,11 @@ export default async function OrganizationLayout({
   }
 
   return (
-    <div className="min-h-dvh bg-background">
-      <OrgNav orgSlug={params.org} orgName={organization.name} />
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+    <div className="min-h-dvh bg-background md:flex">
+      <OrgSidebar orgSlug={params.org} orgName={organization.name} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-10">{children}</main>
+      </div>
     </div>
   );
 }

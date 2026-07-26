@@ -1,5 +1,7 @@
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { db } from "@/db";
 import { organizationMembers } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -40,8 +42,13 @@ export default async function MembresPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Membres</h1>
-        <p className="mt-1 text-muted-foreground">{organization.name}</p>
+        <Link
+          href={`/organisations/${params.org}`}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="size-4" /> {organization.name}
+        </Link>
+        <h1 className="mt-1 text-2xl font-semibold">Membres</h1>
       </div>
 
       <InviteMemberDialog organizationId={organization.id} />
