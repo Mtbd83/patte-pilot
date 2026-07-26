@@ -55,6 +55,17 @@ export const organizations = pgTable("organizations", {
   name: varchar("name", { length: 200 }).notNull(),
   slug: varchar("slug", { length: 200 }).notNull().unique(),
   contactEmail: varchar("contact_email", { length: 255 }),
+
+  // Legal/letterhead details used on generated documents (adoption contract).
+  siren: varchar("siren", { length: 20 }),
+  registrationAuthority: varchar("registration_authority", { length: 200 }), // ex: "sous-préfecture du Var"
+  registrationNumber: varchar("registration_number", { length: 50 }), // ex: "W832021610"
+  address: text("address"),
+  postalCode: varchar("postal_code", { length: 10 }),
+  city: varchar("city", { length: 120 }),
+  phone1: varchar("phone1", { length: 30 }),
+  phone2: varchar("phone2", { length: 30 }),
+
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

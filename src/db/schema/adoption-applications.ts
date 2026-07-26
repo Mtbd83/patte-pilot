@@ -139,3 +139,8 @@ export const adoptionApplicationsRelations = relations(
 
 export type AdoptionApplication = typeof adoptionApplications.$inferSelect;
 export type NewAdoptionApplication = typeof adoptionApplications.$inferInsert;
+export type AdoptionApplicationStatus = (typeof adoptionApplicationStatusEnum.enumValues)[number];
+export type HousingType = (typeof housingTypeEnum.enumValues)[number];
+export type HousingZone = (typeof housingZoneEnum.enumValues)[number];
+export type ResidencyStatus = (typeof residencyStatusEnum.enumValues)[number];
+export type LivingSituation = (typeof livingSituationEnum.enumValues)[number];
