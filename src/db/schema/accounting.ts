@@ -67,3 +67,5 @@ export const accountingEntriesRelations = relations(accountingEntries, ({ one })
 
 export type AccountingEntry = typeof accountingEntries.$inferSelect;
 export type NewAccountingEntry = typeof accountingEntries.$inferInsert;
+export type AccountingType = (typeof accountingTypeEnum.enumValues)[number];
+export type AccountingCategory = (typeof accountingCategoryEnum.enumValues)[number];

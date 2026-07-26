@@ -70,3 +70,5 @@ export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
 
 export type InventoryItem = typeof inventoryItems.$inferSelect;
 export type NewInventoryItem = typeof inventoryItems.$inferInsert;
+export type InventoryCategory = (typeof inventoryCategoryEnum.enumValues)[number];
+export type InventoryStatus = (typeof inventoryStatusEnum.enumValues)[number];

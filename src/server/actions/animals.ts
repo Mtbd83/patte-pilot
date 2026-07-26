@@ -14,10 +14,7 @@ import {
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
 import { statusRequiresFosterFamily } from "@/lib/animal-status";
-
-const dateString = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Format de date invalide (AAAA-MM-JJ).");
+import { dateString } from "@/lib/validation";
 
 const createAnimalSchema = z.object({
   organizationId: z.string().uuid(),

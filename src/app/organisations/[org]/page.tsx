@@ -33,6 +33,8 @@ export default async function OrganizationPage({
       <nav style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 8 }}>
         <a href={`/organisations/${params.org}/animaux`}>Animaux</a>
         <a href={`/organisations/${params.org}/familles-accueil`}>Familles d&apos;accueil</a>
+        <a href={`/organisations/${params.org}/comptabilite`}>Comptabilité</a>
+        <a href={`/organisations/${params.org}/stock`}>Stock</a>
         <a href={`/organisations/${params.org}/membres`}>Gérer les membres</a>
       </nav>
     </main>
