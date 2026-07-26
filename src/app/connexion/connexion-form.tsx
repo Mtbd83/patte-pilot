@@ -19,7 +19,11 @@ export function ConnexionForm() {
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/auth/csrf")
+    // no-store: this must always be a fresh request. A cached response would
+    // hand back a token whose matching authjs.csrf-token cookie was never
+    // (re-)set on this load, so the subsequent form submit gets rejected as
+    // a missing/invalid CSRF token.
+    fetch("/api/auth/csrf", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => setCsrfToken(data.csrfToken));
   }, []);

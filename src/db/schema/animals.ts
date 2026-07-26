@@ -128,3 +128,4 @@ export type NewAnimal = typeof animals.$inferInsert;
 export type AnimalHealthChecklist = typeof animalHealthChecklists.$inferSelect;
 export type AnimalStatus = (typeof animalStatusEnum.enumValues)[number];
 export type AnimalSpecies = (typeof animalSpeciesEnum.enumValues)[number];
+export type AnimalSex = (typeof animalSexEnum.enumValues)[number];

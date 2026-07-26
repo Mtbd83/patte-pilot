@@ -30,7 +30,9 @@ export default async function OrganizationPage({
     <main style={{ maxWidth: 720, margin: "60px auto", fontFamily: "sans-serif" }}>
       <h1>{organization.name}</h1>
       <p>Bienvenue sur votre espace de gestion.</p>
-      <nav style={{ marginTop: 24 }}>
+      <nav style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 8 }}>
+        <a href={`/organisations/${params.org}/animaux`}>Animaux</a>
+        <a href={`/organisations/${params.org}/familles-accueil`}>Familles d&apos;accueil</a>
         <a href={`/organisations/${params.org}/membres`}>Gérer les membres</a>
       </nav>
     </main>
