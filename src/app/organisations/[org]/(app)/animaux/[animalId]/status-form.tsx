@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Field } from "@/components/ui/field";
+import { NewFosterFamilyModal } from "../../familles-accueil/new-foster-family-modal";
 
 const STATUS_OPTIONS = Object.entries(STATUS_LABELS) as [AnimalStatus, string][];
 
@@ -40,6 +41,8 @@ export function StatusForm({
   const [status, setStatus] = useState<AnimalStatus>(currentStatus);
   const [fosterFamilyId, setFosterFamilyId] = useState(currentFosterFamilyId ?? "");
   const [adoptionDate, setAdoptionDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [familyOptions, setFamilyOptions] = useState(fosterFamilies);
+  const [newFamilyModalOpen, setNewFamilyModalOpen] = useState(false);
 
   const needsFosterFamily = statusRequiresFosterFamily(status);
 
@@ -83,7 +86,19 @@ export function StatusForm({
       </Field>
 
       {needsFosterFamily && (
-        <Field label="Famille d'accueil" htmlFor="status-foster-family">
+        <Field
+          label="Famille d'accueil"
+          htmlFor="status-foster-family"
+          hint={
+            <button
+              type="button"
+              onClick={() => setNewFamilyModalOpen(true)}
+              className="text-primary hover:underline"
+            >
+              + Nouvelle famille d&apos;accueil
+            </button>
+          }
+        >
           <Select
             id="status-foster-family"
             required
@@ -91,7 +106,7 @@ export function StatusForm({
             onChange={(e) => setFosterFamilyId(e.target.value)}
           >
             <option value="">— Sélectionner —</option>
-            {fosterFamilies.map((family) => (
+            {familyOptions.map((family) => (
               <option key={family.id} value={family.id}>
                 {family.firstName} {family.lastName}
               </option>
@@ -118,6 +133,16 @@ export function StatusForm({
           Changer le statut
         </Button>
       </div>
+
+      <NewFosterFamilyModal
+        organizationId={organizationId}
+        open={newFamilyModalOpen}
+        onClose={() => setNewFamilyModalOpen(false)}
+        onCreated={(fosterFamily) => {
+          setFamilyOptions((prev) => [...prev, fosterFamily]);
+          setFosterFamilyId(fosterFamily.id);
+        }}
+      />
     </form>
   );
 }

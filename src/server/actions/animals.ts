@@ -29,14 +29,20 @@ const createAnimalSchema = z.object({
   intakeDate: dateString,
   status: z.enum(animalStatusEnum.enumValues).default("quarantaine"),
   fosterFamilyId: z.string().uuid().optional(),
+  firstVaccineDone: z.boolean().default(false),
+  firstVaccineDate: dateString.optional(),
+  sterilizationDone: z.boolean().default(false),
+  sterilizationDate: dateString.optional(),
+  boosterDone: z.boolean().default(false),
+  boosterDate: dateString.optional(),
 });
 
 export type CreateAnimalInput = z.input<typeof createAnimalSchema>;
 
 /**
- * Admin-only: registers a new animal. Creates its (empty) health checklist
- * and, if the initial status requires a foster family, opens the first
- * placement — all in the same transaction.
+ * Admin-only: registers a new animal. Creates its health checklist (blank,
+ * or pre-filled from the create form) and, if the initial status requires a
+ * foster family, opens the first placement — all in the same transaction.
  */
 export async function createAnimal(input: CreateAnimalInput) {
   const session = await auth();
@@ -71,7 +77,15 @@ export async function createAnimal(input: CreateAnimalInput) {
       .returning();
     if (!animal) throw new Error("Échec de la création de l'animal.");
 
-    await tx.insert(animalHealthChecklists).values({ animalId: animal.id });
+    await tx.insert(animalHealthChecklists).values({
+      animalId: animal.id,
+      firstVaccineDone: data.firstVaccineDone,
+      firstVaccineDate: data.firstVaccineDate,
+      sterilizationDone: data.sterilizationDone,
+      sterilizationDate: data.sterilizationDate,
+      boosterDone: data.boosterDone,
+      boosterDate: data.boosterDate,
+    });
 
     if (data.fosterFamilyId) {
       await tx.insert(animalPlacements).values({
