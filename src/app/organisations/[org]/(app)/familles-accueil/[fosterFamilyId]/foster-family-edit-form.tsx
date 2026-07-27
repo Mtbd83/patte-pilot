@@ -8,14 +8,17 @@ import type { FosterFamily } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select } from "@/components/ui/select";
 import { Field, FieldRow } from "@/components/ui/field";
 
 export function FosterFamilyEditForm({
   organizationId,
   fosterFamily,
+  linkableUsers,
 }: {
   organizationId: string;
   fosterFamily: FosterFamily;
+  linkableUsers: { id: string; label: string }[];
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -29,6 +32,7 @@ export function FosterFamilyEditForm({
   const [hasCats, setHasCats] = useState(fosterFamily.hasCats);
   const [hasDogs, setHasDogs] = useState(fosterFamily.hasDogs);
   const [hasRabbits, setHasRabbits] = useState(fosterFamily.hasRabbits);
+  const [linkedUserId, setLinkedUserId] = useState(fosterFamily.linkedUserId ?? "");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +50,7 @@ export function FosterFamilyEditForm({
         hasCats,
         hasDogs,
         hasRabbits,
+        linkedUserId: linkedUserId || null,
       });
       toast.success("Famille d'accueil mise à jour");
       router.refresh();
@@ -79,6 +84,24 @@ export function FosterFamilyEditForm({
           <Input id="ff-edit-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
       </FieldRow>
+
+      <Field label="Compte utilisateur lié" htmlFor="ff-edit-linked-user">
+        <Select
+          id="ff-edit-linked-user"
+          value={linkedUserId}
+          onChange={(e) => setLinkedUserId(e.target.value)}
+        >
+          <option value="">— Aucun —</option>
+          {linkableUsers.map((user) => (
+            <option key={user.id} value={user.id}>
+              {user.label}
+            </option>
+          ))}
+        </Select>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Permet à cette famille d&apos;accueil de gérer la checklist des soins des animaux qui lui sont confiés.
+        </p>
+      </Field>
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium">Autres animaux déjà présents</legend>

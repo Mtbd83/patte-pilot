@@ -30,20 +30,20 @@ export default async function ComptabilitePage({
   if (!organization) notFound();
 
   const roles = await getMemberRoles(session.user.id, organization.id);
-  if (roles.length === 0) {
+  if (!roles.includes("admin")) {
     return (
       <Card className="mx-auto mt-16 max-w-md">
         <CardHeader>
           <CardTitle>Accès refusé</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Vous n&apos;êtes pas membre de cette organisation.</p>
+          <p className="text-sm text-muted-foreground">
+            Seul·e·s les administrateur·rice·s peuvent accéder à la comptabilité.
+          </p>
         </CardContent>
       </Card>
     );
   }
-
-  const isAdmin = roles.includes("admin");
 
   const [entries, summary, animalsList] = await Promise.all([
     listAccountingEntries({ organizationId: organization.id }),
@@ -84,12 +84,10 @@ export default async function ComptabilitePage({
         </Card>
       </div>
 
-      {isAdmin && (
-        <CreateAccountingEntryDialog
-          organizationId={organization.id}
-          animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
-        />
-      )}
+      <CreateAccountingEntryDialog
+        organizationId={organization.id}
+        animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
+      />
 
       <Card>
         <CardContent>
@@ -105,7 +103,7 @@ export default async function ComptabilitePage({
                   <TableHead>Montant</TableHead>
                   <TableHead>Animal</TableHead>
                   <TableHead>Commentaire</TableHead>
-                  {isAdmin && <TableHead />}
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -117,11 +115,9 @@ export default async function ComptabilitePage({
                     <TableCell>{formatAmount(entry.amount)}</TableCell>
                     <TableCell>{entry.animal?.name ?? "—"}</TableCell>
                     <TableCell>{entry.comment || "—"}</TableCell>
-                    {isAdmin && (
-                      <TableCell>
-                        <DeleteEntryButton organizationId={organization.id} entryId={entry.id} />
-                      </TableCell>
-                    )}
+                    <TableCell>
+                      <DeleteEntryButton organizationId={organization.id} entryId={entry.id} />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

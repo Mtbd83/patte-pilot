@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(DATABASE_URL='postgresql://postgres.wrmtfzpdyrmcilfqxtwi:adminadmin83000db!@aws-1-eu-west-3.pooler.supabase.com:5432/postgres' npx drizzle-kit migrate)",
+      "Bash(DIRECT_URL=postgresql://postgres.wrmtfzpdyrmcilfqxtwi:adminadmin83000db!@aws-1-eu-west-3.pooler.supabase.com:5432/postgres node -e ' *)",
+      "Bash(python3 -c ' *)",
+      "Bash(cp \"/tmp/claude-0/-home-mtbd83-repo-anim-admin/610fc76c-3dc8-4eef-9ed9-5ccbf2da2001/scratchpad/import-legacy-data.mjs\" ./import-legacy-data-tmp.mjs)",
+      "Bash(DIRECT_URL='postgresql://postgres.wrmtfzpdyrmcilfqxtwi:adminadmin83000db!@aws-1-eu-west-3.pooler.supabase.com:5432/postgres' node import-legacy-data-tmp.mjs)",
+      "Bash(rm import-legacy-data-tmp.mjs)",
+      "Bash(DIRECT_URL='postgresql://postgres.wrmtfzpdyrmcilfqxtwi:aws-1-eu-west-3.pooler.supabase.com' node -e \"\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://wrmtfzpdyrmcilfqxtwi.supabase.co/storage/v1/object/public/animal-photos/b230f2f7-8aca-44f9-bebe-4b7464e07804/0.04295350479013227.jpeg\")",
+      "Bash(node -e ' *)",
+      "Bash(git fetch *)",
+      "Bash(git ls-tree *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(cd /home/mtbd83/repo/anim-admin *)",
+      "Bash(git add *)",
+      "Bash(git restore *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh auth *)",
+      "Bash(env)",
+      "Bash(sed -i 's/isBoosterOwed\\(animal.healthChecklist\\)/isBoosterOwed\\(animal.healthChecklist, animal.status\\)/' \"src/app/organisations/[org]/\\(app\\)/animaux/page.tsx\")",
+      "Bash(sed -i 's/isBoosterOverdue\\(animal.healthChecklist!\\)/isBoosterOverdue\\(animal.healthChecklist!, animal.status\\)/' \"src/app/organisations/[org]/\\(app\\)/page.tsx\")"
+    ],
+    "additionalDirectories": [
+      "/tmp"
+    ]
+  }
+}

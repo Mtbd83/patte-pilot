@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { accountingEntries, accountingTypeEnum, accountingCategoryEnum } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
+import { requireAdmin, ForbiddenError } from "@/lib/permissions";
 import { dateString } from "@/lib/validation";
 
 const createAccountingEntrySchema = z.object({
@@ -78,7 +78,7 @@ const listAccountingEntriesSchema = z.object({
   category: z.enum(accountingCategoryEnum.enumValues).optional(),
 });
 
-/** Any member (admin, bénévole or famille d'accueil): lists accounting entries. */
+/** Admin-only: lists accounting entries. */
 export async function listAccountingEntries(
   input: z.infer<typeof listAccountingEntriesSchema>,
 ) {
@@ -86,7 +86,7 @@ export async function listAccountingEntries(
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { organizationId, type, category } = listAccountingEntriesSchema.parse(input);
-  await requireRole(session.user.id, organizationId, ["admin", "benevole", "famille_accueil"]);
+  await requireAdmin(session.user.id, organizationId);
 
   const conditions = [eq(accountingEntries.organizationId, organizationId)];
   if (type) conditions.push(eq(accountingEntries.type, type));
@@ -101,13 +101,13 @@ export async function listAccountingEntries(
 
 const summarySchema = z.object({ organizationId: z.string().uuid() });
 
-/** Any member: total in / total out / balance across all recorded entries. */
+/** Admin-only: total in / total out / balance across all recorded entries. */
 export async function getAccountingSummary(input: z.infer<typeof summarySchema>) {
   const session = await auth();
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { organizationId } = summarySchema.parse(input);
-  await requireRole(session.user.id, organizationId, ["admin", "benevole", "famille_accueil"]);
+  await requireAdmin(session.user.id, organizationId);
 
   const entries = await db.query.accountingEntries.findMany({
     where: eq(accountingEntries.organizationId, organizationId),

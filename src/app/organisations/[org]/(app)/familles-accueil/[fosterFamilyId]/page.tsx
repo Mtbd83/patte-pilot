@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { db } from "@/db";
-import { fosterFamilies } from "@/db/schema";
+import { fosterFamilies, organizationMembers } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
@@ -13,15 +13,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { FosterFamilyEditForm } from "./foster-family-edit-form";
 import { DeactivateFosterFamilyButton } from "./deactivate-foster-family-button";
-
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex justify-between gap-4 border-b border-border py-2 text-sm last:border-0">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-right font-medium">{value}</dd>
-    </div>
-  );
-}
 
 export default async function FosterFamilyDetailPage({
   params,
@@ -39,40 +30,51 @@ export default async function FosterFamilyDetailPage({
   if (!organization) notFound();
 
   const roles = await getMemberRoles(session.user.id, organization.id);
-  if (roles.length === 0) {
+  if (!roles.includes("admin")) {
     return (
       <Card className="mx-auto mt-16 max-w-md">
         <CardHeader>
           <CardTitle>Accès refusé</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Vous n&apos;êtes pas membre de cette organisation.</p>
+          <p className="text-sm text-muted-foreground">
+            Seul·e·s les administrateur·rice·s peuvent accéder au détail d&apos;une famille d&apos;accueil.
+          </p>
         </CardContent>
       </Card>
     );
   }
 
-  const fosterFamily = await db.query.fosterFamilies.findFirst({
-    where: and(
-      eq(fosterFamilies.id, params.fosterFamilyId),
-      eq(fosterFamilies.organizationId, organization.id),
-    ),
-    with: {
-      animalsHosted: true,
-      placements: {
-        with: { animal: true },
-        orderBy: (placement) => desc(placement.startedAt),
+  const [fosterFamily, orgMembers] = await Promise.all([
+    db.query.fosterFamilies.findFirst({
+      where: and(
+        eq(fosterFamilies.id, params.fosterFamilyId),
+        eq(fosterFamilies.organizationId, organization.id),
+      ),
+      with: {
+        animalsHosted: true,
+        placements: {
+          with: { animal: true },
+          orderBy: (placement) => desc(placement.startedAt),
+        },
       },
-    },
-  });
+    }),
+    db.query.organizationMembers.findMany({
+      where: eq(organizationMembers.organizationId, organization.id),
+      with: { user: true, roles: true },
+    }),
+  ]);
   if (!fosterFamily) notFound();
 
-  const isAdmin = roles.includes("admin");
-  const otherAnimals = [
-    fosterFamily.hasCats && "Chats",
-    fosterFamily.hasDogs && "Chiens",
-    fosterFamily.hasRabbits && "Lapins",
-  ].filter(Boolean) as string[];
+  const linkableUsers = orgMembers
+    .filter((member) => member.roles.some((role) => role.role === "famille_accueil"))
+    .map((member) => ({
+      id: member.user.id,
+      label:
+        member.user.firstName || member.user.lastName
+          ? `${member.user.firstName ?? ""} ${member.user.lastName ?? ""}`.trim()
+          : member.user.email,
+    }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -98,23 +100,15 @@ export default async function FosterFamilyDetailPage({
           <CardTitle>Coordonnées</CardTitle>
         </CardHeader>
         <CardContent>
-          {isAdmin ? (
-            <FosterFamilyEditForm organizationId={organization.id} fosterFamily={fosterFamily} />
-          ) : (
-            <dl>
-              <InfoRow label="Adresse" value={fosterFamily.address || "—"} />
-              <InfoRow label="Téléphone" value={fosterFamily.phone || "—"} />
-              <InfoRow label="Email" value={fosterFamily.email || "—"} />
-              <InfoRow
-                label="Autres animaux au foyer"
-                value={otherAnimals.length > 0 ? otherAnimals.join(", ") : "Aucun"}
-              />
-            </dl>
-          )}
+          <FosterFamilyEditForm
+            organizationId={organization.id}
+            fosterFamily={fosterFamily}
+            linkableUsers={linkableUsers}
+          />
         </CardContent>
       </Card>
 
-      {isAdmin && fosterFamily.isActive && (
+      {fosterFamily.isActive && (
         <Card>
           <CardHeader>
             <CardTitle>Désactivation</CardTitle>

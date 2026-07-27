@@ -10,9 +10,10 @@ import {
   animalSexEnum,
   animalSpeciesEnum,
   animalStatusEnum,
+  fosterFamilies,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
+import { requireAdmin, requireRole, getMemberRoles, ForbiddenError } from "@/lib/permissions";
 import { statusRequiresFosterFamily } from "@/lib/animal-status";
 import { animalStatusRank, boosterDueDate, isBoosterDueWithin, isBoosterOwed } from "@/lib/animal-care";
 import { dateString } from "@/lib/validation";
@@ -286,18 +287,42 @@ const updateHealthChecklistSchema = z.object({
 
 export type UpdateHealthChecklistInput = z.infer<typeof updateHealthChecklistSchema>;
 
-/** Admin-only: updates one or more fields of an animal's health checklist. */
+/**
+ * Admins can update any animal's checklist. A famille d'accueil can only
+ * update the checklist of an animal currently placed with her — i.e. her
+ * foster family record's linkedUserId matches this user and it's the
+ * animal's currentFosterFamilyId.
+ */
 export async function updateAnimalHealthChecklist(input: UpdateHealthChecklistInput) {
   const session = await auth();
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { animalId, organizationId, ...rest } = updateHealthChecklistSchema.parse(input);
-  await requireAdmin(session.user.id, organizationId);
 
   const animal = await db.query.animals.findFirst({
     where: and(eq(animals.id, animalId), eq(animals.organizationId, organizationId)),
   });
   if (!animal) throw new Error("Animal introuvable.");
+
+  const roles = await getMemberRoles(session.user.id, organizationId);
+  if (!roles.includes("admin")) {
+    const isResponsibleFosterFamily =
+      roles.includes("famille_accueil") &&
+      animal.currentFosterFamilyId !== null &&
+      (await db.query.fosterFamilies.findFirst({
+        where: and(
+          eq(fosterFamilies.id, animal.currentFosterFamilyId),
+          eq(fosterFamilies.organizationId, organizationId),
+          eq(fosterFamilies.linkedUserId, session.user.id),
+        ),
+      })) !== undefined;
+
+    if (!isResponsibleFosterFamily) {
+      throw new ForbiddenError(
+        "Seul·e·s les administrateur·rice·s ou la famille d'accueil responsable peuvent modifier cette checklist.",
+      );
+    }
+  }
 
   const [updated] = await db
     .update(animalHealthChecklists)

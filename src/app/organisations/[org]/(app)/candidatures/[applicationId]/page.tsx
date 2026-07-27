@@ -53,20 +53,20 @@ export default async function CandidatureDetailPage({
   if (!organization) notFound();
 
   const roles = await getMemberRoles(session.user.id, organization.id);
-  if (roles.length === 0) {
+  if (!roles.includes("admin")) {
     return (
       <Card className="mx-auto mt-16 max-w-md">
         <CardHeader>
           <CardTitle>Accès refusé</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Vous n&apos;êtes pas membre de cette organisation.</p>
+          <p className="text-sm text-muted-foreground">
+            Seul·e·s les administrateur·rice·s peuvent accéder au détail d&apos;une candidature.
+          </p>
         </CardContent>
       </Card>
     );
   }
-
-  const isAdmin = roles.includes("admin");
 
   const application = await getAdoptionApplication({
     applicationId: params.applicationId,
@@ -74,7 +74,7 @@ export default async function CandidatureDetailPage({
   });
 
   const [animalsList, documentsList] = await Promise.all([
-    isAdmin ? listAnimals({ organizationId: organization.id }) : Promise.resolve([]),
+    listAnimals({ organizationId: organization.id }),
     listDocuments({ organizationId: organization.id, adoptionApplicationId: application.id }),
   ]);
 
@@ -237,64 +237,58 @@ export default async function CandidatureDetailPage({
         </CardContent>
       </Card>
 
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Statut de la candidature</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ApplicationStatusForm
-              organizationId={organization.id}
-              applicationId={application.id}
-              currentStatus={application.status}
-              currentReviewNotes={application.reviewNotes}
-            />
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Statut de la candidature</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ApplicationStatusForm
+            organizationId={organization.id}
+            applicationId={application.id}
+            currentStatus={application.status}
+            currentReviewNotes={application.reviewNotes}
+          />
+        </CardContent>
+      </Card>
 
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Certificat d&apos;engagement</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">
-              Envoyé tel quel, sans remplissage — l&apos;adoptant·e le complète et le signe de son côté.
-            </p>
-            <SendCertificateForm
-              organizationId={organization.id}
-              applicationId={application.id}
-              animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
-              defaultAnimalId={application.targetAnimalId ?? ""}
-              defaultEmail={application.email}
-            />
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Certificat d&apos;engagement</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Envoyé tel quel, sans remplissage — l&apos;adoptant·e le complète et le signe de son côté.
+          </p>
+          <SendCertificateForm
+            organizationId={organization.id}
+            applicationId={application.id}
+            animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
+            defaultAnimalId={application.targetAnimalId ?? ""}
+            defaultEmail={application.email}
+          />
+        </CardContent>
+      </Card>
 
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Contrat d&apos;adoption</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">
-              Généré et rempli avec les informations de l&apos;animal et de l&apos;adoptant·e.
-            </p>
-            <GenerateContractForm
-              organizationId={organization.id}
-              applicationId={application.id}
-              animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
-              defaultAnimalId={application.targetAnimalId ?? ""}
-              defaultEmail={application.email}
-              defaultAdopterFullName={`${application.firstName} ${application.lastName}`}
-              defaultAdopterCity={application.city ?? ""}
-              defaultAdopterPhone1={application.phone}
-            />
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Contrat d&apos;adoption</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Généré et rempli avec les informations de l&apos;animal et de l&apos;adoptant·e.
+          </p>
+          <GenerateContractForm
+            organizationId={organization.id}
+            applicationId={application.id}
+            animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
+            defaultAnimalId={application.targetAnimalId ?? ""}
+            defaultEmail={application.email}
+            defaultAdopterFullName={`${application.firstName} ${application.lastName}`}
+            defaultAdopterCity={application.city ?? ""}
+            defaultAdopterPhone1={application.phone}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

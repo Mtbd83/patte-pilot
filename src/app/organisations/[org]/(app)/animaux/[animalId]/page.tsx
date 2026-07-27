@@ -55,6 +55,11 @@ export default async function AnimalDetailPage({
   if (!animal) notFound();
 
   const isAdmin = roles.includes("admin");
+  const isResponsibleFosterFamily =
+    !isAdmin &&
+    roles.includes("famille_accueil") &&
+    animal.currentFosterFamily?.linkedUserId === session.user.id;
+  const canEditHealthChecklist = isAdmin || isResponsibleFosterFamily;
 
   const fosterFamilies = isAdmin
     ? await listFosterFamilies({ organizationId: organization.id })
@@ -148,7 +153,7 @@ export default async function AnimalDetailPage({
         </CardHeader>
         <CardContent>
           {animal.healthChecklist &&
-            (isAdmin ? (
+            (canEditHealthChecklist ? (
               <HealthChecklistForm
                 organizationId={organization.id}
                 animalId={animal.id}

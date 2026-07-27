@@ -121,7 +121,7 @@ const getAdoptionApplicationSchema = z.object({
   organizationId: z.string().uuid(),
 });
 
-/** Any member: fetches a single adoption application. */
+/** Admin-only: fetches a single adoption application (contains the applicant's personal details). */
 export async function getAdoptionApplication(
   input: z.infer<typeof getAdoptionApplicationSchema>,
 ) {
@@ -129,7 +129,7 @@ export async function getAdoptionApplication(
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { applicationId, organizationId } = getAdoptionApplicationSchema.parse(input);
-  await requireRole(session.user.id, organizationId, ["admin", "benevole", "famille_accueil"]);
+  await requireAdmin(session.user.id, organizationId);
 
   const application = await db.query.adoptionApplications.findFirst({
     where: and(
