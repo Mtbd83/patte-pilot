@@ -188,7 +188,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
           <PartyPopper className="size-8 text-primary" />
           <h2 className="text-lg font-semibold">Merci !</h2>
           <p className="text-sm text-muted-foreground">
-            Votre candidature a bien été envoyée. L&apos;association reviendra vers vous prochainement.
+            {"Votre candidature a bien été envoyée. L'association reviendra vers vous prochainement si votre profil correspond à un de nos protégés. Si vous n'avez pas de nouvelle de nous d'ici 2 semaines, considérez qe votre profil n'a pas été retenu pour le moment."}
           </p>
         </CardContent>
       </Card>

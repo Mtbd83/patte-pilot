@@ -58,8 +58,6 @@ const FIELDS = {
   donationAmount: { x: 102, y: fromTopLine(493.3), size: 9 },
   donationReason: { x: 257, y: fromTopLine(493.3) },
 
-  paidCbText: { x: 270, y: fromTop(512.7) },
-
   signaturePlace: { x: 53, y: fromTopLine(542.1) },
   signatureDate: { x: 281, y: fromTopLine(542.1) },
 } as const;
@@ -79,6 +77,12 @@ const CHECKBOXES = {
   paidEspecesBox: checkboxOrigin(72.85, 332.41),
   paidChequeBox: checkboxOrigin(135.05, 332.21),
   paidVirementBox: checkboxOrigin(200.95, 332.31),
+  // Measured from the template's own "CB (HelloAsso)" checkbox (added after
+  // the initial measurement pass) by rendering the page to a 300dpi PNG with
+  // pdftoppm and cropping down to the box — its outline isn't a vector `re`
+  // rectangle in the content stream like the other three, so bbox/qpdf
+  // couldn't locate it directly.
+  paidCbBox: checkboxOrigin(282.0, 332.5),
 } as const;
 
 const SEX_LABELS: Record<AnimalSex, string> = {
@@ -193,7 +197,7 @@ export async function generateAdoptionContractPdf(data: AdoptionContractData): P
   if (data.paymentMethod === "especes") check(CHECKBOXES.paidEspecesBox);
   else if (data.paymentMethod === "cheque") check(CHECKBOXES.paidChequeBox);
   else if (data.paymentMethod === "virement") check(CHECKBOXES.paidVirementBox);
-  else text("CB (HelloAsso)", FIELDS.paidCbText, bold);
+  else check(CHECKBOXES.paidCbBox);
 
   text(data.signaturePlace, FIELDS.signaturePlace);
   text(formatDate(data.signatureDate), FIELDS.signatureDate);

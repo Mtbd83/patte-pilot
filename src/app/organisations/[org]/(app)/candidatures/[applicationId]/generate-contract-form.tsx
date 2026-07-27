@@ -81,7 +81,7 @@ export function GenerateContractForm({
       adoptionApplicationId: applicationId,
       toEmail,
       adopterFullName,
-      adopterAddress,
+      adopterAddress: adopterAddress || undefined,
       adopterPostalCode,
       adopterCity,
       adopterPhone1,
@@ -167,10 +167,13 @@ export function GenerateContractForm({
         />
       </Field>
 
-      <Field label="Adresse" htmlFor="contract-adopter-address">
+      <Field
+        label="Adresse"
+        htmlFor="contract-adopter-address"
+        hint="Facultative : cette information n'est pas demandée dans le formulaire d'adoption."
+      >
         <Input
           id="contract-adopter-address"
-          required
           value={adopterAddress}
           onChange={(e) => setAdopterAddress(e.target.value)}
         />

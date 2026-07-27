@@ -35,7 +35,10 @@ test.describe("Invitation flow", () => {
     await inviteePage.getByLabel("Mot de passe").fill("NouveauMotDePasse123!");
     await inviteePage.getByRole("button", { name: "Créer mon compte" }).click();
 
+    // Not asserting the org's display name here: it's real, user-editable
+    // data (not a fixture this suite controls), so it can legitimately
+    // differ from whatever global-setup.ts named it on first creation.
     await expect(inviteePage).toHaveURL(/\/organisations\//);
-    await expect(inviteePage.getByText("Asso Test")).toBeVisible();
+    await expect(inviteePage.getByRole("link", { name: "Tableau de bord" })).toBeVisible();
   });
 });

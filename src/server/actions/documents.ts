@@ -93,15 +93,17 @@ export async function sendEngagementCertificate(
 
 const generateContractSchema = z.object({
   organizationId: z.string().uuid(),
-  animalId: z.string().uuid(),
+  animalId: z.string().uuid({ message: "Sélectionnez un animal." }),
   adoptionApplicationId: z.string().uuid().optional(),
-  toEmail: z.string().email(),
+  toEmail: z.string().email("L'email du destinataire est invalide."),
 
-  adopterFullName: z.string().min(1).max(200),
-  adopterAddress: z.string().min(1),
-  adopterPostalCode: z.string().min(1).max(10),
-  adopterCity: z.string().min(1).max(120),
-  adopterPhone1: z.string().min(1).max(30),
+  adopterFullName: z.string().min(1, "Le nom de l'adoptant·e est requis.").max(200),
+  // Not collected by the public adoption form, so left to the admin's
+  // discretion — the contract is still valid with this line left blank.
+  adopterAddress: z.string().optional(),
+  adopterPostalCode: z.string().min(1, "Le code postal est requis.").max(10),
+  adopterCity: z.string().min(1, "La ville est requise.").max(120),
+  adopterPhone1: z.string().min(1, "Le téléphone est requis.").max(30),
   adopterPhone2: z.string().max(30).optional(),
 
   sterilizationDone: z.boolean(),
@@ -113,7 +115,7 @@ const generateContractSchema = z.object({
   freeDonationReason: z.string().optional(),
   paymentMethod: z.enum(["especes", "cheque", "virement", "cb"]),
 
-  signaturePlace: z.string().min(1).max(150),
+  signaturePlace: z.string().min(1, "Le lieu de signature est requis.").max(150),
   signatureDate: dateString,
 });
 
@@ -124,7 +126,11 @@ async function buildContractPdfBytes(input: GenerateContractInput) {
   const session = await auth();
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
-  const data = generateContractSchema.parse(input);
+  const parsed = generateContractSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Certains champs du formulaire sont invalides.");
+  }
+  const data = parsed.data;
   await requireAdmin(session.user.id, data.organizationId);
 
   const { animal, organization } = await loadAnimalAndOrganization(
@@ -146,7 +152,7 @@ async function buildContractPdfBytes(input: GenerateContractInput) {
     healthCertificateOk: data.healthCertificateOk,
     adopter: {
       fullName: data.adopterFullName,
-      address: data.adopterAddress,
+      address: data.adopterAddress ?? "",
       postalCode: data.adopterPostalCode,
       city: data.adopterCity,
       phone1: data.adopterPhone1,
