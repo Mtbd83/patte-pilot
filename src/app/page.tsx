@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Home, Package, HeartHandshake, Wallet, ArrowRight } from "lucide-react";
+import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 
 const features = [
@@ -27,7 +28,11 @@ const features = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await auth();
+  const loggedIn = Boolean(session?.user?.id);
+  const ctaHref = loggedIn ? "/apres-connexion" : "/connexion";
+
   return (
     <div className="min-h-dvh bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
@@ -37,7 +42,7 @@ export default function HomePage() {
             <img src="/pattepilot-logo.svg" alt="PattePilot" className="h-40 w-auto" />
           </div>
           <Button asChild size="sm">
-            <Link href="/connexion">Connexion</Link>
+            <Link href={ctaHref}>{loggedIn ? "Mon espace" : "Connexion"}</Link>
           </Button>
         </div>
       </header>
@@ -55,7 +60,7 @@ export default function HomePage() {
             stock et vos finances — pour vous concentrer sur l&apos;essentiel.
           </p>
           <Button asChild size="lg" className="mt-2">
-            <Link href="/connexion">
+            <Link href={ctaHref}>
               Accéder à mon espace <ArrowRight />
             </Link>
           </Button>
@@ -92,7 +97,7 @@ export default function HomePage() {
             Connectez-vous dès maintenant et retrouvez toutes vos informations en un seul endroit.
           </p>
           <Button asChild size="lg" className="mt-2">
-            <Link href="/connexion">Se connecter</Link>
+            <Link href={ctaHref}>{loggedIn ? "Accéder à mon espace" : "Se connecter"}</Link>
           </Button>
         </div>
       </section>
