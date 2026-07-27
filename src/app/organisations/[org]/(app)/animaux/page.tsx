@@ -93,7 +93,7 @@ export default async function AnimauxPage({
         </TableHeader>
         <TableBody>
           {animalsList.map((animal) => {
-            const boosterOwed = animal.healthChecklist ? isBoosterOwed(animal.healthChecklist) : false;
+            const boosterOwed = animal.healthChecklist ? isBoosterOwed(animal.healthChecklist, animal.status) : false;
             const dueDate = boosterOwed ? boosterDueDate(animal.healthChecklist!) : null;
             const nextAction = statusNextAction(animal);
 

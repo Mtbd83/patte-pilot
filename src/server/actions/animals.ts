@@ -358,8 +358,8 @@ export async function listAnimalsPage(input: z.infer<typeof listAnimalsPageSchem
   });
 
   const sorted = [...all].sort((a, b) => {
-    const aOwed = a.healthChecklist ? isBoosterOwed(a.healthChecklist) : false;
-    const bOwed = b.healthChecklist ? isBoosterOwed(b.healthChecklist) : false;
+    const aOwed = a.healthChecklist ? isBoosterOwed(a.healthChecklist, a.status) : false;
+    const bOwed = b.healthChecklist ? isBoosterOwed(b.healthChecklist, b.status) : false;
     if (aOwed !== bOwed) return aOwed ? -1 : 1;
 
     const rankDiff = animalStatusRank(a.status) - animalStatusRank(b.status);
@@ -402,6 +402,6 @@ export async function listAnimalsWithBoosterDue(
   });
 
   return all
-    .filter((a) => a.healthChecklist && isBoosterDueWithin(a.healthChecklist, withinDays))
+    .filter((a) => a.healthChecklist && isBoosterDueWithin(a.healthChecklist, withinDays, a.status))
     .sort((a, b) => boosterDueDate(a.healthChecklist!)!.localeCompare(boosterDueDate(b.healthChecklist!)!));
 }

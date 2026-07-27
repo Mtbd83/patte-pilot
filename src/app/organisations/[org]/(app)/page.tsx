@@ -65,7 +65,7 @@ export default async function OrganizationPage({
           <CardContent className="flex flex-col gap-2">
             {animalsWithBoosterDue.map((animal) => {
               const due = boosterDueDate(animal.healthChecklist!);
-              const overdue = isBoosterOverdue(animal.healthChecklist!);
+              const overdue = isBoosterOverdue(animal.healthChecklist!, animal.status);
               return (
                 <Link
                   key={animal.id}

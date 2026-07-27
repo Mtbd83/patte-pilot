@@ -31,14 +31,24 @@ export function boosterDueDate(checklist: Pick<AnimalHealthChecklist, "firstVacc
   return due.toISOString().slice(0, 10);
 }
 
-/** True once the first vaccine is done but the booster itself still isn't — the booster is "owed" regardless of whether its due date has passed yet. */
-export function isBoosterOwed(checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "boosterDone">): boolean {
+/** Statuses where the association is no longer the one responsible for the animal's care — the adopter takes it from here. */
+const STATUSES_WITHOUT_BOOSTER_REMINDER: readonly AnimalStatus[] = ["adopte", "archive"];
+
+/** True once the first vaccine is done but the booster itself still isn't — the booster is "owed" regardless of whether its due date has passed yet. Never true once adopted/archived: it's the adopter's responsibility from then on. */
+export function isBoosterOwed(
+  checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "boosterDone">,
+  status?: AnimalStatus,
+): boolean {
+  if (status && STATUSES_WITHOUT_BOOSTER_REMINDER.includes(status)) return false;
   return checklist.firstVaccineDone && !checklist.boosterDone;
 }
 
 /** Owed AND past its expected due date — the case that should be flagged in red. */
-export function isBoosterOverdue(checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "firstVaccineDate" | "boosterDone">): boolean {
-  if (!isBoosterOwed(checklist)) return false;
+export function isBoosterOverdue(
+  checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "firstVaccineDate" | "boosterDone">,
+  status?: AnimalStatus,
+): boolean {
+  if (!isBoosterOwed(checklist, status)) return false;
   const due = boosterDueDate(checklist);
   if (!due) return false;
   return due < new Date().toISOString().slice(0, 10);
@@ -48,8 +58,9 @@ export function isBoosterOverdue(checklist: Pick<AnimalHealthChecklist, "firstVa
 export function isBoosterDueWithin(
   checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "firstVaccineDate" | "boosterDone">,
   days = 14,
+  status?: AnimalStatus,
 ): boolean {
-  if (!isBoosterOwed(checklist)) return false;
+  if (!isBoosterOwed(checklist, status)) return false;
   const due = boosterDueDate(checklist);
   if (!due) return false;
   const limit = new Date();
