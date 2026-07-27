@@ -9,9 +9,14 @@ import {
   Users,
   Settings,
   ArrowRight,
+  Syringe,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
+import { listAnimalsWithBoosterDue } from "@/server/actions/animals";
+import { boosterDueDate, isBoosterOverdue } from "@/lib/animal-care";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 const MODULES = [
   { href: "animaux", label: "Animaux", description: "Fiches, statuts, checklist santé.", icon: PawPrint },
@@ -34,12 +39,50 @@ export default async function OrganizationPage({
   const organization = await findOrganizationByIdentifier(params.org);
   if (!organization) return null;
 
+  const animalsWithBoosterDue = await listAnimalsWithBoosterDue({
+    organizationId: organization.id,
+    withinDays: 14,
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold">Tableau de bord</h1>
         <p className="mt-1 text-muted-foreground">Bienvenue sur votre espace de gestion.</p>
       </div>
+
+      {animalsWithBoosterDue.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Syringe className="size-4 text-destructive" />
+              Rappels à faire dans les 2 semaines
+            </CardTitle>
+            <CardDescription>
+              Primo-vaccination faite, rappel pas encore enregistré, échéance proche ou dépassée.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {animalsWithBoosterDue.map((animal) => {
+              const due = boosterDueDate(animal.healthChecklist!);
+              const overdue = isBoosterOverdue(animal.healthChecklist!);
+              return (
+                <Link
+                  key={animal.id}
+                  href={`/organisations/${params.org}/animaux/${animal.id}`}
+                  className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+                >
+                  <span className="font-medium">{animal.name}</span>
+                  <Badge variant={overdue ? "destructive" : "warning"}>
+                    {due ? new Date(due).toLocaleDateString("fr-FR") : ""}
+                    {overdue ? " — dépassé" : ""}
+                  </Badge>
+                </Link>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {MODULES.map((module) => (

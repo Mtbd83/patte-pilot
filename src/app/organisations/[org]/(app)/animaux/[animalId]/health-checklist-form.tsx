@@ -29,6 +29,10 @@ export function HealthChecklistForm({
   const [sterilizationDate, setSterilizationDate] = useState(checklist.sterilizationDate ?? "");
   const [boosterDone, setBoosterDone] = useState(checklist.boosterDone);
   const [boosterDate, setBoosterDate] = useState(checklist.boosterDate ?? "");
+  const [dewormingDone, setDewormingDone] = useState(checklist.dewormingDone);
+  const [dewormingDate, setDewormingDate] = useState(checklist.dewormingDate ?? "");
+  const [externalTreatmentDone, setExternalTreatmentDone] = useState(checklist.externalTreatmentDone);
+  const [externalTreatmentDate, setExternalTreatmentDate] = useState(checklist.externalTreatmentDate ?? "");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +48,10 @@ export function HealthChecklistForm({
         sterilizationDate: sterilizationDate || undefined,
         boosterDone,
         boosterDate: boosterDate || undefined,
+        dewormingDone,
+        dewormingDate: dewormingDate || undefined,
+        externalTreatmentDone,
+        externalTreatmentDate: externalTreatmentDate || undefined,
       });
       toast.success("Checklist santé mise à jour");
       router.refresh();
@@ -81,6 +89,24 @@ export function HealthChecklistForm({
       setDone: setBoosterDone,
       date: boosterDate,
       setDate: setBoosterDate,
+    },
+    {
+      id: "checklist-deworming",
+      label: "Vermifuge fait",
+      dateLabel: "Date du vermifuge",
+      done: dewormingDone,
+      setDone: setDewormingDone,
+      date: dewormingDate,
+      setDate: setDewormingDate,
+    },
+    {
+      id: "checklist-external-treatment",
+      label: "Déparasitage externe fait",
+      dateLabel: "Date du déparasitage externe",
+      done: externalTreatmentDone,
+      setDone: setExternalTreatmentDone,
+      date: externalTreatmentDate,
+      setDate: setExternalTreatmentDate,
     },
   ];
 

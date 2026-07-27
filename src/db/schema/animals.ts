@@ -103,6 +103,12 @@ export const animalHealthChecklists = pgTable(
     boosterDone: boolean("booster_done").default(false).notNull(),
     boosterDate: date("booster_date"),
 
+    dewormingDone: boolean("deworming_done").default(false).notNull(),
+    dewormingDate: date("deworming_date"),
+
+    externalTreatmentDone: boolean("external_treatment_done").default(false).notNull(),
+    externalTreatmentDate: date("external_treatment_date"),
+
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({

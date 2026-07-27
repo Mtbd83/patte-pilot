@@ -14,6 +14,7 @@ import {
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
 import { statusRequiresFosterFamily } from "@/lib/animal-status";
+import { animalStatusRank, boosterDueDate, isBoosterDueWithin, isBoosterOwed } from "@/lib/animal-care";
 import { dateString } from "@/lib/validation";
 import { uploadImage } from "@/lib/uploads";
 
@@ -36,6 +37,10 @@ const createAnimalSchema = z.object({
   sterilizationDate: dateString.optional(),
   boosterDone: z.boolean().default(false),
   boosterDate: dateString.optional(),
+  dewormingDone: z.boolean().default(false),
+  dewormingDate: dateString.optional(),
+  externalTreatmentDone: z.boolean().default(false),
+  externalTreatmentDate: dateString.optional(),
 });
 
 export type CreateAnimalInput = z.input<typeof createAnimalSchema>;
@@ -86,6 +91,10 @@ export async function createAnimal(input: CreateAnimalInput) {
       sterilizationDate: data.sterilizationDate,
       boosterDone: data.boosterDone,
       boosterDate: data.boosterDate,
+      dewormingDone: data.dewormingDone,
+      dewormingDate: data.dewormingDate,
+      externalTreatmentDone: data.externalTreatmentDone,
+      externalTreatmentDate: data.externalTreatmentDate,
     });
 
     if (data.fosterFamilyId) {
@@ -216,11 +225,18 @@ export async function changeAnimalStatus(input: ChangeAnimalStatusInput) {
 
   return db.transaction(async (tx) => {
     const nextFosterFamilyId = requiresFosterFamily ? data.fosterFamilyId! : null;
+    const resolvedAdoptionDate =
+      data.status === "adopte" ? data.adoptionDate ?? new Date().toISOString().slice(0, 10) : null;
 
     if (animal.currentFosterFamilyId && animal.currentFosterFamilyId !== nextFosterFamilyId) {
+      // When the placement is closing because the animal was adopted, the
+      // placement's end date should reflect the actual adoption date (which
+      // may have been entered after the fact) rather than the moment this
+      // action happens to run.
+      const endedAt = data.status === "adopte" && resolvedAdoptionDate ? new Date(resolvedAdoptionDate) : new Date();
       await tx
         .update(animalPlacements)
-        .set({ endedAt: new Date() })
+        .set({ endedAt })
         .where(
           and(
             eq(animalPlacements.animalId, animal.id),
@@ -243,10 +259,7 @@ export async function changeAnimalStatus(input: ChangeAnimalStatusInput) {
       .set({
         status: data.status,
         currentFosterFamilyId: nextFosterFamilyId,
-        adoptionDate:
-          data.status === "adopte"
-            ? data.adoptionDate ?? new Date().toISOString().slice(0, 10)
-            : animal.adoptionDate,
+        adoptionDate: resolvedAdoptionDate ?? animal.adoptionDate,
         updatedAt: new Date(),
       })
       .where(eq(animals.id, animal.id))
@@ -265,6 +278,10 @@ const updateHealthChecklistSchema = z.object({
   sterilizationDate: dateString.optional(),
   boosterDone: z.boolean().optional(),
   boosterDate: dateString.optional(),
+  dewormingDone: z.boolean().optional(),
+  dewormingDate: dateString.optional(),
+  externalTreatmentDone: z.boolean().optional(),
+  externalTreatmentDate: dateString.optional(),
 });
 
 export type UpdateHealthChecklistInput = z.infer<typeof updateHealthChecklistSchema>;
@@ -311,4 +328,80 @@ export async function listAnimals(input: z.infer<typeof listAnimalsSchema>) {
     orderBy: desc(animals.createdAt),
     with: { healthChecklist: true, currentFosterFamily: true },
   });
+}
+
+const ANIMALS_PAGE_SIZE = 20;
+
+const listAnimalsPageSchema = z.object({
+  organizationId: z.string().uuid(),
+  status: z.enum(animalStatusEnum.enumValues).optional(),
+  page: z.number().int().min(1).default(1),
+});
+
+/**
+ * Any member: the paginated, triage-ordered animal list used by the Animaux
+ * page — animals with an owed booster first, then by
+ * `ANIMAL_STATUS_ORDER`, most recent first within each group.
+ */
+export async function listAnimalsPage(input: z.infer<typeof listAnimalsPageSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId, status, page } = listAnimalsPageSchema.parse(input);
+  await requireRole(session.user.id, organizationId, ["admin", "benevole", "famille_accueil"]);
+
+  const all = await db.query.animals.findMany({
+    where: status
+      ? and(eq(animals.organizationId, organizationId), eq(animals.status, status))
+      : eq(animals.organizationId, organizationId),
+    with: { healthChecklist: true, currentFosterFamily: true },
+  });
+
+  const sorted = [...all].sort((a, b) => {
+    const aOwed = a.healthChecklist ? isBoosterOwed(a.healthChecklist) : false;
+    const bOwed = b.healthChecklist ? isBoosterOwed(b.healthChecklist) : false;
+    if (aOwed !== bOwed) return aOwed ? -1 : 1;
+
+    const rankDiff = animalStatusRank(a.status) - animalStatusRank(b.status);
+    if (rankDiff !== 0) return rankDiff;
+
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
+
+  const total = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(total / ANIMALS_PAGE_SIZE));
+  const start = (page - 1) * ANIMALS_PAGE_SIZE;
+
+  return {
+    animals: sorted.slice(start, start + ANIMALS_PAGE_SIZE),
+    total,
+    page,
+    pageSize: ANIMALS_PAGE_SIZE,
+    totalPages,
+  };
+}
+
+const listAnimalsWithBoosterDueSchema = z.object({
+  organizationId: z.string().uuid(),
+  withinDays: z.number().int().min(1).default(14),
+});
+
+/** Any member: animals whose booster is owed and due within `withinDays` (including already-overdue ones) — used for the dashboard shortcut. */
+export async function listAnimalsWithBoosterDue(
+  input: z.infer<typeof listAnimalsWithBoosterDueSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId, withinDays } = listAnimalsWithBoosterDueSchema.parse(input);
+  await requireRole(session.user.id, organizationId, ["admin", "benevole", "famille_accueil"]);
+
+  const all = await db.query.animals.findMany({
+    where: eq(animals.organizationId, organizationId),
+    with: { healthChecklist: true },
+  });
+
+  return all
+    .filter((a) => a.healthChecklist && isBoosterDueWithin(a.healthChecklist, withinDays))
+    .sort((a, b) => boosterDueDate(a.healthChecklist!)!.localeCompare(boosterDueDate(b.healthChecklist!)!));
 }

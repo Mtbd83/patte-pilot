@@ -34,7 +34,7 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2 font-semibold">
             <PawPrint className="size-5 text-primary" />
-            Anim Admin
+            PattePilot
           </div>
           <Button asChild size="sm">
             <Link href="/connexion">Connexion</Link>
@@ -101,7 +101,7 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:px-6">
           <div className="flex items-center gap-2">
             <PawPrint className="size-4" />
-            <span className="font-semibold text-foreground">Anim Admin</span>
+            <span className="font-semibold text-foreground">PattePilot</span>
           </div>
           <p>© {new Date().getFullYear()} — Fait avec ❤️ pour les animaux</p>
         </div>

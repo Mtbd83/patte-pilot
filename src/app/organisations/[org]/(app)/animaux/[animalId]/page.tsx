@@ -180,6 +180,22 @@ export default async function AnimalDetailPage({
                       : "Non fait"
                   }
                 />
+                <InfoRow
+                  label="Vermifuge"
+                  value={
+                    animal.healthChecklist.dewormingDone
+                      ? `Fait${animal.healthChecklist.dewormingDate ? ` (${animal.healthChecklist.dewormingDate})` : ""}`
+                      : "Non fait"
+                  }
+                />
+                <InfoRow
+                  label="Déparasitage externe"
+                  value={
+                    animal.healthChecklist.externalTreatmentDone
+                      ? `Fait${animal.healthChecklist.externalTreatmentDate ? ` (${animal.healthChecklist.externalTreatmentDate})` : ""}`
+                      : "Non fait"
+                  }
+                />
               </dl>
             ))}
         </CardContent>

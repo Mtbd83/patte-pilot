@@ -9,7 +9,7 @@ export default function ConnexionPage() {
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
           <PawPrint className="size-8 text-primary" />
-          <h1 className="text-xl font-semibold">Anim Admin</h1>
+          <h1 className="text-xl font-semibold">PattePilot</h1>
         </div>
         <Card>
           <CardHeader>

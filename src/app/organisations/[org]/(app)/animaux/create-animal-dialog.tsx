@@ -63,6 +63,10 @@ export function CreateAnimalDialog({
   const [sterilizationDate, setSterilizationDate] = useState("");
   const [boosterDone, setBoosterDone] = useState(false);
   const [boosterDate, setBoosterDate] = useState("");
+  const [dewormingDone, setDewormingDone] = useState(false);
+  const [dewormingDate, setDewormingDate] = useState("");
+  const [externalTreatmentDone, setExternalTreatmentDone] = useState(false);
+  const [externalTreatmentDate, setExternalTreatmentDate] = useState("");
 
   const needsFosterFamily = statusRequiresFosterFamily(status);
 
@@ -93,6 +97,24 @@ export function CreateAnimalDialog({
       setDone: setBoosterDone,
       date: boosterDate,
       setDate: setBoosterDate,
+    },
+    {
+      id: "animal-deworming",
+      label: "Vermifuge fait",
+      dateLabel: "Date du vermifuge",
+      done: dewormingDone,
+      setDone: setDewormingDone,
+      date: dewormingDate,
+      setDate: setDewormingDate,
+    },
+    {
+      id: "animal-external-treatment",
+      label: "Déparasitage externe fait",
+      dateLabel: "Date du déparasitage externe",
+      done: externalTreatmentDone,
+      setDone: setExternalTreatmentDone,
+      date: externalTreatmentDate,
+      setDate: setExternalTreatmentDate,
     },
   ];
 
@@ -126,6 +148,10 @@ export function CreateAnimalDialog({
     setSterilizationDate("");
     setBoosterDone(false);
     setBoosterDate("");
+    setDewormingDone(false);
+    setDewormingDate("");
+    setExternalTreatmentDone(false);
+    setExternalTreatmentDate("");
     setError(null);
   }
 
@@ -159,6 +185,10 @@ export function CreateAnimalDialog({
         sterilizationDate: sterilizationDate || undefined,
         boosterDone,
         boosterDate: boosterDate || undefined,
+        dewormingDone,
+        dewormingDate: dewormingDate || undefined,
+        externalTreatmentDone,
+        externalTreatmentDate: externalTreatmentDate || undefined,
       });
 
       if (photoFile) {
