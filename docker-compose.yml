@@ -1,17 +1,12 @@
 services:
   postgres:
-    container_name: animal-postgres
-    image: postgres:14-alpine
-    environment:
-      POSTGRES_USER: animal-admin
-      POSTGRES_PASSWORD: animal-admin
-      POSTGRES_DB: animal-admin
+    container_name: asso-saas-postgres
+    image: postgres:16-alpine
     ports:
-      - "5557:5432"
+      - 5544:5432
     volumes:
-      - ./.data/postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U animal-admin"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - ~/apps/asso-saas-postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=asso_saas
+      - POSTGRES_USER=asso_saas
+      - POSTGRES_DB=asso_saas
