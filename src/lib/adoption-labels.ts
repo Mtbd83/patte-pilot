@@ -4,6 +4,8 @@ import type {
   HousingZone,
   LivingSituation,
   ResidencyStatus,
+  ActivityLevel,
+  AloneTime,
 } from "@/db/schema";
 
 export const ADOPTION_STATUS_LABELS: Record<AdoptionApplicationStatus, string> = {
@@ -45,4 +47,18 @@ export const LIVING_SITUATION_LABELS: Record<LivingSituation, string> = {
   en_couple: "En couple",
   colocation: "En colocation",
   en_famille: "En famille",
+};
+
+export const ACTIVITY_LEVEL_LABELS: Record<ActivityLevel, string> = {
+  intense: "Intense",
+  modere: "Modéré",
+  faible: "Faible",
+};
+
+export const ALONE_TIME_LABELS: Record<AloneTime, string> = {
+  presque_aucune: "Presque aucune",
+  moins_2h: "- de 2h",
+  "2h_4h": "2h à 4h",
+  "4h_6h": "4h à 6h",
+  "8h_plus": "8h ou plus",
 };

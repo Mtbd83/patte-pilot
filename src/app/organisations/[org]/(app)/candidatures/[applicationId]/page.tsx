@@ -14,6 +14,8 @@ import {
   HOUSING_TYPE_LABELS,
   RESIDENCY_STATUS_LABELS,
   LIVING_SITUATION_LABELS,
+  ACTIVITY_LEVEL_LABELS,
+  ALONE_TIME_LABELS,
 } from "@/lib/adoption-labels";
 import { SPECIES_LABELS } from "@/lib/animal-labels";
 import { Badge } from "@/components/ui/badge";
@@ -174,7 +176,10 @@ export default async function CandidatureDetailPage({
               value={`${application.familySize ?? "—"} personne(s), dont ${application.childrenCount ?? 0} enfant(s)`}
             />
             <InfoRow label="Allergies" value={application.hasAllergies ? "Oui" : "Non"} />
-            <InfoRow label="Niveau d'activité" value={application.activityLevel || "—"} />
+            <InfoRow
+              label="Niveau d'activité"
+              value={application.activityLevel ? ACTIVITY_LEVEL_LABELS[application.activityLevel] : "—"}
+            />
             <InfoRow
               label="Accord familial"
               value={
@@ -206,7 +211,10 @@ export default async function CandidatureDetailPage({
           <dl>
             <InfoRow label="Référent" value={application.caretakerPerson || "—"} />
             <InfoRow label="Espace de sommeil" value={application.sleepingArea || "—"} />
-            <InfoRow label="Temps seul par jour" value={application.aloneTimePerDay || "—"} />
+            <InfoRow
+              label="Temps seul par jour"
+              value={application.aloneTimePerDay ? ALONE_TIME_LABELS[application.aloneTimePerDay] : "—"}
+            />
             {application.desiredSpecies === "chien" && (
               <>
                 <InfoRow label="Promenades par jour" value={application.dogWalksPerDay ?? "—"} />

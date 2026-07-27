@@ -8,6 +8,8 @@ import {
   HOUSING_TYPE_LABELS,
   RESIDENCY_STATUS_LABELS,
   LIVING_SITUATION_LABELS,
+  ACTIVITY_LEVEL_LABELS,
+  ALONE_TIME_LABELS,
 } from "@/lib/adoption-labels";
 import { SPECIES_LABELS } from "@/lib/animal-labels";
 import type {
@@ -16,6 +18,8 @@ import type {
   HousingZone,
   LivingSituation,
   ResidencyStatus,
+  ActivityLevel,
+  AloneTime,
 } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +33,8 @@ const HOUSING_ZONE_OPTIONS = Object.entries(HOUSING_ZONE_LABELS) as [HousingZone
 const HOUSING_TYPE_OPTIONS = Object.entries(HOUSING_TYPE_LABELS) as [HousingType, string][];
 const RESIDENCY_STATUS_OPTIONS = Object.entries(RESIDENCY_STATUS_LABELS) as [ResidencyStatus, string][];
 const LIVING_SITUATION_OPTIONS = Object.entries(LIVING_SITUATION_LABELS) as [LivingSituation, string][];
+const ACTIVITY_LEVEL_OPTIONS = Object.entries(ACTIVITY_LEVEL_LABELS) as [ActivityLevel, string][];
+const ALONE_TIME_OPTIONS = Object.entries(ALONE_TIME_LABELS) as [AloneTime, string][];
 const SPECIES_OPTIONS = Object.entries(SPECIES_LABELS) as [AnimalSpecies, string][];
 
 interface FormState {
@@ -54,7 +60,7 @@ interface FormState {
   familySize: string;
   childrenCount: string;
   hasAllergies: boolean;
-  activityLevel: string;
+  activityLevel: ActivityLevel | "";
   familyAgrees: boolean;
   familyDisagreementReason: string;
 
@@ -63,7 +69,7 @@ interface FormState {
 
   caretakerPerson: string;
   sleepingArea: string;
-  aloneTimePerDay: string;
+  aloneTimePerDay: AloneTime | "";
   dogWalksPerDay: string;
   dogMiddayWalkPossible: boolean;
   vacationPlan: string;
@@ -203,10 +209,10 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <FieldRow>
-            <Field label="Prénom" htmlFor="ad-first-name" className="flex-1">
+            <Field label="Prénom" htmlFor="ad-first-name" className="flex-1" required>
               <Input id="ad-first-name" required value={form.firstName} onChange={(e) => set("firstName", e.target.value)} />
             </Field>
-            <Field label="Nom" htmlFor="ad-last-name" className="flex-1">
+            <Field label="Nom" htmlFor="ad-last-name" className="flex-1" required>
               <Input id="ad-last-name" required value={form.lastName} onChange={(e) => set("lastName", e.target.value)} />
             </Field>
           </FieldRow>
@@ -214,15 +220,15 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             <Input id="ad-city" value={form.city} onChange={(e) => set("city", e.target.value)} />
           </Field>
           <FieldRow>
-            <Field label="Téléphone" htmlFor="ad-phone" className="flex-1">
+            <Field label="Téléphone" htmlFor="ad-phone" className="flex-1" required>
               <Input id="ad-phone" required value={form.phone} onChange={(e) => set("phone", e.target.value)} />
             </Field>
-            <Field label="Adresse mail" htmlFor="ad-email" className="flex-1">
+            <Field label="Adresse mail" htmlFor="ad-email" className="flex-1" required>
               <Input id="ad-email" type="email" required value={form.email} onChange={(e) => set("email", e.target.value)} />
             </Field>
           </FieldRow>
           <FieldRow>
-            <Field label="Quel âge avez-vous ?" htmlFor="ad-age" className="flex-1">
+            <Field label="Quel âge avez-vous ?" htmlFor="ad-age" className="flex-1" required>
               <Input id="ad-age" required type="number" min="0" value={form.age} onChange={(e) => set("age", e.target.value)} />
             </Field>
             <Field label="Ainsi que votre conjoint·e ? (si applicable)" htmlFor="ad-spouse-age" className="flex-1">
@@ -236,7 +242,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             </Field>
           </FieldRow>
           <FieldRow>
-            <Field label="Quelle est votre profession ?" htmlFor="ad-profession" className="flex-1">
+            <Field label="Quelle est votre profession ?" htmlFor="ad-profession" className="flex-1" required>
               <Input id="ad-profession" required value={form.profession} onChange={(e) => set("profession", e.target.value)} />
             </Field>
             <Field label="Et celle de votre conjoint·e ? (si applicable)" htmlFor="ad-spouse-profession" className="flex-1">
@@ -286,7 +292,12 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             </Field>
           </FieldRow>
           <FieldRow>
-            <Field label="Superficie du jardin (m²)" htmlFor="ad-garden-area" className="flex-1">
+            <Field
+              label="Superficie du jardin (m²)"
+              htmlFor="ad-garden-area"
+              className="flex-1"
+              required={form.housingType === "maison"}
+            >
               <Input
                 id="ad-garden-area"
                 type="number"
@@ -296,7 +307,12 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
                 onChange={(e) => set("gardenAreaM2", e.target.value)}
               />
             </Field>
-            <Field label="Hauteur des clôtures (précisez si pas clôturé)" htmlFor="ad-fence-height" className="flex-1">
+            <Field
+              label="Hauteur des clôtures (précisez si pas clôturé)"
+              htmlFor="ad-fence-height"
+              className="flex-1"
+              required={form.housingType === "maison"}
+            >
               <Input id="ad-fence-height" required={form.housingType === "maison" ? true: false} value={form.fenceHeight} onChange={(e) => set("fenceHeight", e.target.value)} />
             </Field>
           </FieldRow>
@@ -311,7 +327,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             />
           </Field>
           <FieldRow>
-            <Field label="Vous êtes" htmlFor="ad-residency-status" className="flex-1">
+            <Field label="Vous êtes" htmlFor="ad-residency-status" className="flex-1" required>
               <Select
                 id="ad-residency-status"
                 value={form.residencyStatus}
@@ -334,7 +350,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
               />
             </Field>
           </FieldRow>
-          <Field label="Vivez-vous" htmlFor="ad-living-situation">
+          <Field label="Vivez-vous" htmlFor="ad-living-situation" required>
             <Select
               id="ad-living-situation"
               value={form.livingSituation}
@@ -358,7 +374,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <FieldRow>
-            <Field label="De combien de personnes se compose la famille ?" htmlFor="ad-family-size" className="flex-1">
+            <Field label="De combien de personnes se compose la famille ?" htmlFor="ad-family-size" className="flex-1" required>
               <Input
                 id="ad-family-size"
                 type="number"
@@ -368,7 +384,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
                 onChange={(e) => set("familySize", e.target.value)}
               />
             </Field>
-            <Field label="Dont combien d'enfants ?" htmlFor="ad-children-count" className="flex-1">
+            <Field label="Dont combien d'enfants ?" htmlFor="ad-children-count" className="flex-1" required>
               <Input
                 id="ad-children-count"
                 type="number"
@@ -383,10 +399,22 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             <Checkbox id="ad-allergies" checked={form.hasAllergies} onChange={(e) => set("hasAllergies", e.target.checked)} />
             Y a-t-il des cas d&apos;allergie dans la famille ?
           </label>
-          <Field label="Quel est le niveau d'activité de la famille ?" htmlFor="ad-activity-level">
-            <Input id="ad-activity-level" value={form.activityLevel} onChange={(e) => set("activityLevel", e.target.value)} />
+          <Field label="Quel est le niveau d'activité de la famille ?" htmlFor="ad-activity-level" required>
+            <Select
+              id="ad-activity-level"
+              value={form.activityLevel}
+              required
+              onChange={(e) => set("activityLevel", e.target.value as ActivityLevel)}
+            >
+              <option value="">—</option>
+              {ACTIVITY_LEVEL_OPTIONS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
           </Field>
-          <Field label="Toute la famille est-elle d'accord pour accueillir l'animal ?" htmlFor="ad-family-agrees">
+          <Field label="Toute la famille est-elle d'accord pour accueillir l'animal ?" htmlFor="ad-family-agrees" required>
             <Select
               id="ad-family-agrees"
               value={form.familyAgrees ? "oui" : "non"}
@@ -398,7 +426,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             </Select>
           </Field>
           {!form.familyAgrees && (
-            <Field label="Si non, pourquoi ?" htmlFor="ad-family-disagreement">
+            <Field label="Si non, pourquoi ?" htmlFor="ad-family-disagreement" required>
               <Textarea
                 id="ad-family-disagreement"
                 required
@@ -427,6 +455,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             <Field
               label="Précisez vos animaux (type / race / âge / si stérilisé / dernière date de vaccin)"
               htmlFor="ad-other-animals-details"
+              required
             >
               <Textarea
                 id="ad-other-animals-details"
@@ -450,8 +479,20 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
           <Field label="Dans quel espace l'animal dormira ?" htmlFor="ad-sleeping-area">
             <Input id="ad-sleeping-area" value={form.sleepingArea} onChange={(e) => set("sleepingArea", e.target.value)} />
           </Field>
-          <Field label="Combien de temps l'animal restera seul par jour ?" htmlFor="ad-alone-time">
-            <Input id="ad-alone-time" value={form.aloneTimePerDay} onChange={(e) => set("aloneTimePerDay", e.target.value)} />
+          <Field label="Combien de temps l'animal restera seul par jour ?" htmlFor="ad-alone-time" required>
+            <Select
+              id="ad-alone-time"
+              value={form.aloneTimePerDay}
+              required
+              onChange={(e) => set("aloneTimePerDay", e.target.value as AloneTime)}
+            >
+              <option value="">—</option>
+              {ALONE_TIME_OPTIONS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
           </Field>
           {form.desiredSpecies === "chien" && (
             <>
@@ -474,7 +515,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
               </label>
             </>
           )}
-          <Field label="Que ferez-vous de votre animal pendant les weekends / vacances ?" htmlFor="ad-vacation-plan">
+          <Field label="Que ferez-vous de votre animal pendant les weekends / vacances ?" htmlFor="ad-vacation-plan" required>
             <Textarea id="ad-vacation-plan" required value={form.vacationPlan} onChange={(e) => set("vacationPlan", e.target.value)} />
           </Field>
         </CardContent>
@@ -485,7 +526,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
           <CardTitle>Votre souhait d&apos;adoption</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Field label="Type d'animal souhaité" htmlFor="ad-desired-species">
+          <Field label="Type d'animal souhaité" htmlFor="ad-desired-species" required>
             <Select
               id="ad-desired-species"
               value={form.desiredSpecies}

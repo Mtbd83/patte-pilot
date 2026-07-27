@@ -18,6 +18,17 @@ test("public adoption form → admin review → certificate + contract sent", as
   await page.getByLabel("Nom", { exact: true }).fill(`Dupont-${suffix}`);
   await page.getByLabel("Téléphone").fill("0600000000");
   await page.getByLabel("Adresse mail").fill(applicantEmail);
+  await page.getByLabel("Quel âge avez-vous ?").fill("35");
+  await page.getByLabel("Quelle est votre profession ?").fill("Vétérinaire");
+  await page.getByLabel("Vous êtes").selectOption({ label: "Propriétaire" });
+  await page.getByLabel("Vivez-vous", { exact: true }).selectOption({ label: "En couple" });
+  await page.getByLabel("De combien de personnes se compose la famille ?").fill("2");
+  await page.getByLabel("Dont combien d'enfants ?").fill("0");
+  await page.getByLabel("Quel est le niveau d'activité de la famille ?").selectOption({ label: "Modéré" });
+  await page.getByLabel("Combien de temps l'animal restera seul par jour ?").selectOption({ label: "2h à 4h" });
+  await page
+    .getByLabel("Que ferez-vous de votre animal pendant les weekends / vacances ?")
+    .fill("Il viendra avec nous ou restera avec un proche.");
   await page.getByLabel("Type d'animal souhaité").selectOption({ label: "Chat" });
   await page.getByRole("button", { name: "Envoyer ma candidature" }).click();
   await expect(page.getByRole("heading", { name: "Merci !" })).toBeVisible();

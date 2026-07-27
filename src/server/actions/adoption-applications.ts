@@ -10,6 +10,8 @@ import {
   housingZoneEnum,
   residencyStatusEnum,
   livingSituationEnum,
+  activityLevelEnum,
+  aloneTimeEnum,
   animalSpeciesEnum,
   organizations,
 } from "@/db/schema";
@@ -44,7 +46,7 @@ const submitAdoptionApplicationSchema = z.object({
   familySize: z.coerce.number().int().min(1).optional(),
   childrenCount: z.coerce.number().int().min(0).default(0),
   hasAllergies: z.boolean().default(false),
-  activityLevel: z.string().max(120).optional(),
+  activityLevel: z.enum(activityLevelEnum.enumValues).optional(),
   familyAgrees: z.boolean().default(true),
   familyDisagreementReason: z.string().optional(),
 
@@ -55,7 +57,7 @@ const submitAdoptionApplicationSchema = z.object({
   // Organisation du quotidien
   caretakerPerson: z.string().max(200).optional(),
   sleepingArea: z.string().max(200).optional(),
-  aloneTimePerDay: z.string().max(120).optional(),
+  aloneTimePerDay: z.enum(aloneTimeEnum.enumValues).optional(),
   dogWalksPerDay: z.coerce.number().int().min(0).optional(),
   dogMiddayWalkPossible: z.boolean().optional(),
   vacationPlan: z.string().optional(),

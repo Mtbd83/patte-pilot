@@ -45,6 +45,20 @@ export const livingSituationEnum = pgEnum("living_situation", [
   "en_famille",
 ]);
 
+export const activityLevelEnum = pgEnum("activity_level", [
+  "intense",
+  "modere",
+  "faible",
+]);
+
+export const aloneTimeEnum = pgEnum("alone_time_per_day", [
+  "presque_aucune",
+  "moins_2h",
+  "2h_4h",
+  "4h_6h",
+  "8h_plus",
+]);
+
 /**
  * A submitted adoption application, mirroring the fields of the current
  * Google Form so imports/migration stay straightforward. Kept as one wide
@@ -84,7 +98,7 @@ export const adoptionApplications = pgTable(
     familySize: integer("family_size"),
     childrenCount: integer("children_count").default(0),
     hasAllergies: boolean("has_allergies").default(false),
-    activityLevel: varchar("activity_level", { length: 120 }),
+    activityLevel: activityLevelEnum("activity_level"),
     familyAgrees: boolean("family_agrees").default(true).notNull(),
     familyDisagreementReason: text("family_disagreement_reason"),
 
@@ -95,7 +109,7 @@ export const adoptionApplications = pgTable(
     // Organisation du quotidien
     caretakerPerson: varchar("caretaker_person", { length: 200 }),
     sleepingArea: varchar("sleeping_area", { length: 200 }),
-    aloneTimePerDay: varchar("alone_time_per_day", { length: 120 }),
+    aloneTimePerDay: aloneTimeEnum("alone_time_per_day"),
     dogWalksPerDay: integer("dog_walks_per_day"), // si adoption d'un chien
     dogMiddayWalkPossible: boolean("dog_midday_walk_possible"),
     vacationPlan: text("vacation_plan"), // weekends / vacances
@@ -144,3 +158,5 @@ export type HousingType = (typeof housingTypeEnum.enumValues)[number];
 export type HousingZone = (typeof housingZoneEnum.enumValues)[number];
 export type ResidencyStatus = (typeof residencyStatusEnum.enumValues)[number];
 export type LivingSituation = (typeof livingSituationEnum.enumValues)[number];
+export type ActivityLevel = (typeof activityLevelEnum.enumValues)[number];
+export type AloneTime = (typeof aloneTimeEnum.enumValues)[number];

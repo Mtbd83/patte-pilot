@@ -32,7 +32,11 @@
       "Bash(curl -s http://localhost:3000/organisations/asso-test/adopter)",
       "Bash(curl -s -w \"\\\\nHTTP_CODE:%{http_code}\\\\n\" http://localhost:3000/organisations/asso-test/adopter)",
       "Bash(npx drizzle-kit *)",
-      "Bash(npx tsx *)"
+      "Bash(npx tsx *)",
+      "Bash(grep -n \"Field label\\\\|Field$\\\\|required\" /home/mtbd83/repo/anim-admin/src/app/organisations/\\\\[org\\\\]/adopter/adoption-application-form.tsx)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/organisations/asso-test/adopter)",
+      "Bash(kill 24233 24234 24246)",
+      "Bash(disown)"
     ],
     "additionalDirectories": [
       "/tmp"
