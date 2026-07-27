@@ -262,7 +262,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <FieldRow>
-            <Field label="Votre logement est en zone" htmlFor="ad-housing-zone" className="flex-1">
+            <Field label="Votre logement est en zone" htmlFor="ad-housing-zone" className="flex-1" required>
               <Select
                 id="ad-housing-zone"
                 value={form.housingZone}
@@ -277,7 +277,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
                 ))}
               </Select>
             </Field>
-            <Field label="Votre logement est un/une" htmlFor="ad-housing-type" className="flex-1">
+            <Field label="Votre logement est un/une" htmlFor="ad-housing-type" className="flex-1" required>
               <Select
                 id="ad-housing-type"
                 value={form.housingType}
@@ -475,10 +475,10 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
           <CardTitle>Organisation du quotidien</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Field label="Qui se chargera de soigner (et sortir si chien) l'animal ?" htmlFor="ad-caretaker">
+          <Field label="Qui se chargera de soigner (et sortir si chien) l'animal ?" htmlFor="ad-caretaker" required>
             <Input id="ad-caretaker" required value={form.caretakerPerson} onChange={(e) => set("caretakerPerson", e.target.value)} />
           </Field>
-          <Field label="Dans quel espace l'animal dormira ?" htmlFor="ad-sleeping-area">
+          <Field label="Dans quel espace l'animal dormira ?" htmlFor="ad-sleeping-area" required>
             <Input id="ad-sleeping-area" required value={form.sleepingArea} onChange={(e) => set("sleepingArea", e.target.value)} />
           </Field>
           <Field label="Combien de temps l'animal restera seul par jour ?" htmlFor="ad-alone-time" required>

@@ -70,6 +70,8 @@ test.describe("Bénévole", () => {
     await page.getByLabel("Téléphone").fill("0600000000");
     await page.getByLabel("Adresse mail").fill(applicantEmail);
     await page.getByLabel("Quel âge avez-vous ?").fill("35");
+    await page.getByLabel("Votre logement est en zone").selectOption({ label: "Urbaine" });
+    await page.getByLabel("Votre logement est un/une").selectOption({ label: "Appartement" });
     await page.getByLabel("Quelle est votre profession ?").fill("Vétérinaire");
     await page.getByLabel("Vous êtes").selectOption({ label: "Propriétaire" });
     await page.getByLabel("Vivez-vous", { exact: true }).selectOption({ label: "En couple" });
@@ -80,6 +82,8 @@ test.describe("Bénévole", () => {
     await page
       .getByLabel("Que ferez-vous de votre animal pendant les weekends / vacances ?")
       .fill("Il viendra avec nous ou restera avec un proche.");
+    await page.getByLabel("Qui se chargera de soigner (et sortir si chien) l'animal ?").fill("Moi");
+    await page.getByLabel("Dans quel espace l'animal dormira ?").fill("Salon");
     await page.getByLabel("Type d'animal souhaité").selectOption({ label: "Chat" });
     await page.getByRole("button", { name: "Envoyer ma candidature" }).click();
     await expect(page.getByRole("heading", { name: "Merci !" })).toBeVisible();

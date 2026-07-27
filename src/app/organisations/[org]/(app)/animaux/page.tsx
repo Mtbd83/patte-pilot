@@ -6,6 +6,7 @@ import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
 import { listAnimalsPage } from "@/server/actions/animals";
 import { listFosterFamilies } from "@/server/actions/foster-families";
+import { getAccountingTotalsByAnimal } from "@/server/actions/accounting";
 import { SPECIES_LABELS, STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
 import { isBoosterOwed, boosterDueDate, statusNextAction } from "@/lib/animal-care";
 import type { AnimalStatus } from "@/db/schema";
@@ -43,6 +44,13 @@ export default async function AnimauxPage({
     listAnimalsPage({ organizationId: organization.id, status, page }),
     listFosterFamilies({ organizationId: organization.id }),
   ]);
+
+  const accountingTotals = isAdmin
+    ? await getAccountingTotalsByAnimal({
+        organizationId: organization.id,
+        animalIds: animalsList.map((animal) => animal.id),
+      })
+    : {};
 
   function pageHref(targetPage: number) {
     const params = new URLSearchParams();
@@ -88,6 +96,7 @@ export default async function AnimauxPage({
             <TableHead>Espèce</TableHead>
             <TableHead>Statut</TableHead>
             <TableHead>Famille d&apos;accueil</TableHead>
+            {isAdmin && <TableHead>Solde comptable</TableHead>}
             <TableHead>Prochaine action</TableHead>
           </TableRow>
         </TableHeader>
@@ -96,6 +105,7 @@ export default async function AnimauxPage({
             const boosterOwed = animal.healthChecklist ? isBoosterOwed(animal.healthChecklist, animal.status) : false;
             const dueDate = boosterOwed ? boosterDueDate(animal.healthChecklist!) : null;
             const nextAction = statusNextAction(animal);
+            const accountingTotal = accountingTotals[animal.id];
 
             return (
               <TableRow key={animal.id}>
@@ -128,6 +138,19 @@ export default async function AnimauxPage({
                     ? `${animal.currentFosterFamily.firstName} ${animal.currentFosterFamily.lastName}`
                     : "—"}
                 </TableCell>
+                {isAdmin && (
+                  <TableCell
+                    className={
+                      accountingTotal === undefined
+                        ? "text-muted-foreground"
+                        : accountingTotal < 0
+                          ? "text-destructive"
+                          : ""
+                    }
+                  >
+                    {accountingTotal === undefined ? "—" : `${accountingTotal.toFixed(2)} €`}
+                  </TableCell>
+                )}
                 <TableCell>
                   <div className="flex flex-col gap-0.5 text-sm">
                     {boosterOwed && (
@@ -144,7 +167,7 @@ export default async function AnimauxPage({
           })}
           {animalsList.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={isAdmin ? 6 : 5} className="py-8 text-center text-muted-foreground">
                 Aucun animal enregistré pour le moment.
               </TableCell>
             </TableRow>

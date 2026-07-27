@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { accountingEntries, accountingTypeEnum, accountingCategoryEnum } from "@/db/schema";
@@ -122,4 +122,42 @@ export async function getAccountingSummary(input: z.infer<typeof summarySchema>)
   }
 
   return { totalIn, totalOut, balance: totalIn - totalOut };
+}
+
+const totalsByAnimalSchema = z.object({
+  organizationId: z.string().uuid(),
+  animalIds: z.array(z.string().uuid()),
+});
+
+/**
+ * Admin-only: net balance (entrées - sorties) per animal, for the given
+ * animal ids — used to show a running cost/support total on the Animaux
+ * list without pulling every entry for the whole organization.
+ */
+export async function getAccountingTotalsByAnimal(
+  input: z.infer<typeof totalsByAnimalSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId, animalIds } = totalsByAnimalSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  if (animalIds.length === 0) return {};
+
+  const entries = await db.query.accountingEntries.findMany({
+    where: and(
+      eq(accountingEntries.organizationId, organizationId),
+      inArray(accountingEntries.animalId, animalIds),
+    ),
+  });
+
+  const totals: Record<string, number> = {};
+  for (const entry of entries) {
+    if (!entry.animalId) continue;
+    const amount = Number(entry.amount);
+    const signed = entry.type === "entree" ? amount : -amount;
+    totals[entry.animalId] = (totals[entry.animalId] ?? 0) + signed;
+  }
+  return totals;
 }
