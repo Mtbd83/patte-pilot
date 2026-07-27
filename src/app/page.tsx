@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PawPrint, Home, Package, HeartHandshake, Wallet, ArrowRight } from "lucide-react";
+import { Home, Package, HeartHandshake, Wallet, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const features = [
@@ -32,9 +32,9 @@ export default function HomePage() {
     <div className="min-h-dvh bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-2 font-semibold">
-            <PawPrint className="size-5 text-primary" />
-            PattePilot
+          <div className="flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/pattepilot-logo.svg" alt="PattePilot" className="h-40 w-auto" />
           </div>
           <Button asChild size="sm">
             <Link href="/connexion">Connexion</Link>
@@ -99,9 +99,9 @@ export default function HomePage() {
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:px-6">
-          <div className="flex items-center gap-2">
-            <PawPrint className="size-4" />
-            <span className="font-semibold text-foreground">PattePilot</span>
+          <div className="flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/pattepilot-logo.svg" alt="PattePilot" className="h-20 w-auto" />
           </div>
           <p>© {new Date().getFullYear()} — Fait avec ❤️ pour les animaux</p>
         </div>

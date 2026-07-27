@@ -53,7 +53,7 @@ export default async function CandidaturesPage({
         <h1 className="mt-1 text-2xl font-semibold">Candidatures d&apos;adoption</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Formulaire public à partager :{" "}
-          <Link href={publicFormPath} className="text-foreground hover:underline">
+          <Link href={publicFormPath} target="_blank" className="text-foreground hover:underline">
             {publicFormPath}
           </Link>
         </p>

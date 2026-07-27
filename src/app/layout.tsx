@@ -5,8 +5,8 @@ import "./globals.css";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "Anim Management",
-  description: "Created by Maud Tribaudeau",
+  title: "PattePilot",
+  description: "Créé par Maud Tribaudeau",
 };
 
 export default function RootLayout({

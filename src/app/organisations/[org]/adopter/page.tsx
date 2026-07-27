@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { PawPrint } from "lucide-react";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { AdoptionApplicationForm } from "./adoption-application-form";
 
@@ -24,7 +23,8 @@ export default async function AdopterPage({
               className="size-16 rounded-lg object-cover"
             />
           ) : (
-            <PawPrint className="size-8 text-primary" />
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/pattepilot-logo.svg" alt="" className="h-40 w-auto" />
           )}
           <h1 className="text-2xl font-semibold">Adopter chez {organization.name}</h1>
           <p className="text-sm text-muted-foreground">

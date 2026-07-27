@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Menu, X, LogOut, PawPrint } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -57,7 +57,8 @@ export function OrgSidebar({
       // eslint-disable-next-line @next/next/no-img-element
       <img src={logoUrl} alt="" className="size-5 shrink-0 rounded object-cover" />
     ) : (
-      <PawPrint className="size-5 text-primary" />
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src="/pattepilot-logo.svg" alt="" className="h-9 w-auto shrink-0" />
     );
   }
 

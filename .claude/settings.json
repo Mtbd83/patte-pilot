@@ -22,7 +22,15 @@
       "Bash(gh auth *)",
       "Bash(env)",
       "Bash(sed -i 's/isBoosterOwed\\(animal.healthChecklist\\)/isBoosterOwed\\(animal.healthChecklist, animal.status\\)/' \"src/app/organisations/[org]/\\(app\\)/animaux/page.tsx\")",
-      "Bash(sed -i 's/isBoosterOverdue\\(animal.healthChecklist!\\)/isBoosterOverdue\\(animal.healthChecklist!, animal.status\\)/' \"src/app/organisations/[org]/\\(app\\)/page.tsx\")"
+      "Bash(sed -i 's/isBoosterOverdue\\(animal.healthChecklist!\\)/isBoosterOverdue\\(animal.healthChecklist!, animal.status\\)/' \"src/app/organisations/[org]/\\(app\\)/page.tsx\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{content_type}\\\\n\" http://localhost:3000/icon.svg?)",
+      "Bash(curl -s http://localhost:3000/ -o /tmp/home.html)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:3000/icon.svg?5706aa09510557db\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:3000/pattepilot-logo.svg\")",
+      "Bash(npx eslint *)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(curl -s http://localhost:3000/organisations/asso-test/adopter)",
+      "Bash(curl -s -w \"\\\\nHTTP_CODE:%{http_code}\\\\n\" http://localhost:3000/organisations/asso-test/adopter)"
     ],
     "additionalDirectories": [
       "/tmp"
