@@ -7,9 +7,9 @@ import { organizationMembers } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { InviteMemberDialog } from "./invite-member-dialog";
+import { MemberRolesForm } from "./member-roles-form";
 
 export default async function MembresPage({
   params,
@@ -65,17 +65,11 @@ export default async function MembresPage({
             <TableRow key={member.id}>
               <TableCell className="font-medium">{member.user.email}</TableCell>
               <TableCell>
-                <div className="flex flex-wrap gap-1">
-                  {member.roles.length > 0 ? (
-                    member.roles.map((r) => (
-                      <Badge key={r.id} variant="secondary">
-                        {r.role}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Aucun rôle</span>
-                  )}
-                </div>
+                <MemberRolesForm
+                  organizationId={organization.id}
+                  memberId={member.id}
+                  currentRoles={member.roles.map((r) => r.role)}
+                />
               </TableCell>
             </TableRow>
           ))}

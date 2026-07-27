@@ -18,9 +18,10 @@ test.describe("Invitation flow", () => {
 
     await page.goto("/organisations/asso-test/membres");
     await page.getByRole("button", { name: "Inviter un membre" }).click();
-    await page.getByLabel("Email").fill("nouveau-benevole@example.com");
-    await page.getByLabel("Bénévole").check();
-    await page.getByRole("button", { name: "Envoyer l'invitation" }).click();
+    const inviteDialog = page.getByRole("dialog", { name: "Inviter un membre" });
+    await inviteDialog.getByLabel("Email").fill("nouveau-benevole@example.com");
+    await inviteDialog.getByLabel("Bénévole").check();
+    await inviteDialog.getByRole("button", { name: "Envoyer l'invitation" }).click();
 
     await expect(page.getByText("Invitation envoyée")).toBeVisible();
 
