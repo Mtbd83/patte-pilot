@@ -36,7 +36,8 @@
       "Bash(grep -n \"Field label\\\\|Field$\\\\|required\" /home/mtbd83/repo/anim-admin/src/app/organisations/\\\\[org\\\\]/adopter/adoption-application-form.tsx)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/organisations/asso-test/adopter)",
       "Bash(kill 24233 24234 24246)",
-      "Bash(disown)"
+      "Bash(disown)",
+      "Bash(DATABASE_URL=\"postgresql://postgres.wrmtfzpdyrmcilfqxtwi:adminadmin83000db!@aws-1-eu-west-3.pooler.supabase.com:5432/postgres\" npx drizzle-kit migrate)"
     ],
     "additionalDirectories": [
       "/tmp"

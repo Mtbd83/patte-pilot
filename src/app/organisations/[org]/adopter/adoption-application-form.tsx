@@ -267,6 +267,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
                 id="ad-housing-zone"
                 value={form.housingZone}
                 onChange={(e) => set("housingZone", e.target.value as HousingZone)}
+                required
               >
                 <option value="">—</option>
                 {HOUSING_ZONE_OPTIONS.map(([value, label]) => (
@@ -281,6 +282,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
                 id="ad-housing-type"
                 value={form.housingType}
                 onChange={(e) => set("housingType", e.target.value as HousingType)}
+                required
               >
                 <option value="">—</option>
                 {HOUSING_TYPE_OPTIONS.map(([value, label]) => (
@@ -474,10 +476,10 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Field label="Qui se chargera de soigner (et sortir si chien) l'animal ?" htmlFor="ad-caretaker">
-            <Input id="ad-caretaker" value={form.caretakerPerson} onChange={(e) => set("caretakerPerson", e.target.value)} />
+            <Input id="ad-caretaker" required value={form.caretakerPerson} onChange={(e) => set("caretakerPerson", e.target.value)} />
           </Field>
           <Field label="Dans quel espace l'animal dormira ?" htmlFor="ad-sleeping-area">
-            <Input id="ad-sleeping-area" value={form.sleepingArea} onChange={(e) => set("sleepingArea", e.target.value)} />
+            <Input id="ad-sleeping-area" required value={form.sleepingArea} onChange={(e) => set("sleepingArea", e.target.value)} />
           </Field>
           <Field label="Combien de temps l'animal restera seul par jour ?" htmlFor="ad-alone-time" required>
             <Select
