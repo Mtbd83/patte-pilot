@@ -7,6 +7,7 @@ import { getMemberRoles } from "@/lib/permissions";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { OrganizationProfileForm } from "./organization-profile-form";
 import { OrganizationLogoUpload } from "./organization-logo-upload";
+import { OrganizationEmailSettingsForm } from "./organization-email-settings-form";
 
 export default async function ParametresPage({
   params,
@@ -48,6 +49,24 @@ export default async function ParametresPage({
         </Link>
         <h1 className="mt-1 text-2xl font-semibold">Paramètres de l&apos;association</h1>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Adresse email d&apos;envoi</CardTitle>
+          <CardDescription>
+            Les invitations, certificats et contrats sont envoyés depuis cette adresse — jamais depuis une
+            adresse partagée. Nécessite un compte Gmail dédié à l&apos;association avec la validation en 2 étapes
+            activée.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <OrganizationEmailSettingsForm
+            organizationId={organization.id}
+            smtpUser={organization.smtpUser}
+            hasAppPassword={Boolean(organization.smtpAppPassword)}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -15,7 +15,7 @@ import {
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, ForbiddenError } from "@/lib/permissions";
-import { sendEmail, invitationEmailHtml } from "@/lib/mailer";
+import { sendEmail, invitationEmailHtml, organizationSmtpConfig } from "@/lib/mailer";
 
 const INVITATION_TTL_DAYS = 7;
 
@@ -75,6 +75,9 @@ export async function createInvitation(input: CreateInvitationInput) {
       acceptUrl,
       roles,
     }),
+    fromName: organization.name,
+    replyTo: organization.contactEmail ?? undefined,
+    organizationSmtp: organizationSmtpConfig(organization),
   });
 
   return invitation;

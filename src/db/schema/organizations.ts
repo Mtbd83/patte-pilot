@@ -57,6 +57,13 @@ export const organizations = pgTable("organizations", {
   contactEmail: varchar("contact_email", { length: 255 }),
   logoUrl: text("logo_url"),
 
+  // Outgoing email identity: each organization sends through its own mailbox
+  // (typically Gmail + an app password) so recipients only ever see that
+  // organization's own address, never a shared/platform one. Emails fail
+  // with a clear error if these aren't set — no silent fallback.
+  smtpUser: varchar("smtp_user", { length: 255 }),
+  smtpAppPassword: text("smtp_app_password"),
+
   // Legal/letterhead details used on generated documents (adoption contract).
   siren: varchar("siren", { length: 20 }),
   registrationAuthority: varchar("registration_authority", { length: 200 }), // ex: "sous-préfecture du Var"

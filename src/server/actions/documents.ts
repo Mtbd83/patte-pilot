@@ -8,7 +8,7 @@ import { db } from "@/db";
 import { animals, documents, organizations } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
-import { sendEmail } from "@/lib/mailer";
+import { sendEmail, organizationSmtpConfig } from "@/lib/mailer";
 import { dateString } from "@/lib/validation";
 import { generateAdoptionContractPdf } from "@/lib/adoption-contract-pdf";
 
@@ -70,6 +70,9 @@ export async function sendEngagementCertificate(
     attachments: [
       { filename: "certificat-engagement.pdf", content: fileBuffer, contentType: "application/pdf" },
     ],
+    fromName: organization.name,
+    replyTo: organization.contactEmail ?? undefined,
+    organizationSmtp: organizationSmtpConfig(organization),
   });
 
   const [document] = await db
@@ -197,6 +200,9 @@ export async function generateAndSendAdoptionContract(input: GenerateContractInp
         contentType: "application/pdf",
       },
     ],
+    fromName: organization.name,
+    replyTo: organization.contactEmail ?? undefined,
+    organizationSmtp: organizationSmtpConfig(organization),
   });
 
   const [document] = await db

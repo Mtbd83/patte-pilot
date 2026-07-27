@@ -82,6 +82,43 @@ export async function updateOrganizationProfile(input: UpdateOrganizationProfile
   return updated;
 }
 
+const updateOrganizationEmailSettingsSchema = z.object({
+  organizationId: z.string().uuid(),
+  smtpUser: z.string().email("Adresse email invalide."),
+  smtpAppPassword: z.string().min(1).optional(),
+});
+
+export type UpdateOrganizationEmailSettingsInput = z.infer<typeof updateOrganizationEmailSettingsSchema>;
+
+/**
+ * Admin-only: sets the organization's own outgoing mailbox (an email
+ * address + Gmail app password) — every email this app sends on the
+ * organization's behalf goes through it, so recipients see the
+ * association's own address, not a shared one. The app password is
+ * write-only: never returned, and left unchanged if omitted so re-saving
+ * the address alone doesn't require re-entering it.
+ */
+export async function updateOrganizationEmailSettings(input: UpdateOrganizationEmailSettingsInput) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId, smtpUser, smtpAppPassword } =
+    updateOrganizationEmailSettingsSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  const [updated] = await db
+    .update(organizations)
+    .set({
+      smtpUser,
+      ...(smtpAppPassword ? { smtpAppPassword: smtpAppPassword.replace(/\s+/g, "") } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(organizations.id, organizationId))
+    .returning({ id: organizations.id, smtpUser: organizations.smtpUser });
+  if (!updated) throw new Error("Échec de la mise à jour de l'adresse d'envoi.");
+  return updated;
+}
+
 /** Admin-only: uploads (or replaces) the organization's logo. */
 export async function uploadOrganizationLogo(formData: FormData) {
   const session = await auth();
