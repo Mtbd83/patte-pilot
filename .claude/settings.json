@@ -30,7 +30,9 @@
       "Bash(npx eslint *)",
       "Bash(curl -s http://localhost:3000/)",
       "Bash(curl -s http://localhost:3000/organisations/asso-test/adopter)",
-      "Bash(curl -s -w \"\\\\nHTTP_CODE:%{http_code}\\\\n\" http://localhost:3000/organisations/asso-test/adopter)"
+      "Bash(curl -s -w \"\\\\nHTTP_CODE:%{http_code}\\\\n\" http://localhost:3000/organisations/asso-test/adopter)",
+      "Bash(npx drizzle-kit *)",
+      "Bash(npx tsx *)"
     ],
     "additionalDirectories": [
       "/tmp"

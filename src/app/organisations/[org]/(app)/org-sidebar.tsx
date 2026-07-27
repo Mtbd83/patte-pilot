@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -99,7 +99,14 @@ export function OrgSidebar({
 
   function SignOutButton() {
     return (
-      <div className="border-t border-border p-3">
+      <div className="flex flex-col border-t border-border p-3">
+        <Link
+          href="/mon-compte"
+          className="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          <User className="size-4" />
+          Mon compte
+        </Link>
         <button
           onClick={() => signOut()}
           className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"

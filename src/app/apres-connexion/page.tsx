@@ -52,6 +52,11 @@ export default async function ApresConnexionPage() {
             </CardContent>
           )}
         </Card>
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          <Link href="/mon-compte" className="hover:text-foreground hover:underline">
+            Mon compte
+          </Link>
+        </p>
       </div>
     </main>
   );

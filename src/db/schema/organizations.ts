@@ -127,9 +127,10 @@ export const invitations = pgTable("invitations", {
   roles: orgRoleEnum("roles").array().notNull(),
   token: varchar("token", { length: 128 }).notNull().unique(),
   status: invitationStatusEnum("status").default("pending").notNull(),
-  invitedByUserId: uuid("invited_by_user_id")
-    .notNull()
-    .references(() => users.id),
+  // Nullable + set-null on delete: the invite record (who was invited, with
+  // which roles) stays valid history even after the inviting admin's own
+  // account is deleted.
+  invitedByUserId: uuid("invited_by_user_id").references(() => users.id, { onDelete: "set null" }),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   acceptedAt: timestamp("accepted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

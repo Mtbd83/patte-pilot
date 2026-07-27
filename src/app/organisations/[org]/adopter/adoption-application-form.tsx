@@ -223,7 +223,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
           </FieldRow>
           <FieldRow>
             <Field label="Quel âge avez-vous ?" htmlFor="ad-age" className="flex-1">
-              <Input id="ad-age" type="number" min="0" value={form.age} onChange={(e) => set("age", e.target.value)} />
+              <Input id="ad-age" required type="number" min="0" value={form.age} onChange={(e) => set("age", e.target.value)} />
             </Field>
             <Field label="Ainsi que votre conjoint·e ? (si applicable)" htmlFor="ad-spouse-age" className="flex-1">
               <Input
@@ -237,7 +237,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
           </FieldRow>
           <FieldRow>
             <Field label="Quelle est votre profession ?" htmlFor="ad-profession" className="flex-1">
-              <Input id="ad-profession" value={form.profession} onChange={(e) => set("profession", e.target.value)} />
+              <Input id="ad-profession" required value={form.profession} onChange={(e) => set("profession", e.target.value)} />
             </Field>
             <Field label="Et celle de votre conjoint·e ? (si applicable)" htmlFor="ad-spouse-profession" className="flex-1">
               <Input
@@ -290,13 +290,14 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
               <Input
                 id="ad-garden-area"
                 type="number"
+                required={form.housingType === "maison" ? true: false}
                 min="0"
                 value={form.gardenAreaM2}
                 onChange={(e) => set("gardenAreaM2", e.target.value)}
               />
             </Field>
             <Field label="Hauteur des clôtures (précisez si pas clôturé)" htmlFor="ad-fence-height" className="flex-1">
-              <Input id="ad-fence-height" value={form.fenceHeight} onChange={(e) => set("fenceHeight", e.target.value)} />
+              <Input id="ad-fence-height" required={form.housingType === "maison" ? true: false} value={form.fenceHeight} onChange={(e) => set("fenceHeight", e.target.value)} />
             </Field>
           </FieldRow>
           <Field
@@ -314,6 +315,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
               <Select
                 id="ad-residency-status"
                 value={form.residencyStatus}
+                required
                 onChange={(e) => set("residencyStatus", e.target.value as ResidencyStatus)}
               >
                 <option value="">—</option>
@@ -336,6 +338,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             <Select
               id="ad-living-situation"
               value={form.livingSituation}
+              required
               onChange={(e) => set("livingSituation", e.target.value as LivingSituation)}
             >
               <option value="">—</option>
@@ -359,6 +362,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
               <Input
                 id="ad-family-size"
                 type="number"
+                required
                 min="1"
                 value={form.familySize}
                 onChange={(e) => set("familySize", e.target.value)}
@@ -368,6 +372,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
               <Input
                 id="ad-children-count"
                 type="number"
+                required
                 min="0"
                 value={form.childrenCount}
                 onChange={(e) => set("childrenCount", e.target.value)}
@@ -385,6 +390,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             <Select
               id="ad-family-agrees"
               value={form.familyAgrees ? "oui" : "non"}
+              required
               onChange={(e) => set("familyAgrees", e.target.value === "oui")}
             >
               <option value="oui">Oui</option>
@@ -395,6 +401,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             <Field label="Si non, pourquoi ?" htmlFor="ad-family-disagreement">
               <Textarea
                 id="ad-family-disagreement"
+                required
                 value={form.familyDisagreementReason}
                 onChange={(e) => set("familyDisagreementReason", e.target.value)}
               />
@@ -424,6 +431,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
               <Textarea
                 id="ad-other-animals-details"
                 value={form.otherAnimalsDetails}
+                required
                 onChange={(e) => set("otherAnimalsDetails", e.target.value)}
               />
             </Field>
@@ -467,7 +475,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             </>
           )}
           <Field label="Que ferez-vous de votre animal pendant les weekends / vacances ?" htmlFor="ad-vacation-plan">
-            <Textarea id="ad-vacation-plan" value={form.vacationPlan} onChange={(e) => set("vacationPlan", e.target.value)} />
+            <Textarea id="ad-vacation-plan" required value={form.vacationPlan} onChange={(e) => set("vacationPlan", e.target.value)} />
           </Field>
         </CardContent>
       </Card>
@@ -481,6 +489,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
             <Select
               id="ad-desired-species"
               value={form.desiredSpecies}
+              required
               onChange={(e) => set("desiredSpecies", e.target.value as AnimalSpecies)}
             >
               <option value="">—</option>

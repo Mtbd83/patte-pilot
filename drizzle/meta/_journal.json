@@ -43,6 +43,13 @@
       "when": 1785159181570,
       "tag": "0005_greedy_luke_cage",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785168805453,
+      "tag": "0006_cultured_nightcrawler",
+      "breakpoints": true
     }
   ]
 }
