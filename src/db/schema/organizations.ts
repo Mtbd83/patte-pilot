@@ -55,6 +55,7 @@ export const organizations = pgTable("organizations", {
   name: varchar("name", { length: 200 }).notNull(),
   slug: varchar("slug", { length: 200 }).notNull().unique(),
   contactEmail: varchar("contact_email", { length: 255 }),
+  logoUrl: text("logo_url"),
 
   // Legal/letterhead details used on generated documents (adoption contract).
   siren: varchar("siren", { length: 20 }),

@@ -10,10 +10,7 @@ import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
 import { sendEmail } from "@/lib/mailer";
 import { dateString } from "@/lib/validation";
-import {
-  generateAdoptionContractPdf,
-  type AdoptionContractPaymentMethod,
-} from "@/lib/adoption-contract-pdf";
+import { generateAdoptionContractPdf } from "@/lib/adoption-contract-pdf";
 
 const CERTIFICATE_FILE_PATH = path.join(
   process.cwd(),
@@ -113,7 +110,6 @@ const generateContractSchema = z.object({
   sterilizationFeesAmount: z.coerce.number().min(0).optional(),
   freeDonationAmount: z.coerce.number().min(0).optional(),
   freeDonationReason: z.string().optional(),
-  paymentMethod: z.enum(["especes", "cheque", "virement", "cb"]),
 
   signaturePlace: z.string().min(1, "Le lieu de signature est requis.").max(150),
   signatureDate: dateString,
@@ -163,7 +159,6 @@ async function buildContractPdfBytes(input: GenerateContractInput) {
     sterilizationFeesAmount: data.sterilizationFeesAmount,
     freeDonationAmount: data.freeDonationAmount,
     freeDonationReason: data.freeDonationReason,
-    paymentMethod: data.paymentMethod as AdoptionContractPaymentMethod,
     signaturePlace: data.signaturePlace,
     signatureDate: data.signatureDate,
   });

@@ -21,7 +21,6 @@ const baseData = {
   },
   vetFeesAmount: 180,
   sterilizationFeesAmount: 150,
-  paymentMethod: "cb" as const,
   signaturePlace: "Garéoult",
   signatureDate: "2026-07-22",
 };
@@ -48,7 +47,6 @@ describe("generateAdoptionContractPdf", () => {
         email: "jean@example.com",
       },
       vetFeesAmount: 100,
-      paymentMethod: "especes" as const,
       signaturePlace: "Paris",
       signatureDate: "2026-01-01",
     };
@@ -57,13 +55,12 @@ describe("generateAdoptionContractPdf", () => {
     expect(Buffer.from(bytes.slice(0, 5)).toString("latin1")).toBe("%PDF-");
   });
 
-  it("writes 'CB (HelloAsso)' as text when paid by card (no checkbox exists for it on the template)", async () => {
+  it("still renders with a free donation set", async () => {
     const bytes = await generateAdoptionContractPdf({
       ...baseData,
       sterilizationFeesAmount: undefined,
       freeDonationAmount: 50,
       freeDonationReason: "Don ponctuel",
-      paymentMethod: "cb",
     });
     expect(Buffer.from(bytes.slice(0, 5)).toString("latin1")).toBe("%PDF-");
   });

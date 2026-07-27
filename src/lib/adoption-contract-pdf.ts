@@ -74,15 +74,6 @@ const CHECKBOXES = {
   sterilizeNonBox: checkboxOrigin(161.25, 586.0),
   santeOuiBox: checkboxOrigin(158.0, 562.05),
   santeNonBox: checkboxOrigin(199.4, 561.75),
-  paidEspecesBox: checkboxOrigin(72.85, 332.41),
-  paidChequeBox: checkboxOrigin(135.05, 332.21),
-  paidVirementBox: checkboxOrigin(200.95, 332.31),
-  // Measured from the template's own "CB (HelloAsso)" checkbox (added after
-  // the initial measurement pass) by rendering the page to a 300dpi PNG with
-  // pdftoppm and cropping down to the box — its outline isn't a vector `re`
-  // rectangle in the content stream like the other three, so bbox/qpdf
-  // couldn't locate it directly.
-  paidCbBox: checkboxOrigin(282.0, 332.5),
 } as const;
 
 const SEX_LABELS: Record<AnimalSex, string> = {
@@ -97,8 +88,6 @@ const SPECIES_LABELS: Record<AnimalSpecies, string> = {
   lapin: "Lapin",
   autre: "Autre",
 };
-
-export type AdoptionContractPaymentMethod = "especes" | "cheque" | "virement" | "cb";
 
 export interface AdoptionContractAnimal {
   name: string;
@@ -129,7 +118,6 @@ export interface AdoptionContractData {
   sterilizationFeesAmount?: number;
   freeDonationAmount?: number;
   freeDonationReason?: string;
-  paymentMethod: AdoptionContractPaymentMethod;
   signaturePlace: string;
   signatureDate: string;
 }
@@ -194,10 +182,8 @@ export async function generateAdoptionContractPdf(data: AdoptionContractData): P
     text(data.freeDonationReason ?? "", FIELDS.donationReason, font);
   }
 
-  if (data.paymentMethod === "especes") check(CHECKBOXES.paidEspecesBox);
-  else if (data.paymentMethod === "cheque") check(CHECKBOXES.paidChequeBox);
-  else if (data.paymentMethod === "virement") check(CHECKBOXES.paidVirementBox);
-  else check(CHECKBOXES.paidCbBox);
+  // "Payée en" (espèces / chèque / virement / CB) is left blank on purpose —
+  // the adopter ticks the box themselves when signing, not the association.
 
   text(data.signaturePlace, FIELDS.signaturePlace);
   text(formatDate(data.signatureDate), FIELDS.signatureDate);

@@ -136,7 +136,6 @@ describe("documents server actions", () => {
       healthCertificateOk: true,
       vetFeesAmount: 180,
       sterilizationFeesAmount: 150,
-      paymentMethod: "cb",
       signaturePlace: "Garéoult",
       signatureDate: "2026-07-22",
     });
@@ -163,7 +162,6 @@ describe("documents server actions", () => {
         sterilizationDone: false,
         healthCertificateOk: true,
         vetFeesAmount: 180,
-        paymentMethod: "cb",
         signaturePlace: "Garéoult",
         signatureDate: "2026-07-22",
       }),

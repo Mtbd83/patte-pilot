@@ -38,11 +38,28 @@ interface NavLink {
   label: string;
 }
 
-export function OrgSidebar({ orgSlug, orgName }: { orgSlug: string; orgName: string }) {
+export function OrgSidebar({
+  orgSlug,
+  orgName,
+  logoUrl,
+}: {
+  orgSlug: string;
+  orgName: string;
+  logoUrl: string | null;
+}) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const base = `/organisations/${orgSlug}`;
+
+  function BrandIcon() {
+    return logoUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={logoUrl} alt="" className="size-5 shrink-0 rounded object-cover" />
+    ) : (
+      <PawPrint className="size-5 text-primary" />
+    );
+  }
 
   const links: NavLink[] = [
     { href: base, label: "Tableau de bord" },
@@ -100,7 +117,7 @@ export function OrgSidebar({ orgSlug, orgName }: { orgSlug: string; orgName: str
       <>
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/80">
           <Link href={base} className="flex items-center gap-2 font-semibold">
-            <PawPrint className="size-5 text-primary" />
+            <BrandIcon />
             <span className="truncate">{orgName}</span>
           </Link>
           <Button
@@ -123,7 +140,7 @@ export function OrgSidebar({ orgSlug, orgName }: { orgSlug: string; orgName: str
                   className="flex items-center gap-2 font-semibold"
                   onClick={() => setOpen(false)}
                 >
-                  <PawPrint className="size-5 text-primary" />
+                  <BrandIcon />
                   <span className="truncate">{orgName}</span>
                 </Link>
                 <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Fermer le menu">
@@ -142,7 +159,7 @@ export function OrgSidebar({ orgSlug, orgName }: { orgSlug: string; orgName: str
   return (
     <aside className="sticky top-0 flex h-dvh w-64 shrink-0 flex-col border-r border-border">
       <Link href={base} className="flex h-14 items-center gap-2 border-b border-border px-4 font-semibold">
-        <PawPrint className="size-5 text-primary" />
+        <BrandIcon />
         <span className="truncate">{orgName}</span>
       </Link>
       <NavLinks />

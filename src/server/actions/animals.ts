@@ -15,6 +15,7 @@ import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
 import { statusRequiresFosterFamily } from "@/lib/animal-status";
 import { dateString } from "@/lib/validation";
+import { uploadImage } from "@/lib/uploads";
 
 const createAnimalSchema = z.object({
   organizationId: z.string().uuid(),
@@ -135,6 +136,40 @@ export async function updateAnimal(input: UpdateAnimalInput) {
   const [updated] = await db
     .update(animals)
     .set({ ...rest, updatedAt: new Date() })
+    .where(eq(animals.id, animalId))
+    .returning();
+  if (!updated) throw new Error("Échec de la mise à jour de l'animal.");
+  return updated;
+}
+
+/** Admin-only: uploads (or replaces) an animal's photo. */
+export async function uploadAnimalPhoto(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const organizationId = formData.get("organizationId");
+  const animalId = formData.get("animalId");
+  const file = formData.get("file");
+  if (
+    typeof organizationId !== "string" ||
+    typeof animalId !== "string" ||
+    !(file instanceof File)
+  ) {
+    throw new Error("Requête invalide.");
+  }
+
+  await requireAdmin(session.user.id, organizationId);
+
+  const animal = await db.query.animals.findFirst({
+    where: and(eq(animals.id, animalId), eq(animals.organizationId, organizationId)),
+  });
+  if (!animal) throw new Error("Animal introuvable.");
+
+  const photoUrl = await uploadImage(file, `animaux/${animalId}`);
+
+  const [updated] = await db
+    .update(animals)
+    .set({ photoUrl, updatedAt: new Date() })
     .where(eq(animals.id, animalId))
     .returning();
   if (!updated) throw new Error("Échec de la mise à jour de l'animal.");

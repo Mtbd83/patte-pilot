@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
-import { createAnimal } from "@/server/actions/animals";
+import { ImagePlus, Plus } from "lucide-react";
+import { createAnimal, uploadAnimalPhoto } from "@/server/actions/animals";
 import { statusRequiresFosterFamily } from "@/lib/animal-status";
 import { SPECIES_LABELS, SEX_LABELS, STATUS_LABELS } from "@/lib/animal-labels";
 import type { AnimalSex, AnimalSpecies, AnimalStatus } from "@/db/schema";
@@ -41,6 +41,9 @@ export function CreateAnimalDialog({
   const [error, setError] = useState<string | null>(null);
   const [familyOptions, setFamilyOptions] = useState(fosterFamilies);
   const [newFamilyModalOpen, setNewFamilyModalOpen] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [species, setSpecies] = useState<AnimalSpecies>("chat");
@@ -93,7 +96,19 @@ export function CreateAnimalDialog({
     },
   ];
 
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPhotoFile(file);
+    setPhotoPreviewUrl(URL.createObjectURL(file));
+  }
+
   function reset() {
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
+    if (photoInputRef.current) photoInputRef.current.value = "";
     setName("");
     setSpecies("chat");
     setSex("inconnu");
@@ -125,7 +140,7 @@ export function CreateAnimalDialog({
 
     setPending(true);
     try {
-      await createAnimal({
+      const animal = await createAnimal({
         organizationId,
         name,
         species,
@@ -145,6 +160,27 @@ export function CreateAnimalDialog({
         boosterDone,
         boosterDate: boosterDate || undefined,
       });
+
+      if (photoFile) {
+        try {
+          const formData = new FormData();
+          formData.set("organizationId", organizationId);
+          formData.set("animalId", animal.id);
+          formData.set("file", photoFile);
+          await uploadAnimalPhoto(formData);
+        } catch (photoErr) {
+          toast.error(
+            photoErr instanceof Error
+              ? `Animal ajouté, mais la photo n'a pas pu être envoyée : ${photoErr.message}`
+              : "Animal ajouté, mais la photo n'a pas pu être envoyée.",
+          );
+          setOpen(false);
+          reset();
+          router.refresh();
+          return;
+        }
+      }
+
       toast.success("Animal ajouté");
       setOpen(false);
       reset();
@@ -171,6 +207,35 @@ export function CreateAnimalDialog({
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+              {photoPreviewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photoPreviewUrl} alt="" className="size-full object-cover" />
+              ) : (
+                <ImagePlus className="size-6 text-muted-foreground" />
+              )}
+            </div>
+            <div>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                id="animal-photo-input"
+                onChange={handlePhotoChange}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => photoInputRef.current?.click()}
+              >
+                {photoPreviewUrl ? "Changer la photo" : "Ajouter une photo"}
+              </Button>
+            </div>
+          </div>
+
           <Field label="Nom" htmlFor="animal-name">
             <Input id="animal-name" required value={name} onChange={(e) => setName(e.target.value)} />
           </Field>

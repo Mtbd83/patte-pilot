@@ -4,19 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { generateAndSendAdoptionContract, previewAdoptionContract } from "@/server/actions/documents";
-import type { AdoptionContractPaymentMethod } from "@/lib/adoption-contract-pdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldRow } from "@/components/ui/field";
-
-const PAYMENT_METHOD_OPTIONS: [AdoptionContractPaymentMethod, string][] = [
-  ["especes", "Espèces"],
-  ["cheque", "Chèque"],
-  ["virement", "Virement"],
-  ["cb", "CB"],
-];
 
 interface AnimalOption {
   id: string;
@@ -70,7 +62,6 @@ export function GenerateContractForm({
   const [sterilizationFeesAmount, setSterilizationFeesAmount] = useState("");
   const [freeDonationAmount, setFreeDonationAmount] = useState("");
   const [freeDonationReason, setFreeDonationReason] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<AdoptionContractPaymentMethod>("especes");
   const [signaturePlace, setSignaturePlace] = useState("");
   const [signatureDate, setSignatureDate] = useState(() => new Date().toISOString().slice(0, 10));
 
@@ -92,7 +83,6 @@ export function GenerateContractForm({
       sterilizationFeesAmount: sterilizationFeesAmount ? Number(sterilizationFeesAmount) : undefined,
       freeDonationAmount: freeDonationAmount ? Number(freeDonationAmount) : undefined,
       freeDonationReason: freeDonationReason || undefined,
-      paymentMethod,
       signaturePlace,
       signatureDate,
     };
@@ -278,20 +268,6 @@ export function GenerateContractForm({
           />
         </Field>
       </FieldRow>
-
-      <Field label="Payé en" htmlFor="contract-payment-method">
-        <Select
-          id="contract-payment-method"
-          value={paymentMethod}
-          onChange={(e) => setPaymentMethod(e.target.value as AdoptionContractPaymentMethod)}
-        >
-          {PAYMENT_METHOD_OPTIONS.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
-      </Field>
 
       <FieldRow>
         <Field label="Fait à" htmlFor="contract-place" className="flex-1">

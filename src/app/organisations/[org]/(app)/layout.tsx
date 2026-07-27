@@ -41,7 +41,7 @@ export default async function OrganizationLayout({
 
   return (
     <div className="min-h-dvh bg-background md:flex">
-      <OrgSidebar orgSlug={params.org} orgName={organization.name} />
+      <OrgSidebar orgSlug={params.org} orgName={organization.name} logoUrl={organization.logoUrl} />
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-10">{children}</main>
       </div>

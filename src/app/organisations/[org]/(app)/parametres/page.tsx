@@ -6,6 +6,7 @@ import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { OrganizationProfileForm } from "./organization-profile-form";
+import { OrganizationLogoUpload } from "./organization-logo-upload";
 
 export default async function ParametresPage({
   params,
@@ -47,6 +48,18 @@ export default async function ParametresPage({
         </Link>
         <h1 className="mt-1 text-2xl font-semibold">Paramètres de l&apos;association</h1>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Logo de l&apos;association</CardTitle>
+          <CardDescription>
+            Affiché dans le menu et sur le formulaire public d&apos;adoption.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <OrganizationLogoUpload organizationId={organization.id} logoUrl={organization.logoUrl} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { AnimalEditForm } from "./animal-edit-form";
+import { AnimalPhotoUpload } from "./animal-photo-upload";
 import { HealthChecklistForm } from "./health-checklist-form";
 import { StatusForm } from "./status-form";
 
@@ -78,7 +79,19 @@ export default async function AnimalDetailPage({
         <CardHeader>
           <CardTitle>Informations générales</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
+          {isAdmin ? (
+            <AnimalPhotoUpload organizationId={organization.id} animalId={animal.id} photoUrl={animal.photoUrl} />
+          ) : (
+            animal.photoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={animal.photoUrl}
+                alt={animal.name}
+                className="size-24 rounded-lg border border-border object-cover"
+              />
+            )
+          )}
           {isAdmin ? (
             <AnimalEditForm organizationId={organization.id} animal={animal} />
           ) : (

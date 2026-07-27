@@ -59,6 +59,7 @@ export const animals = pgTable(
     sex: animalSexEnum("sex").default("inconnu").notNull(),
     coat: varchar("coat", { length: 120 }), // pelage
     description: text("description"),
+    photoUrl: text("photo_url"),
 
     intakeDate: date("intake_date").notNull(), // date de prise en charge
     adoptionDate: date("adoption_date"), // date d'adoption, si adopté
