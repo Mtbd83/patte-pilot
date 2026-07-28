@@ -7,8 +7,10 @@ import { test, expect, type Page } from "@playwright/test";
  * refused on comptabilité/membres/paramètres and on any detail/management
  * page. A FA additionally gets edit rights on the health checklist of an
  * animal currently placed with her — and only that. A bénévole is also the
- * one exception to "read-only candidatures": she can change a candidature's
- * status and record the adopted animal directly from the list (FA can't).
+ * one exception to "read-only candidatures": she can open a candidature's
+ * detail page and change its status / record the adopted animal (FA can't
+ * open the detail page at all); the certificate/contract-sending cards on
+ * that detail page stay admin-only even for her.
  *
  * Assumes the seeded test DB (see e2e/global-setup.ts): a bénévole
  * (benevole-test@example.com) and a famille d'accueil
@@ -111,6 +113,17 @@ test.describe("Bénévole", () => {
     await page.goto(fosterFamilyUrl);
     await expect(page.getByText("Accès refusé")).toBeVisible();
 
+    // ...but the candidature detail page is one place she IS let in — just
+    // without the certificate/contract-sending cards, which stay admin-only.
+    await page.goto(candidatureUrl);
+    await expect(page.getByText("Accès refusé")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: `Candidat Refus-${suffix}` })).toBeVisible();
+    await expect(page.getByText("Statut de la candidature")).toBeVisible();
+    await expect(page.getByText("Certificat d'engagement")).toHaveCount(0);
+    await expect(page.getByText("Contrat d'adoption")).toHaveCount(0);
+
+    // --- Famille d'accueil still gets refused on the candidature detail ---
+    await login(page, "famille-accueil-test@example.com", "FamilleAccueil123!");
     await page.goto(candidatureUrl);
     await expect(page.getByText("Accès refusé")).toBeVisible();
   });

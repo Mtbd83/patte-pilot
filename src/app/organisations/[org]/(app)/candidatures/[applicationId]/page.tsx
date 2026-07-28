@@ -55,7 +55,9 @@ export default async function CandidatureDetailPage({
   if (!organization) notFound();
 
   const roles = await getMemberRoles(session.user.id, organization.id);
-  if (!roles.includes("admin")) {
+  const isAdmin = roles.includes("admin");
+  const canView = isAdmin || roles.includes("benevole");
+  if (!canView) {
     return (
       <Card className="mx-auto mt-16 max-w-md">
         <CardHeader>
@@ -63,7 +65,8 @@ export default async function CandidatureDetailPage({
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Seul·e·s les administrateur·rice·s peuvent accéder au détail d&apos;une candidature.
+            Seul·e·s les administrateur·rice·s et bénévoles peuvent accéder au détail d&apos;une
+            candidature.
           </p>
         </CardContent>
       </Card>
@@ -259,44 +262,48 @@ export default async function CandidatureDetailPage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Certificat d&apos;engagement</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
-            Envoyé tel quel, sans remplissage — l&apos;adoptant·e le complète et le signe de son côté.
-          </p>
-          <SendCertificateForm
-            organizationId={organization.id}
-            applicationId={application.id}
-            animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
-            defaultAnimalId={application.targetAnimalId ?? ""}
-            defaultEmail={application.email}
-          />
-        </CardContent>
-      </Card>
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Certificat d&apos;engagement</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-sm text-muted-foreground">
+              Envoyé tel quel, sans remplissage — l&apos;adoptant·e le complète et le signe de son côté.
+            </p>
+            <SendCertificateForm
+              organizationId={organization.id}
+              applicationId={application.id}
+              animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
+              defaultAnimalId={application.targetAnimalId ?? ""}
+              defaultEmail={application.email}
+            />
+          </CardContent>
+        </Card>
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Contrat d&apos;adoption</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
-            Généré et rempli avec les informations de l&apos;animal et de l&apos;adoptant·e.
-          </p>
-          <GenerateContractForm
-            organizationId={organization.id}
-            applicationId={application.id}
-            animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
-            defaultAnimalId={application.targetAnimalId ?? ""}
-            defaultEmail={application.email}
-            defaultAdopterFullName={`${application.firstName} ${application.lastName}`}
-            defaultAdopterCity={application.city ?? ""}
-            defaultAdopterPhone1={application.phone}
-          />
-        </CardContent>
-      </Card>
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Contrat d&apos;adoption</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-sm text-muted-foreground">
+              Généré et rempli avec les informations de l&apos;animal et de l&apos;adoptant·e.
+            </p>
+            <GenerateContractForm
+              organizationId={organization.id}
+              applicationId={application.id}
+              animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
+              defaultAnimalId={application.targetAnimalId ?? ""}
+              defaultEmail={application.email}
+              defaultAdopterFullName={`${application.firstName} ${application.lastName}`}
+              defaultAdopterCity={application.city ?? ""}
+              defaultAdopterPhone1={application.phone}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

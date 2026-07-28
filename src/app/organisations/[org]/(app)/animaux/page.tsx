@@ -85,7 +85,7 @@ export default async function AnimauxPage({
         )}
         <AnimalStatusFilter currentStatus={status ?? ""} />
         <span className="text-sm text-muted-foreground">
-          {total} animal{total > 1 ? "aux" : ""}
+          {total} animaux
         </span>
       </div>
 
