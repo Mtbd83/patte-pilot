@@ -42,10 +42,13 @@ export default async function CandidaturesPage({
   }
 
   const isAdmin = roles.includes("admin");
+  // Bénévoles can also work candidatures (change status, record the
+  // adopted animal) — only famille d'accueil is read-only here.
+  const canEditStatus = isAdmin || roles.includes("benevole");
 
   const [applications, animalsList] = await Promise.all([
     listAdoptionApplications({ organizationId: organization.id }),
-    isAdmin ? listAnimals({ organizationId: organization.id }) : Promise.resolve([]),
+    canEditStatus ? listAnimals({ organizationId: organization.id }) : Promise.resolve([]),
   ]);
   const animalOptions = animalsList.map((animal) => ({ id: animal.id, name: animal.name }));
   const publicFormPath = `/organisations/${params.org}/adopter`;
@@ -103,7 +106,7 @@ export default async function CandidaturesPage({
                       {application.specificAnimalName ? ` (${application.specificAnimalName})` : ""}
                     </TableCell>
                     <TableCell>
-                      {isAdmin ? (
+                      {canEditStatus ? (
                         <InlineStatusForm
                           organizationId={organization.id}
                           applicationId={application.id}

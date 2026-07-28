@@ -152,7 +152,10 @@ const updateStatusSchema = z.object({
   targetAnimalId: z.string().uuid().nullable().optional(),
 });
 
-/** Admin-only: accepts/refuses/withdraws an adoption application, and records which animal was adopted. */
+/**
+ * Admin or bénévole (not famille d'accueil): accepts/refuses/withdraws an
+ * adoption application, and records which animal was adopted.
+ */
 export async function updateAdoptionApplicationStatus(
   input: z.infer<typeof updateStatusSchema>,
 ) {
@@ -161,7 +164,7 @@ export async function updateAdoptionApplicationStatus(
 
   const { applicationId, organizationId, status, reviewNotes, targetAnimalId } =
     updateStatusSchema.parse(input);
-  await requireAdmin(session.user.id, organizationId);
+  await requireRole(session.user.id, organizationId, ["admin", "benevole"]);
 
   const application = await db.query.adoptionApplications.findFirst({
     where: and(

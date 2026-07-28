@@ -6,7 +6,9 @@ import { test, expect, type Page } from "@playwright/test";
  * read-only access to animaux/stock/familles-accueil/candidatures and are
  * refused on comptabilité/membres/paramètres and on any detail/management
  * page. A FA additionally gets edit rights on the health checklist of an
- * animal currently placed with her — and only that.
+ * animal currently placed with her — and only that. A bénévole is also the
+ * one exception to "read-only candidatures": she can change a candidature's
+ * status and record the adopted animal directly from the list (FA can't).
  *
  * Assumes the seeded test DB (see e2e/global-setup.ts): a bénévole
  * (benevole-test@example.com) and a famille d'accueil
@@ -184,4 +186,69 @@ test.describe("Famille d'accueil", () => {
     await expect(page.getByLabel("Primo vaccin fait")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Enregistrer la checklist" })).toHaveCount(0);
   });
+});
+
+test("un bénévole peut changer le statut d'une candidature et l'animal adopté, une famille d'accueil non", async ({
+  page,
+}) => {
+  const suffix = `${Date.now()}-${test.info().parallelIndex}`;
+  const animalName = `PermStatus-${suffix}`;
+  const applicantEmail = `perm-status-${suffix}@example.com`;
+
+  await login(page, "admin@example.com", "Password123!");
+
+  await page.goto("/organisations/asso-test/animaux");
+  await page.getByRole("button", { name: "Ajouter un animal" }).click();
+  await page.getByLabel("Nom", { exact: true }).fill(animalName);
+  await page.getByLabel("Statut", { exact: true }).selectOption({ label: "Adopté" });
+  await page.getByRole("button", { name: "Ajouter l'animal" }).click();
+  await expect(page.getByText("Animal ajouté")).toBeVisible();
+
+  await page.goto("/organisations/asso-test/adopter");
+  await page.getByLabel("Prénom", { exact: true }).fill("Perm");
+  await page.getByLabel("Nom", { exact: true }).fill(`Status-${suffix}`);
+  await page.getByLabel("Téléphone").fill("0600000000");
+  await page.getByLabel("Adresse mail").fill(applicantEmail);
+  await page.getByLabel("Quel âge avez-vous ?").fill("35");
+  await page.getByLabel("Votre logement est en zone").selectOption({ label: "Urbaine" });
+  await page.getByLabel("Votre logement est un/une").selectOption({ label: "Appartement" });
+  await page.getByLabel("Quelle est votre profession ?").fill("Vétérinaire");
+  await page.getByLabel("Vous êtes").selectOption({ label: "Propriétaire" });
+  await page.getByLabel("Vivez-vous", { exact: true }).selectOption({ label: "En couple" });
+  await page.getByLabel("De combien de personnes se compose la famille ?").fill("2");
+  await page.getByLabel("Dont combien d'enfants ?").fill("0");
+  await page.getByLabel("Quel est le niveau d'activité de la famille ?").selectOption({ label: "Modéré" });
+  await page.getByLabel("Combien de temps l'animal restera seul par jour ?").selectOption({ label: "2h à 4h" });
+  await page
+    .getByLabel("Que ferez-vous de votre animal pendant les weekends / vacances ?")
+    .fill("Il viendra avec nous.");
+  await page.getByLabel("Qui se chargera de soigner (et sortir si chien) l'animal ?").fill("Moi");
+  await page.getByLabel("Dans quel espace l'animal dormira ?").fill("Salon");
+  await page.getByLabel("Type d'animal souhaité").selectOption({ label: "Chat" });
+  await page.getByRole("button", { name: "Envoyer ma candidature" }).click();
+  await expect(page.getByRole("heading", { name: "Merci !" })).toBeVisible();
+
+  // --- Bénévole: can change the status and record the adopted animal ---
+  await login(page, "benevole-test@example.com", "Benevole123!");
+  await page.goto("/organisations/asso-test/candidatures");
+  const row = page.getByRole("row", { name: new RegExp(applicantEmail) });
+  await expect(row).toBeVisible();
+  await row.getByLabel("Statut").selectOption({ label: "Retenue" });
+  await row.getByLabel("Animal adopté").selectOption({ label: animalName });
+  await row.getByRole("button", { name: "Enregistrer" }).click();
+  await expect(page.getByText("Statut mis à jour")).toBeVisible();
+
+  await page.goto("/organisations/asso-test/candidatures");
+  const rowAfter = page.getByRole("row", { name: new RegExp(applicantEmail) });
+  await expect(rowAfter.getByRole("link", { name: animalName })).toBeVisible();
+  await expect(rowAfter.getByRole("button", { name: "Supprimer" })).toHaveCount(0);
+
+  // --- Famille d'accueil: read-only, no status control, no delete ---
+  await login(page, "famille-accueil-test@example.com", "FamilleAccueil123!");
+  await page.goto("/organisations/asso-test/candidatures");
+  const faRow = page.getByRole("row", { name: new RegExp(applicantEmail) });
+  await expect(faRow).toBeVisible();
+  await expect(faRow.getByRole("combobox")).toHaveCount(0);
+  await expect(faRow.getByRole("button", { name: "Supprimer" })).toHaveCount(0);
+  await expect(faRow.getByText("Retenue")).toBeVisible();
 });
