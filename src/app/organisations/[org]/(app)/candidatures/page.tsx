@@ -5,11 +5,14 @@ import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
 import { listAdoptionApplications } from "@/server/actions/adoption-applications";
+import { listAnimals } from "@/server/actions/animals";
 import { ADOPTION_STATUS_LABELS, ADOPTION_STATUS_BADGE_VARIANT } from "@/lib/adoption-labels";
 import { SPECIES_LABELS } from "@/lib/animal-labels";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { InlineStatusForm } from "./inline-status-form";
+import { DeleteApplicationButton } from "./delete-application-button";
 
 export default async function CandidaturesPage({
   params,
@@ -38,7 +41,13 @@ export default async function CandidaturesPage({
     );
   }
 
-  const applications = await listAdoptionApplications({ organizationId: organization.id });
+  const isAdmin = roles.includes("admin");
+
+  const [applications, animalsList] = await Promise.all([
+    listAdoptionApplications({ organizationId: organization.id }),
+    isAdmin ? listAnimals({ organizationId: organization.id }) : Promise.resolve([]),
+  ]);
+  const animalOptions = animalsList.map((animal) => ({ id: animal.id, name: animal.name }));
   const publicFormPath = `/organisations/${params.org}/adopter`;
 
   return (
@@ -72,6 +81,8 @@ export default async function CandidaturesPage({
                   <TableHead>Email</TableHead>
                   <TableHead>Animal souhaité</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead>Animal adopté</TableHead>
+                  {isAdmin && <TableHead />}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -92,10 +103,41 @@ export default async function CandidaturesPage({
                       {application.specificAnimalName ? ` (${application.specificAnimalName})` : ""}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={ADOPTION_STATUS_BADGE_VARIANT[application.status]}>
-                        {ADOPTION_STATUS_LABELS[application.status]}
-                      </Badge>
+                      {isAdmin ? (
+                        <InlineStatusForm
+                          organizationId={organization.id}
+                          applicationId={application.id}
+                          currentStatus={application.status}
+                          currentTargetAnimalId={application.targetAnimalId}
+                          animals={animalOptions}
+                        />
+                      ) : (
+                        <Badge variant={ADOPTION_STATUS_BADGE_VARIANT[application.status]}>
+                          {ADOPTION_STATUS_LABELS[application.status]}
+                        </Badge>
+                      )}
                     </TableCell>
+                    <TableCell>
+                      {application.targetAnimal ? (
+                        <Link
+                          href={`/organisations/${params.org}/animaux/${application.targetAnimal.id}`}
+                          className="hover:underline"
+                        >
+                          {application.targetAnimal.name}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <DeleteApplicationButton
+                          organizationId={organization.id}
+                          applicationId={application.id}
+                          applicantName={`${application.firstName} ${application.lastName}`}
+                        />
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

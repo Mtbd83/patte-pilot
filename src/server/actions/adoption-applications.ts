@@ -149,16 +149,18 @@ const updateStatusSchema = z.object({
   organizationId: z.string().uuid(),
   status: z.enum(adoptionApplicationStatusEnum.enumValues),
   reviewNotes: z.string().optional(),
+  targetAnimalId: z.string().uuid().nullable().optional(),
 });
 
-/** Admin-only: accepts/refuses/withdraws an adoption application. */
+/** Admin-only: accepts/refuses/withdraws an adoption application, and records which animal was adopted. */
 export async function updateAdoptionApplicationStatus(
   input: z.infer<typeof updateStatusSchema>,
 ) {
   const session = await auth();
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
-  const { applicationId, organizationId, status, reviewNotes } = updateStatusSchema.parse(input);
+  const { applicationId, organizationId, status, reviewNotes, targetAnimalId } =
+    updateStatusSchema.parse(input);
   await requireAdmin(session.user.id, organizationId);
 
   const application = await db.query.adoptionApplications.findFirst({
@@ -169,11 +171,46 @@ export async function updateAdoptionApplicationStatus(
   });
   if (!application) throw new Error("Candidature introuvable.");
 
+  // targetAnimalId is only touched when the caller explicitly sends it (the
+  // inline table editor always does; the detail page's status form doesn't
+  // carry this field at all) — otherwise a save from a form that doesn't
+  // know about it would silently wipe out an already-recorded animal.
   const [updated] = await db
     .update(adoptionApplications)
-    .set({ status, reviewNotes, updatedAt: new Date() })
+    .set({
+      status,
+      reviewNotes,
+      ...(targetAnimalId !== undefined ? { targetAnimalId } : {}),
+      updatedAt: new Date(),
+    })
     .where(eq(adoptionApplications.id, applicationId))
     .returning();
   if (!updated) throw new Error("Échec de la mise à jour du statut.");
   return updated;
+}
+
+const deleteAdoptionApplicationSchema = z.object({
+  applicationId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+});
+
+/** Admin-only: permanently removes an adoption application. */
+export async function deleteAdoptionApplication(
+  input: z.infer<typeof deleteAdoptionApplicationSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { applicationId, organizationId } = deleteAdoptionApplicationSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  const application = await db.query.adoptionApplications.findFirst({
+    where: and(
+      eq(adoptionApplications.id, applicationId),
+      eq(adoptionApplications.organizationId, organizationId),
+    ),
+  });
+  if (!application) throw new Error("Candidature introuvable.");
+
+  await db.delete(adoptionApplications).where(eq(adoptionApplications.id, applicationId));
 }
