@@ -62,3 +62,18 @@ export async function requireRole(
 export async function requireAdmin(userId: string, organizationId: string) {
   return requireRole(userId, organizationId, ["admin"]);
 }
+
+/** User IDs of every active admin of an organization — e.g. to notify them of a new adoption application. */
+export async function listOrganizationAdminUserIds(organizationId: string): Promise<string[]> {
+  const members = await db.query.organizationMembers.findMany({
+    where: and(
+      eq(organizationMembers.organizationId, organizationId),
+      eq(organizationMembers.isActive, true),
+    ),
+    with: { roles: true },
+  });
+
+  return members
+    .filter((member) => member.roles.some((r) => r.role === "admin"))
+    .map((member) => member.userId);
+}

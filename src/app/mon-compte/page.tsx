@@ -11,6 +11,7 @@ import { ChangePasswordForm } from "./change-password-form";
 import { DeleteAccountForm } from "./delete-account-form";
 import { LeaveOrganizationButton } from "./leave-organization-button";
 import { SignOutButton } from "./sign-out-button";
+import { PushNotificationsToggle } from "./push-notifications-toggle";
 
 export default async function MonComptePage() {
   const session = await auth();
@@ -63,6 +64,15 @@ export default async function MonComptePage() {
                 ))}
               </ul>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifications</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PushNotificationsToggle />
           </CardContent>
         </Card>
 

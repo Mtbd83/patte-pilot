@@ -16,7 +16,9 @@ import {
   organizations,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
+import { requireAdmin, requireRole, listOrganizationAdminUserIds, ForbiddenError } from "@/lib/permissions";
+import { sendPushToUsers } from "@/lib/push";
+import { SPECIES_LABELS } from "@/lib/animal-labels";
 
 const submitAdoptionApplicationSchema = z.object({
   organizationId: z.string().uuid(),
@@ -91,6 +93,22 @@ export async function submitAdoptionApplication(input: SubmitAdoptionApplication
     })
     .returning();
   if (!application) throw new Error("Échec de l'envoi de la candidature.");
+
+  // Best-effort: never let a notification failure break the public submission.
+  try {
+    const adminUserIds = await listOrganizationAdminUserIds(data.organizationId);
+    const animalWanted =
+      application.specificAnimalName ||
+      (application.desiredSpecies ? SPECIES_LABELS[application.desiredSpecies] : "un animal");
+    await sendPushToUsers(adminUserIds, {
+      title: "Nouvelle candidature",
+      body: `${application.firstName} ${application.lastName} souhaite adopter ${animalWanted}.`,
+      url: `/organisations/${organization.slug}/candidatures/${application.id}`,
+    });
+  } catch (err) {
+    console.error("Échec de l'envoi de la notification de nouvelle candidature:", err);
+  }
+
   return application;
 }
 

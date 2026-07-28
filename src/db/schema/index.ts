@@ -14,6 +14,7 @@ import { accountingEntries } from "./accounting";
 import { inventoryItems } from "./inventory";
 import { events } from "./events";
 import { documents } from "./documents";
+import { pushSubscriptions } from "./push-subscriptions";
 
 export * from "./organizations";
 export * from "./animals";
@@ -24,6 +25,7 @@ export * from "./accounting";
 export * from "./inventory";
 export * from "./events";
 export * from "./documents";
+export * from "./push-subscriptions";
 
 // ---------------------------------------------------------------------------
 // All relations() calls live here, one per table, so a table's relations
@@ -35,6 +37,7 @@ export * from "./documents";
 export const usersRelations = relations(users, ({ many }) => ({
   memberships: many(organizationMembers),
   fosterFamilyProfiles: many(fosterFamilies),
+  pushSubscriptions: many(pushSubscriptions),
 }));
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
@@ -59,6 +62,13 @@ export const organizationHelloAssoLinksRelations = relations(
     }),
   }),
 );
+
+export const pushSubscriptionsRelations = relations(pushSubscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [pushSubscriptions.userId],
+    references: [users.id],
+  }),
+}));
 
 export const animalsRelations = relations(animals, ({ one, many }) => ({
   organization: one(organizations, {

@@ -71,6 +71,13 @@
       "when": 1785236522745,
       "tag": "0009_steady_umar",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785240067436,
+      "tag": "0010_clear_blue_shield",
+      "breakpoints": true
     }
   ]
 }
