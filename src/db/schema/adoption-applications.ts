@@ -16,6 +16,7 @@ import { animals, animalSpeciesEnum } from "./animals";
 
 export const adoptionApplicationStatusEnum = pgEnum("adoption_application_status", [
   "en_attente",
+  "en_cours",
   "retenu",
   "refuse",
   "retire",

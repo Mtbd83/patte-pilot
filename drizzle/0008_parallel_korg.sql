@@ -1,0 +1,1 @@
+ALTER TYPE "adoption_application_status" ADD VALUE 'en_cours';
