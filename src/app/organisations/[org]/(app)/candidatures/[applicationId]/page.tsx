@@ -7,6 +7,7 @@ import { getMemberRoles } from "@/lib/permissions";
 import { getAdoptionApplication } from "@/server/actions/adoption-applications";
 import { listAnimals } from "@/server/actions/animals";
 import { listDocuments } from "@/server/actions/documents";
+import { listHelloAssoLinks } from "@/server/actions/helloasso-links";
 import {
   ADOPTION_STATUS_LABELS,
   ADOPTION_STATUS_BADGE_VARIANT,
@@ -78,9 +79,10 @@ export default async function CandidatureDetailPage({
     organizationId: organization.id,
   });
 
-  const [animalsList, documentsList] = await Promise.all([
+  const [animalsList, documentsList, helloAssoLinksList] = await Promise.all([
     listAnimals({ organizationId: organization.id }),
     listDocuments({ organizationId: organization.id, adoptionApplicationId: application.id }),
+    isAdmin ? listHelloAssoLinks({ organizationId: organization.id }) : Promise.resolve([]),
   ]);
 
   return (
@@ -295,6 +297,7 @@ export default async function CandidatureDetailPage({
               organizationId={organization.id}
               applicationId={application.id}
               animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
+              helloAssoLinks={helloAssoLinksList.map((l) => ({ id: l.id, label: l.label, url: l.url }))}
               defaultAnimalId={application.targetAnimalId ?? ""}
               defaultEmail={application.email}
               defaultAdopterFullName={`${application.firstName} ${application.lastName}`}

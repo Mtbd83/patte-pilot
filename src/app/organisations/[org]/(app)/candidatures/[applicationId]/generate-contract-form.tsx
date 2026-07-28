@@ -3,11 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { generateAndSendAdoptionContract, previewAdoptionContract } from "@/server/actions/documents";
+import {
+  generateAndSendAdoptionContract,
+  previewAdoptionContract,
+  previewContractEmail,
+} from "@/server/actions/documents";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldRow } from "@/components/ui/field";
 
 interface AnimalOption {
@@ -15,10 +20,17 @@ interface AnimalOption {
   name: string;
 }
 
+interface HelloAssoLinkOption {
+  id: string;
+  label: string;
+  url: string;
+}
+
 export function GenerateContractForm({
   organizationId,
   applicationId,
   animals,
+  helloAssoLinks,
   defaultAnimalId,
   defaultEmail,
   defaultAdopterFullName,
@@ -28,6 +40,7 @@ export function GenerateContractForm({
   organizationId: string;
   applicationId: string;
   animals: AnimalOption[];
+  helloAssoLinks: HelloAssoLinkOption[];
   defaultAnimalId: string;
   defaultEmail: string;
   defaultAdopterFullName: string;
@@ -64,6 +77,10 @@ export function GenerateContractForm({
   const [freeDonationReason, setFreeDonationReason] = useState("");
   const [signaturePlace, setSignaturePlace] = useState("");
   const [signatureDate, setSignatureDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [helloAssoLink, setHelloAssoLink] = useState("");
+  const [emailPreviewPending, setEmailPreviewPending] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
 
   function buildPayload() {
     return {
@@ -85,7 +102,30 @@ export function GenerateContractForm({
       freeDonationReason: freeDonationReason || undefined,
       signaturePlace,
       signatureDate,
+      emailSubject: emailSubject || undefined,
+      emailBody: emailBody || undefined,
     };
+  }
+
+  async function handleEmailPreview() {
+    setError(null);
+    setEmailPreviewPending(true);
+    try {
+      const preview = await previewContractEmail({
+        organizationId,
+        animalId,
+        adoptionApplicationId: applicationId,
+        sterilizationDone,
+        vetFeesAmount: Number(vetFeesAmount),
+        helloAssoLink: helloAssoLink || undefined,
+      });
+      setEmailSubject(preview.subject);
+      setEmailBody(preview.body);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+    } finally {
+      setEmailPreviewPending(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -289,14 +329,38 @@ export function GenerateContractForm({
         </Field>
       </FieldRow>
 
+      <Field
+        label="Lien HelloAsso à utiliser"
+        htmlFor="contract-helloasso-link"
+        hint="À choisir toi-même selon le cas (âge, statut vaccinal, tarif réduit...) — géré dans Paramètres."
+      >
+        <Select
+          id="contract-helloasso-link"
+          value={helloAssoLink}
+          onChange={(e) => setHelloAssoLink(e.target.value)}
+        >
+          <option value="">— Aucun / à ajouter manuellement —</option>
+          {helloAssoLinks.map((link) => (
+            <option key={link.id} value={link.url}>
+              {link.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={handlePreview} disabled={previewPending || !animalId}>
           Prévisualiser le PDF
         </Button>
-        <Button type="submit" disabled={pending || !animalId}>
-          Générer et envoyer le contrat
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleEmailPreview}
+          disabled={emailPreviewPending || !animalId || !vetFeesAmount}
+        >
+          Générer l&apos;aperçu du mail
         </Button>
       </div>
 
@@ -307,6 +371,34 @@ export function GenerateContractForm({
           className="h-[600px] w-full rounded-md border border-border"
         />
       )}
+
+      {emailSubject && (
+        <>
+          <Field label="Sujet du mail" htmlFor="contract-email-subject">
+            <Input
+              id="contract-email-subject"
+              required
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+            />
+          </Field>
+          <Field label="Message" htmlFor="contract-email-body">
+            <Textarea
+              id="contract-email-body"
+              required
+              rows={16}
+              value={emailBody}
+              onChange={(e) => setEmailBody(e.target.value)}
+            />
+          </Field>
+        </>
+      )}
+
+      <div>
+        <Button type="submit" disabled={pending || !animalId || !emailSubject || !emailBody}>
+          Générer et envoyer le contrat
+        </Button>
+      </div>
     </form>
   );
 }

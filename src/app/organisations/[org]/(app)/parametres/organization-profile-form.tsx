@@ -28,6 +28,8 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
   const [city, setCity] = useState(organization.city ?? "");
   const [phone1, setPhone1] = useState(organization.phone1 ?? "");
   const [phone2, setPhone2] = useState(organization.phone2 ?? "");
+  const [iban, setIban] = useState(organization.iban ?? "");
+  const [treasurerName, setTreasurerName] = useState(organization.treasurerName ?? "");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +48,8 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
         city: city || undefined,
         phone1: phone1 || undefined,
         phone2: phone2 || undefined,
+        iban: iban || undefined,
+        treasurerName: treasurerName || undefined,
       });
       toast.success("Profil de l'association mis à jour");
       router.refresh();
@@ -111,6 +115,29 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
         </Field>
         <Field label="Téléphone 2" htmlFor="org-phone2" className="flex-1">
           <Input id="org-phone2" value={phone2} onChange={(e) => setPhone2(e.target.value)} />
+        </Field>
+      </FieldRow>
+
+      <FieldRow>
+        <Field
+          label="IBAN"
+          htmlFor="org-iban"
+          hint="Utilisé dans le mail de contrat d'adoption (paiement par virement)."
+          className="flex-1"
+        >
+          <Input id="org-iban" value={iban} onChange={(e) => setIban(e.target.value)} />
+        </Field>
+        <Field
+          label="Trésorière / trésorier"
+          htmlFor="org-treasurer-name"
+          hint="Nom à l'ordre duquel les chèques doivent être établis."
+          className="flex-1"
+        >
+          <Input
+            id="org-treasurer-name"
+            value={treasurerName}
+            onChange={(e) => setTreasurerName(e.target.value)}
+          />
         </Field>
       </FieldRow>
 

@@ -5,12 +5,21 @@ import path from "path";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { animals, documents, organizations } from "@/db/schema";
+import { animals, documents, organizations, adoptionApplications, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
 import { sendEmail, organizationSmtpConfig } from "@/lib/mailer";
 import { dateString } from "@/lib/validation";
 import { generateAdoptionContractPdf } from "@/lib/adoption-contract-pdf";
+import { isBoosterOwed, boosterDueDate } from "@/lib/animal-care";
+import {
+  renderEmailTemplate,
+  textToHtml,
+  DEFAULT_CERTIFICATE_EMAIL_SUBJECT,
+  DEFAULT_CERTIFICATE_EMAIL_BODY,
+  DEFAULT_CONTRACT_EMAIL_SUBJECT,
+  DEFAULT_CONTRACT_EMAIL_BODY,
+} from "@/lib/email-templates";
 
 const CERTIFICATE_FILE_PATH = path.join(
   process.cwd(),
@@ -23,6 +32,7 @@ async function loadAnimalAndOrganization(animalId: string, organizationId: strin
   const [animal, organization] = await Promise.all([
     db.query.animals.findFirst({
       where: and(eq(animals.id, animalId), eq(animals.organizationId, organizationId)),
+      with: { healthChecklist: true },
     }),
     db.query.organizations.findFirst({ where: eq(organizations.id, organizationId) }),
   ]);
@@ -31,17 +41,91 @@ async function loadAnimalAndOrganization(animalId: string, organizationId: strin
   return { animal, organization };
 }
 
+/** First name of the admin composing the email — signs off the message as "{{expediteur}}". */
+async function loadSenderFirstName(userId: string) {
+  const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  return user?.firstName ?? "";
+}
+
+/** First name of the applicant tied to this send, if any — fills "{{prenom}}". */
+async function loadApplicantFirstName(adoptionApplicationId: string | undefined) {
+  if (!adoptionApplicationId) return "";
+  const application = await db.query.adoptionApplications.findFirst({
+    where: eq(adoptionApplications.id, adoptionApplicationId),
+  });
+  return application?.firstName ?? "";
+}
+
+const frDate = (date: Date) => date.toLocaleDateString("fr-FR");
+
+const previewCertificateEmailSchema = z.object({
+  organizationId: z.string().uuid(),
+  animalId: z.string().uuid(),
+  adoptionApplicationId: z.string().uuid().optional(),
+});
+
+/**
+ * Admin-only, read-only: composes the certificate email's subject/body from
+ * the organization's saved template (or the default one) so it can be shown
+ * in an editable field before sending.
+ */
+export async function previewCertificateEmail(
+  input: z.infer<typeof previewCertificateEmailSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const data = previewCertificateEmailSchema.parse(input);
+  await requireAdmin(session.user.id, data.organizationId);
+
+  const { animal, organization } = await loadAnimalAndOrganization(
+    data.animalId,
+    data.organizationId,
+  );
+  const [prenom, expediteur] = await Promise.all([
+    loadApplicantFirstName(data.adoptionApplicationId),
+    loadSenderFirstName(session.user.id),
+  ]);
+
+  const today = new Date();
+  const deadline = new Date(today);
+  deadline.setDate(deadline.getDate() + 7);
+
+  const vars = {
+    prenom,
+    animal: animal.name,
+    date_jour: frDate(today),
+    date_limite: frDate(deadline),
+    expediteur,
+  };
+
+  return {
+    subject: renderEmailTemplate(
+      organization.certificateEmailSubject || DEFAULT_CERTIFICATE_EMAIL_SUBJECT,
+      vars,
+    ),
+    body: renderEmailTemplate(
+      organization.certificateEmailBody || DEFAULT_CERTIFICATE_EMAIL_BODY,
+      vars,
+    ),
+  };
+}
+
 const sendEngagementCertificateSchema = z.object({
   organizationId: z.string().uuid(),
   animalId: z.string().uuid(),
   adoptionApplicationId: z.string().uuid().optional(),
   toEmail: z.string().email(),
+  subject: z.string().min(1, "Le sujet est requis."),
+  body: z.string().min(1, "Le corps du message est requis."),
 });
 
 /**
  * Admin-only: emails the engagement certificate as-is (no filling — it's a
- * generic legal document the adopter signs on their own). The association
- * must place the real file at public/documents/certificat-engagement.pdf.
+ * generic legal document the adopter signs on their own) alongside the
+ * subject/body composed (and possibly edited) from the organization's
+ * template. The association must place the real file at
+ * public/documents/certificat-engagement.pdf.
  */
 export async function sendEngagementCertificate(
   input: z.infer<typeof sendEngagementCertificateSchema>,
@@ -65,8 +149,8 @@ export async function sendEngagementCertificate(
 
   await sendEmail({
     to: data.toEmail,
-    subject: `Certificat d'engagement — ${organization.name}`,
-    html: `<p>Bonjour,</p><p>Veuillez trouver ci-joint le certificat d'engagement à compléter et signer avant l'adoption.</p><p>${organization.name}</p>`,
+    subject: data.subject,
+    html: textToHtml(data.body),
     attachments: [
       { filename: "certificat-engagement.pdf", content: fileBuffer, contentType: "application/pdf" },
     ],
@@ -116,9 +200,80 @@ const generateContractSchema = z.object({
 
   signaturePlace: z.string().min(1, "Le lieu de signature est requis.").max(150),
   signatureDate: dateString,
+
+  // Composed (and possibly edited) client-side from previewContractEmail —
+  // optional here since the PDF preview path doesn't need them, required at
+  // actual send time (checked in generateAndSendAdoptionContract).
+  emailSubject: z.string().optional(),
+  emailBody: z.string().optional(),
 });
 
 export type GenerateContractInput = z.infer<typeof generateContractSchema>;
+
+const previewContractEmailSchema = z.object({
+  organizationId: z.string().uuid(),
+  animalId: z.string().uuid({ message: "Sélectionnez un animal." }),
+  adoptionApplicationId: z.string().uuid().optional(),
+  sterilizationDone: z.boolean(),
+  vetFeesAmount: z.coerce.number().min(0),
+  helloAssoLink: z.string().optional(),
+});
+
+/**
+ * Admin-only, read-only: composes the contract email's subject/body from
+ * the organization's saved template (or the default one) so it can be shown
+ * in an editable field before sending. Kept separate from the PDF-generation
+ * schema since it only needs a handful of the contract's fields.
+ */
+export async function previewContractEmail(input: z.infer<typeof previewContractEmailSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const data = previewContractEmailSchema.parse(input);
+  await requireAdmin(session.user.id, data.organizationId);
+
+  const { animal, organization } = await loadAnimalAndOrganization(
+    data.animalId,
+    data.organizationId,
+  );
+  const [prenom, expediteur] = await Promise.all([
+    loadApplicantFirstName(data.adoptionApplicationId),
+    loadSenderFirstName(session.user.id),
+  ]);
+
+  const rappelVaccin = animal.healthChecklist
+    ? isBoosterOwed(animal.healthChecklist, animal.status)
+    : false;
+  const dueDate = rappelVaccin && animal.healthChecklist ? boosterDueDate(animal.healthChecklist) : null;
+
+  const vars = {
+    prenom,
+    animal: animal.name,
+    montant: `${data.vetFeesAmount.toFixed(2)} €`,
+    iban: organization.iban ?? "",
+    helloasso_lien: data.helloAssoLink ?? "",
+    tresoriere: organization.treasurerName ?? "",
+    expediteur,
+    date_rappel_vaccin: dueDate ? frDate(new Date(dueDate)) : "",
+  };
+  const flags = {
+    caution_sterilisation: !data.sterilizationDone,
+    rappel_vaccin: rappelVaccin,
+  };
+
+  return {
+    subject: renderEmailTemplate(
+      organization.contractEmailSubject || DEFAULT_CONTRACT_EMAIL_SUBJECT,
+      vars,
+      flags,
+    ),
+    body: renderEmailTemplate(
+      organization.contractEmailBody || DEFAULT_CONTRACT_EMAIL_BODY,
+      vars,
+      flags,
+    ),
+  };
+}
 
 /** Shared by preview and send: validates, checks admin access, and renders the PDF bytes. */
 async function buildContractPdfBytes(input: GenerateContractInput) {
@@ -189,10 +344,14 @@ export async function previewAdoptionContract(input: GenerateContractInput) {
 export async function generateAndSendAdoptionContract(input: GenerateContractInput) {
   const { pdfBytes, animal, organization, data } = await buildContractPdfBytes(input);
 
+  if (!data.emailSubject || !data.emailBody) {
+    throw new Error("Le sujet et le corps de l'email sont requis — générez l'aperçu du mail.");
+  }
+
   await sendEmail({
     to: data.toEmail,
-    subject: `Contrat d'adoption — ${animal.name} — ${organization.name}`,
-    html: `<p>Bonjour,</p><p>Veuillez trouver ci-joint le contrat d'adoption de ${animal.name}.</p><p>${organization.name}</p>`,
+    subject: data.emailSubject,
+    html: textToHtml(data.emailBody),
     attachments: [
       {
         filename: `contrat-adoption-${animal.name.replace(/\s+/g, "-").toLowerCase()}.pdf`,

@@ -72,6 +72,8 @@ test("public adoption form → admin review → certificate + contract sent", as
   await page.waitForLoadState("networkidle");
 
   await page.getByLabel("Animal", { exact: true }).first().selectOption({ label: animalName });
+  await page.getByRole("button", { name: "Générer l'aperçu du mail" }).first().click();
+  await expect(page.getByLabel("Sujet", { exact: true })).not.toHaveValue("");
   await page.getByRole("button", { name: "Envoyer le certificat d'engagement" }).click();
   await expect(page.getByText("Certificat d'engagement envoyé")).toBeVisible();
 
@@ -82,6 +84,8 @@ test("public adoption form → admin review → certificate + contract sent", as
   await page.getByLabel("Ville", { exact: true }).fill("Belgentier");
   await page.getByLabel("Frais vétérinaires (€)").fill("180");
   await page.getByLabel("Fait à").fill("Garéoult");
+  await page.getByRole("button", { name: "Générer l'aperçu du mail" }).nth(1).click();
+  await expect(page.getByLabel("Sujet du mail")).not.toHaveValue("");
   await page.getByRole("button", { name: "Générer et envoyer le contrat" }).click();
   await expect(page.getByText("Contrat d'adoption généré et envoyé")).toBeVisible();
 

@@ -9,6 +9,7 @@ jest.mock("@/lib/auth", () => ({
   auth: jest.fn(),
 }));
 jest.mock("@/lib/mailer", () => ({
+  ...jest.requireActual("@/lib/mailer"),
   sendEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -105,6 +106,8 @@ describe("documents server actions", () => {
       organizationId,
       animalId,
       toEmail: "adoptant@example.com",
+      subject: "Certificat d'engagement — Biscotte",
+      body: "Bonjour,\n\nVeuillez trouver ci-joint le certificat d'engagement.",
     });
     expect(document.type).toBe("certificat_engagement");
     expect(document.status).toBe("envoye");
@@ -112,13 +115,20 @@ describe("documents server actions", () => {
 
     const call = sendEmailMock.mock.calls[0][0];
     expect(call.to).toBe("adoptant@example.com");
+    expect(call.subject).toBe("Certificat d'engagement — Biscotte");
     expect(call.attachments[0].filename).toBe("certificat-engagement.pdf");
   });
 
   it("rejects a non-admin from sending the certificate", async () => {
     authMock.mockResolvedValue({ user: { id: outsiderUserId, email: "outsider@example.com" } });
     await expect(
-      sendEngagementCertificate({ organizationId, animalId, toEmail: "adoptant@example.com" }),
+      sendEngagementCertificate({
+        organizationId,
+        animalId,
+        toEmail: "adoptant@example.com",
+        subject: "Certificat d'engagement — Biscotte",
+        body: "Bonjour,",
+      }),
     ).rejects.toThrow(ForbiddenError);
   });
 
@@ -138,11 +148,14 @@ describe("documents server actions", () => {
       sterilizationFeesAmount: 150,
       signaturePlace: "Garéoult",
       signatureDate: "2026-07-22",
+      emailSubject: "Contrat d'adoption — Biscotte",
+      emailBody: "Bonjour,\n\nVeuillez trouver ci-joint le contrat d'adoption.",
     });
     expect(document.type).toBe("contrat_adoption");
     expect(sendEmailMock).toHaveBeenCalledTimes(1);
 
     const call = sendEmailMock.mock.calls[0][0];
+    expect(call.subject).toBe("Contrat d'adoption — Biscotte");
     expect(call.attachments[0].contentType).toBe("application/pdf");
     expect(Buffer.from(call.attachments[0].content).slice(0, 5).toString("latin1")).toBe("%PDF-");
   });
@@ -164,6 +177,8 @@ describe("documents server actions", () => {
         vetFeesAmount: 180,
         signaturePlace: "Garéoult",
         signatureDate: "2026-07-22",
+        emailSubject: "Contrat d'adoption — Biscotte",
+        emailBody: "Bonjour,",
       }),
     ).rejects.toThrow(ForbiddenError);
   });

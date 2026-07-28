@@ -1,5 +1,11 @@
 import { relations } from "drizzle-orm";
-import { organizations, users, organizationMembers, invitations } from "./organizations";
+import {
+  organizations,
+  users,
+  organizationMembers,
+  invitations,
+  organizationHelloAssoLinks,
+} from "./organizations";
 import { animals, animalHealthChecklists } from "./animals";
 import { fosterFamilies } from "./foster-families";
 import { animalPlacements } from "./animal-placements";
@@ -41,7 +47,18 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   inventoryItems: many(inventoryItems),
   events: many(events),
   documents: many(documents),
+  helloAssoLinks: many(organizationHelloAssoLinks),
 }));
+
+export const organizationHelloAssoLinksRelations = relations(
+  organizationHelloAssoLinks,
+  ({ one }) => ({
+    organization: one(organizations, {
+      fields: [organizationHelloAssoLinks.organizationId],
+      references: [organizations.id],
+    }),
+  }),
+);
 
 export const animalsRelations = relations(animals, ({ one, many }) => ({
   organization: one(organizations, {

@@ -4,10 +4,13 @@ import { ChevronLeft } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
+import { listHelloAssoLinks } from "@/server/actions/helloasso-links";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { OrganizationProfileForm } from "./organization-profile-form";
 import { OrganizationLogoUpload } from "./organization-logo-upload";
 import { OrganizationEmailSettingsForm } from "./organization-email-settings-form";
+import { OrganizationHelloAssoLinksForm } from "./organization-helloasso-links-form";
+import { OrganizationEmailTemplatesForm } from "./organization-email-templates-form";
 
 export default async function ParametresPage({
   params,
@@ -37,6 +40,8 @@ export default async function ParametresPage({
       </Card>
     );
   }
+
+  const helloAssoLinks = await listHelloAssoLinks({ organizationId: organization.id });
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,6 +95,38 @@ export default async function ParametresPage({
         </CardHeader>
         <CardContent>
           <OrganizationProfileForm organization={organization} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Liens HelloAsso</CardTitle>
+          <CardDescription>
+            Liens de paiement HelloAsso, nommés librement (ex. par espèce, par âge, tarif réduit...).
+            Choisis manuellement dans le mail de contrat d&apos;adoption au moment de l&apos;envoi.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <OrganizationHelloAssoLinksForm organizationId={organization.id} links={helloAssoLinks} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Modèles d&apos;emails</CardTitle>
+          <CardDescription>
+            Textes envoyés avec le certificat d&apos;engagement et le contrat d&apos;adoption. Modifiables ici, et
+            encore une dernière fois avant chaque envoi depuis une fiche candidature.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <OrganizationEmailTemplatesForm
+            organizationId={organization.id}
+            certificateEmailSubject={organization.certificateEmailSubject}
+            certificateEmailBody={organization.certificateEmailBody}
+            contractEmailSubject={organization.contractEmailSubject}
+            contractEmailBody={organization.contractEmailBody}
+          />
         </CardContent>
       </Card>
     </div>

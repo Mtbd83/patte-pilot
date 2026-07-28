@@ -74,8 +74,36 @@ export const organizations = pgTable("organizations", {
   phone1: varchar("phone1", { length: 30 }),
   phone2: varchar("phone2", { length: 30 }),
 
+  // Payment details filled into the adoption contract email (IBAN/treasurer
+  // name go straight into the {{iban}}/{{tresoriere}} tokens below).
+  iban: varchar("iban", { length: 34 }),
+  treasurerName: varchar("treasurer_name", { length: 200 }),
+
+  // Editable email templates (see src/lib/email-templates.ts for the token
+  // syntax and the fallback text used while these are unset).
+  certificateEmailSubject: text("certificate_email_subject"),
+  certificateEmailBody: text("certificate_email_body"),
+  contractEmailSubject: text("contract_email_subject"),
+  contractEmailBody: text("contract_email_body"),
+
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * Named HelloAsso payment links (e.g. "Chaton vaccin complet", "Frais
+ * réduit") an admin maintains freely — no fixed set of categories, since
+ * they vary per association and change over time. Picked manually from a
+ * dropdown when composing the adoption contract email; never auto-selected.
+ */
+export const organizationHelloAssoLinks = pgTable("organization_helloasso_links", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  organizationId: uuid("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  label: varchar("label", { length: 120 }).notNull(),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 /** Membership of a user inside an organization (without the role detail). */
@@ -186,3 +214,4 @@ export type OrganizationMember = typeof organizationMembers.$inferSelect;
 export type OrganizationMemberRole = typeof organizationMemberRoles.$inferSelect;
 export type Invitation = typeof invitations.$inferSelect;
 export type OrgRole = (typeof orgRoleEnum.enumValues)[number];
+export type OrganizationHelloAssoLink = typeof organizationHelloAssoLinks.$inferSelect;

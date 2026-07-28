@@ -57,6 +57,8 @@ const updateOrganizationProfileSchema = z.object({
   city: z.string().max(120).optional(),
   phone1: z.string().max(30).optional(),
   phone2: z.string().max(30).optional(),
+  iban: z.string().max(34).optional(),
+  treasurerName: z.string().max(200).optional(),
 });
 
 export type UpdateOrganizationProfileInput = z.infer<typeof updateOrganizationProfileSchema>;
@@ -116,6 +118,41 @@ export async function updateOrganizationEmailSettings(input: UpdateOrganizationE
     .where(eq(organizations.id, organizationId))
     .returning({ id: organizations.id, smtpUser: organizations.smtpUser });
   if (!updated) throw new Error("Échec de la mise à jour de l'adresse d'envoi.");
+  return updated;
+}
+
+const updateOrganizationEmailTemplatesSchema = z.object({
+  organizationId: z.string().uuid(),
+  certificateEmailSubject: z.string().min(1, "Le sujet est requis.").max(255),
+  certificateEmailBody: z.string().min(1, "Le corps du message est requis."),
+  contractEmailSubject: z.string().min(1, "Le sujet est requis.").max(255),
+  contractEmailBody: z.string().min(1, "Le corps du message est requis."),
+});
+
+export type UpdateOrganizationEmailTemplatesInput = z.infer<
+  typeof updateOrganizationEmailTemplatesSchema
+>;
+
+/**
+ * Admin-only: saves the organization's own wording for the certificate and
+ * contract emails (see src/lib/email-templates.ts for the {{token}} syntax
+ * and the default text used before an organization has saved its own).
+ */
+export async function updateOrganizationEmailTemplates(
+  input: UpdateOrganizationEmailTemplatesInput,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId, ...rest } = updateOrganizationEmailTemplatesSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  const [updated] = await db
+    .update(organizations)
+    .set({ ...rest, updatedAt: new Date() })
+    .where(eq(organizations.id, organizationId))
+    .returning();
+  if (!updated) throw new Error("Échec de la mise à jour des modèles d'emails.");
   return updated;
 }
 
