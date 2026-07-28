@@ -6,7 +6,11 @@ import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
 import { listAdoptionApplications } from "@/server/actions/adoption-applications";
 import { listAnimals } from "@/server/actions/animals";
-import { ADOPTION_STATUS_LABELS, ADOPTION_STATUS_BADGE_VARIANT } from "@/lib/adoption-labels";
+import {
+  ADOPTION_STATUS_LABELS,
+  ADOPTION_STATUS_BADGE_VARIANT,
+  ADOPTION_STATUS_ROW_CLASS,
+} from "@/lib/adoption-labels";
 import { SPECIES_LABELS } from "@/lib/animal-labels";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -90,7 +94,7 @@ export default async function CandidaturesPage({
               </TableHeader>
               <TableBody>
                 {applications.map((application) => (
-                  <TableRow key={application.id}>
+                  <TableRow key={application.id} className={ADOPTION_STATUS_ROW_CLASS[application.status]}>
                     <TableCell>
                       <Link
                         href={`/organisations/${params.org}/candidatures/${application.id}`}

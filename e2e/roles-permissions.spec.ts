@@ -233,6 +233,7 @@ test("un bénévole peut changer le statut d'une candidature et l'animal adopté
   await page.goto("/organisations/asso-test/candidatures");
   const row = page.getByRole("row", { name: new RegExp(applicantEmail) });
   await expect(row).toBeVisible();
+  await row.getByRole("button", { name: "Modifier le statut" }).click();
   await row.getByLabel("Statut").selectOption({ label: "Retenue" });
   await row.getByLabel("Animal adopté").selectOption({ label: animalName });
   await row.getByRole("button", { name: "Enregistrer" }).click();
