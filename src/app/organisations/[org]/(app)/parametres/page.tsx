@@ -6,6 +6,7 @@ import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
 import { listHelloAssoLinks } from "@/server/actions/helloasso-links";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { OrganizationProfileForm } from "./organization-profile-form";
 import { OrganizationLogoUpload } from "./organization-logo-upload";
 import { OrganizationEmailSettingsForm } from "./organization-email-settings-form";
@@ -114,6 +115,23 @@ export default async function ParametresPage({
             certificateFileUrl={organization.certificateFileUrl}
             certificateFileUrlChien={organization.certificateFileUrlChien}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Contrat d&apos;adoption</CardTitle>
+          <CardDescription>
+            Votre propre modèle de contrat, rempli automatiquement avec les informations de l&apos;animal et
+            de l&apos;adoptant·e — à configurer une fois dans un outil dédié.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" asChild>
+            <Link href={`/organisations/${params.org}/parametres/contrat`}>
+              {organization.contractTemplateUrl ? "Modifier le modèle de contrat" : "Configurer le modèle de contrat"}
+            </Link>
+          </Button>
         </CardContent>
       </Card>
 

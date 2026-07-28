@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "node scripts/copy-pdf-worker.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -30,6 +31,7 @@
     "next-auth": "5.0.0-beta.20",
     "nodemailer": "^6.9.14",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.1.200",
     "postgres": "^3.4.4",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",

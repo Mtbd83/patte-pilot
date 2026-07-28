@@ -224,3 +224,65 @@ export async function updateOrganizationCertificate(formData: FormData) {
   if (!updated) throw new Error("Échec de la mise à jour du certificat.");
   return updated;
 }
+
+/**
+ * Admin-only: uploads (or replaces) the organization's own adoption
+ * contract PDF, as-is. Replacing it doesn't clear any previously-saved
+ * field positions — they're kept as a starting point since a re-upload is
+ * often a minor revision of the same layout, and should be re-checked in
+ * the mapping tool (src/app/.../parametres/contrat) rather than silently
+ * discarded.
+ */
+export async function updateOrganizationContractTemplate(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const organizationId = formData.get("organizationId");
+  const file = formData.get("file");
+  if (typeof organizationId !== "string" || !(file instanceof File)) {
+    throw new Error("Requête invalide.");
+  }
+
+  await requireAdmin(session.user.id, organizationId);
+
+  const contractTemplateUrl = await uploadDocument(file, `documents/${organizationId}/contrat`);
+
+  const [updated] = await db
+    .update(organizations)
+    .set({ contractTemplateUrl, updatedAt: new Date() })
+    .where(eq(organizations.id, organizationId))
+    .returning();
+  if (!updated) throw new Error("Échec de la mise à jour du modèle de contrat.");
+  return updated;
+}
+
+const contractFieldPositionSchema = z.object({
+  page: z.number().int().min(0),
+  x: z.number(),
+  y: z.number(),
+  size: z.number().min(1).optional(),
+});
+
+const updateOrganizationContractFieldPositionsSchema = z.object({
+  organizationId: z.string().uuid(),
+  positions: z.record(contractFieldPositionSchema),
+});
+
+/** Admin-only: saves where each field should be written on the organization's own contract template. */
+export async function updateOrganizationContractFieldPositions(
+  input: z.infer<typeof updateOrganizationContractFieldPositionsSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId, positions } = updateOrganizationContractFieldPositionsSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  const [updated] = await db
+    .update(organizations)
+    .set({ contractFieldPositions: positions, updatedAt: new Date() })
+    .where(eq(organizations.id, organizationId))
+    .returning();
+  if (!updated) throw new Error("Échec de l'enregistrement du mappage du contrat.");
+  return updated;
+}

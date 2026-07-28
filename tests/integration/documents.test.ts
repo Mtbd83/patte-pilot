@@ -43,10 +43,54 @@ const PLACEHOLDER_CERTIFICATE_PATH = path.join(
 );
 const FAKE_CERTIFICATE_URL = "https://storage.example.test/documents/certificat-engagement.pdf";
 
+const CONTRACT_TEMPLATE_PATH = path.join(
+  process.cwd(),
+  "public",
+  "documents",
+  "contrat-adoption-template.pdf",
+);
+const FAKE_CONTRACT_URL = "https://storage.example.test/documents/contrat-adoption-template.pdf";
+
+// La Patte Chanceuse's real, historical positions for this exact template —
+// see tests/unit/adoption-contract-pdf.test.ts and e2e/global-setup.ts for
+// the same values.
+const CONTRACT_POSITIONS = {
+  nom: { page: 0, x: 55, y: 633.02 },
+  dateNaissance: { page: 0, x: 432, y: 633.02 },
+  icad: { page: 0, x: 150, y: 613.62 },
+  pelage: { page: 0, x: 404, y: 613.62 },
+  espece: { page: 0, x: 295, y: 559.72 },
+  adopterName: { page: 0, x: 86, y: 520.62 },
+  adopterAddress: { page: 0, x: 70, y: 501.22 },
+  adopterPostalCode: { page: 0, x: 85, y: 471.92 },
+  adopterCity: { page: 0, x: 338, y: 471.92 },
+  adopterPhone1: { page: 0, x: 88, y: 447.42 },
+  adopterPhone2: { page: 0, x: 378, y: 447.42 },
+  adopterEmail: { page: 0, x: 90, y: 423.02 },
+  vetFees: { page: 0, x: 360, y: 398.52, size: 9 },
+  sterilizationFees: { page: 0, x: 254, y: 382.92, size: 9 },
+  donationAmount: { page: 0, x: 102, y: 354.62, size: 9 },
+  donationReason: { page: 0, x: 257, y: 354.62 },
+  signaturePlace: { page: 0, x: 53, y: 305.82 },
+  signatureDate: { page: 0, x: 281, y: 305.82 },
+  sexeMaleBox: { page: 0, x: 202.15, y: 630.8 },
+  sexeFemelleBox: { page: 0, x: 245.95, y: 631.6 },
+  sterilizeOuiBox: { page: 0, x: 114.75, y: 582.66 },
+  sterilizeNonBox: { page: 0, x: 157.65, y: 582.4 },
+  santeOuiBox: { page: 0, x: 154.4, y: 558.45 },
+  santeNonBox: { page: 0, x: 195.8, y: 558.15 },
+};
+
 global.fetch = jest.fn(async (url: string) => {
-  if (url !== FAKE_CERTIFICATE_URL) throw new Error(`Unexpected fetch in test: ${url}`);
-  const bytes = readFileSync(PLACEHOLDER_CERTIFICATE_PATH);
-  return { ok: true, arrayBuffer: async () => Uint8Array.from(bytes).buffer } as Response;
+  if (url === FAKE_CERTIFICATE_URL) {
+    const bytes = readFileSync(PLACEHOLDER_CERTIFICATE_PATH);
+    return { ok: true, arrayBuffer: async () => Uint8Array.from(bytes).buffer } as Response;
+  }
+  if (url === FAKE_CONTRACT_URL) {
+    const bytes = readFileSync(CONTRACT_TEMPLATE_PATH);
+    return { ok: true, arrayBuffer: async () => Uint8Array.from(bytes).buffer } as Response;
+  }
+  throw new Error(`Unexpected fetch in test: ${url}`);
 }) as unknown as typeof fetch;
 
 describe("documents server actions", () => {
@@ -98,7 +142,11 @@ describe("documents server actions", () => {
     });
     await db
       .update(organizations)
-      .set({ certificateFileUrl: FAKE_CERTIFICATE_URL })
+      .set({
+        certificateFileUrl: FAKE_CERTIFICATE_URL,
+        contractTemplateUrl: FAKE_CONTRACT_URL,
+        contractFieldPositions: CONTRACT_POSITIONS,
+      })
       .where(eq(organizations.id, organizationId));
 
     const animal = await createAnimal({
@@ -193,6 +241,51 @@ describe("documents server actions", () => {
         body: "Bonjour,",
       }),
     ).rejects.toThrow(/Aucun certificat d'engagement configuré/);
+
+    await db.delete(organizations).where(eq(organizations.id, bareOrg.id));
+  });
+
+  it("rejects generating a contract when no template is configured for the organization", async () => {
+    const [bareOrg] = await db
+      .insert(organizations)
+      .values({ name: "Sans contrat", slug: `no-contract-${randomUUID().slice(0, 8)}` })
+      .returning();
+    if (!bareOrg) throw new Error("Seed setup failed.");
+    const [member] = await db
+      .insert(organizationMembers)
+      .values({ organizationId: bareOrg.id, userId: adminUserId })
+      .returning();
+    if (!member) throw new Error("Seed setup failed.");
+    await db.insert(organizationMemberRoles).values({ memberId: member.id, role: "admin" });
+
+    const bareAnimal = await createAnimal({
+      organizationId: bareOrg.id,
+      name: "Sans Contrat",
+      species: "chat",
+      sex: "femelle",
+      intakeDate: "2026-01-01",
+      status: "adopte",
+    });
+
+    await expect(
+      generateAndSendAdoptionContract({
+        organizationId: bareOrg.id,
+        animalId: bareAnimal.id,
+        toEmail: "adoptant@example.com",
+        adopterFullName: "GALEA Sandrine",
+        adopterAddress: "1 rue des Fleurs",
+        adopterPostalCode: "83210",
+        adopterCity: "Belgentier",
+        adopterPhone1: "0609709861",
+        sterilizationDone: false,
+        healthCertificateOk: true,
+        vetFeesAmount: 180,
+        signaturePlace: "Garéoult",
+        signatureDate: "2026-07-22",
+        emailSubject: "Contrat d'adoption",
+        emailBody: "Bonjour,",
+      }),
+    ).rejects.toThrow(/Aucun modèle de contrat configuré/);
 
     await db.delete(organizations).where(eq(organizations.id, bareOrg.id));
   });

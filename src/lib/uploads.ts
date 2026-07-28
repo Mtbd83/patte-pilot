@@ -13,6 +13,7 @@ const ALLOWED_PATH_PATTERNS = [
   new RegExp(`^logos/${UUID}$`),
   new RegExp(`^animaux/${UUID}$`),
   new RegExp(`^documents/${UUID}/certificat-(default|chien)$`),
+  new RegExp(`^documents/${UUID}/contrat$`),
 ];
 
 export class UploadError extends Error {}

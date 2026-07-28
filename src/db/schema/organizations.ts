@@ -7,8 +7,26 @@ import {
   pgEnum,
   uniqueIndex,
   boolean,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+
+/**
+ * Where on the organization's own uploaded contract PDF a given field's
+ * value gets written — captured by an admin clicking on a rendered preview
+ * of their document (src/app/.../parametres/contrat), in pdf-lib's own
+ * bottom-up point space. Keyed by field name (see src/lib/contract-fields.ts
+ * for the canonical list) — a field absent from the map just isn't drawn
+ * (the organization's document doesn't have it, or it hasn't been placed yet).
+ */
+export interface ContractFieldPosition {
+  page: number;
+  x: number;
+  y: number;
+  /** Font size in points — defaults to 10 if unset. */
+  size?: number;
+}
+export type ContractFieldPositions = Record<string, ContractFieldPosition>;
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -65,6 +83,12 @@ export const organizations = pgTable("organizations", {
   // document.
   certificateFileUrl: text("certificate_file_url"),
   certificateFileUrlChien: text("certificate_file_url_chien"),
+
+  // The organization's own adoption contract PDF (uploaded as-is) and where
+  // on it each piece of data gets written — see ContractFieldPositions
+  // above and generateAdoptionContractPdf (src/lib/adoption-contract-pdf.ts).
+  contractTemplateUrl: text("contract_template_url"),
+  contractFieldPositions: jsonb("contract_field_positions").$type<ContractFieldPositions>(),
 
   // Outgoing email identity: each organization sends through its own mailbox
   // (typically Gmail + an app password) so recipients only ever see that

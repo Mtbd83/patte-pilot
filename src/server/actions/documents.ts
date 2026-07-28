@@ -8,7 +8,7 @@ import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
 import { sendEmail, organizationSmtpConfig } from "@/lib/mailer";
 import { dateString } from "@/lib/validation";
-import { generateAdoptionContractPdf } from "@/lib/adoption-contract-pdf";
+import { generateAdoptionContractPdf, SAMPLE_CONTRACT_DATA } from "@/lib/adoption-contract-pdf";
 import { isBoosterOwed, boosterDueDate } from "@/lib/animal-care";
 import {
   renderEmailTemplate,
@@ -289,34 +289,49 @@ async function buildContractPdfBytes(input: GenerateContractInput) {
     data.organizationId,
   );
 
-  const pdfBytes = await generateAdoptionContractPdf({
-    animal: {
-      name: animal.name,
-      sex: animal.sex,
-      species: animal.species,
-      breed: animal.breed,
-      birthDate: animal.birthDate,
-      icadNumber: animal.icadNumber,
-      coat: animal.coat,
+  if (!organization.contractTemplateUrl || !organization.contractFieldPositions) {
+    throw new Error(
+      "Aucun modèle de contrat configuré pour cette association — configurez-le dans Paramètres.",
+    );
+  }
+  const templateResponse = await fetch(organization.contractTemplateUrl);
+  if (!templateResponse.ok) {
+    throw new Error("Le modèle de contrat configuré est introuvable — vérifiez-le dans Paramètres.");
+  }
+  const templateBytes = new Uint8Array(await templateResponse.arrayBuffer());
+
+  const pdfBytes = await generateAdoptionContractPdf(
+    {
+      animal: {
+        name: animal.name,
+        sex: animal.sex,
+        species: animal.species,
+        breed: animal.breed,
+        birthDate: animal.birthDate,
+        icadNumber: animal.icadNumber,
+        coat: animal.coat,
+      },
+      sterilizationDone: data.sterilizationDone,
+      healthCertificateOk: data.healthCertificateOk,
+      adopter: {
+        fullName: data.adopterFullName,
+        address: data.adopterAddress ?? "",
+        postalCode: data.adopterPostalCode,
+        city: data.adopterCity,
+        phone1: data.adopterPhone1,
+        phone2: data.adopterPhone2,
+        email: data.toEmail,
+      },
+      vetFeesAmount: data.vetFeesAmount,
+      sterilizationFeesAmount: data.sterilizationFeesAmount,
+      freeDonationAmount: data.freeDonationAmount,
+      freeDonationReason: data.freeDonationReason,
+      signaturePlace: data.signaturePlace,
+      signatureDate: data.signatureDate,
     },
-    sterilizationDone: data.sterilizationDone,
-    healthCertificateOk: data.healthCertificateOk,
-    adopter: {
-      fullName: data.adopterFullName,
-      address: data.adopterAddress ?? "",
-      postalCode: data.adopterPostalCode,
-      city: data.adopterCity,
-      phone1: data.adopterPhone1,
-      phone2: data.adopterPhone2,
-      email: data.toEmail,
-    },
-    vetFeesAmount: data.vetFeesAmount,
-    sterilizationFeesAmount: data.sterilizationFeesAmount,
-    freeDonationAmount: data.freeDonationAmount,
-    freeDonationReason: data.freeDonationReason,
-    signaturePlace: data.signaturePlace,
-    signatureDate: data.signatureDate,
-  });
+    templateBytes,
+    organization.contractFieldPositions,
+  );
 
   return { pdfBytes, animal, organization, data };
 }
@@ -329,6 +344,53 @@ async function buildContractPdfBytes(input: GenerateContractInput) {
  */
 export async function previewAdoptionContract(input: GenerateContractInput) {
   const { pdfBytes } = await buildContractPdfBytes(input);
+  return { pdfBase64: Buffer.from(pdfBytes).toString("base64") };
+}
+
+const previewContractFieldMappingSchema = z.object({
+  organizationId: z.string().uuid(),
+  positions: z.record(
+    z.object({
+      page: z.number().int().min(0),
+      x: z.number(),
+      y: z.number(),
+      size: z.number().min(1).optional(),
+    }),
+  ),
+});
+
+/**
+ * Admin-only, read-only: renders the contract with sample/placeholder data
+ * using a field mapping that isn't saved yet — lets an admin iterate
+ * (place a field, preview, adjust) in the mapping tool
+ * (src/app/.../parametres/contrat) before committing.
+ */
+export async function previewContractFieldMapping(
+  input: z.infer<typeof previewContractFieldMappingSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const data = previewContractFieldMappingSchema.parse(input);
+  await requireAdmin(session.user.id, data.organizationId);
+
+  const organization = await db.query.organizations.findFirst({
+    where: eq(organizations.id, data.organizationId),
+  });
+  if (!organization) throw new Error("Organisation introuvable.");
+  if (!organization.contractTemplateUrl) {
+    throw new Error("Commencez par téléverser votre modèle de contrat.");
+  }
+
+  const response = await fetch(organization.contractTemplateUrl);
+  if (!response.ok) throw new Error("Le modèle de contrat est introuvable.");
+  const templateBytes = new Uint8Array(await response.arrayBuffer());
+
+  const pdfBytes = await generateAdoptionContractPdf(
+    SAMPLE_CONTRACT_DATA,
+    templateBytes,
+    data.positions,
+  );
   return { pdfBase64: Buffer.from(pdfBytes).toString("base64") };
 }
 
