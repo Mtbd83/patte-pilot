@@ -6,6 +6,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { animals, documents, organizations, adoptionApplications, users } from "@/db/schema";
+import type { AnimalSpecies } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
 import { sendEmail, organizationSmtpConfig } from "@/lib/mailer";
@@ -21,12 +22,12 @@ import {
   DEFAULT_CONTRACT_EMAIL_BODY,
 } from "@/lib/email-templates";
 
-const CERTIFICATE_FILE_PATH = path.join(
-  process.cwd(),
-  "public",
-  "documents",
-  "certificat-engagement.pdf",
-);
+const CERTIFICATE_FILE_PATHS: Record<AnimalSpecies, string> = {
+  chien: path.join(process.cwd(), "public", "documents", "certificat-engagement-chien.pdf"),
+  chat: path.join(process.cwd(), "public", "documents", "certificat-engagement.pdf"),
+  lapin: path.join(process.cwd(), "public", "documents", "certificat-engagement.pdf"),
+  autre: path.join(process.cwd(), "public", "documents", "certificat-engagement.pdf"),
+};
 
 async function loadAnimalAndOrganization(animalId: string, organizationId: string) {
   const [animal, organization] = await Promise.all([
@@ -136,14 +137,15 @@ export async function sendEngagementCertificate(
   const data = sendEngagementCertificateSchema.parse(input);
   await requireAdmin(session.user.id, data.organizationId);
 
-  const { organization } = await loadAnimalAndOrganization(data.animalId, data.organizationId);
+  const { animal, organization } = await loadAnimalAndOrganization(data.animalId, data.organizationId);
 
+  const certificatePath = CERTIFICATE_FILE_PATHS[animal.species];
   let fileBuffer: Buffer;
   try {
-    fileBuffer = await readFile(CERTIFICATE_FILE_PATH);
+    fileBuffer = await readFile(certificatePath);
   } catch {
     throw new Error(
-      "Le fichier du certificat d'engagement est introuvable. Ajoutez-le à public/documents/certificat-engagement.pdf.",
+      `Le fichier du certificat d'engagement est introuvable. Ajoutez-le à public/documents/${path.basename(certificatePath)}.`,
     );
   }
 
@@ -152,7 +154,7 @@ export async function sendEngagementCertificate(
     subject: data.subject,
     html: textToHtml(data.body),
     attachments: [
-      { filename: "certificat-engagement.pdf", content: fileBuffer, contentType: "application/pdf" },
+      { filename: path.basename(certificatePath), content: fileBuffer, contentType: "application/pdf" },
     ],
     fromName: organization.name,
     replyTo: organization.contactEmail ?? undefined,
