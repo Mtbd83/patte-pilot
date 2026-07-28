@@ -51,6 +51,12 @@ export const invitationStatusEnum = pgEnum("invitation_status", [
   "expired",
 ]);
 
+export const organizationSignupRequestStatusEnum = pgEnum("organization_signup_request_status", [
+  "en_attente",
+  "approuve",
+  "refuse",
+]);
+
 // ---------------------------------------------------------------------------
 // Core identity
 // ---------------------------------------------------------------------------
@@ -63,6 +69,10 @@ export const users = pgTable("users", {
   firstName: varchar("first_name", { length: 120 }),
   lastName: varchar("last_name", { length: 120 }),
   phone: varchar("phone", { length: 30 }),
+  // Platform-level operator status — independent of per-organization roles
+  // (organizationMemberRoles). No self-service path: set directly in the
+  // database for a trusted account. See requirePlatformManager.
+  isPlatformManager: boolean("is_platform_manager").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -121,6 +131,41 @@ export const organizations = pgTable("organizations", {
 
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * A prospective association's self-service request to join the platform —
+ * reviewed by a platform manager (users.isPlatformManager), who approves
+ * (creating the organization + emailing an admin invite to contactEmail) or
+ * rejects it. Public, unauthenticated submission — see
+ * submitOrganizationSignupRequest and the anti-spam fields, same pattern as
+ * adoptionApplications.
+ */
+export const organizationSignupRequests = pgTable("organization_signup_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  organizationName: varchar("organization_name", { length: 200 }).notNull(),
+  contactName: varchar("contact_name", { length: 200 }).notNull(),
+  contactEmail: varchar("contact_email", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 30 }),
+  message: text("message"),
+
+  // Legal/letterhead details, collected upfront so the created organization
+  // starts pre-filled instead of asking the new admin to re-enter them.
+  siren: varchar("siren", { length: 20 }),
+  address: text("address"),
+  postalCode: varchar("postal_code", { length: 10 }),
+  city: varchar("city", { length: 120 }),
+
+  status: organizationSignupRequestStatusEnum("status").default("en_attente").notNull(),
+  reviewNotes: text("review_notes"),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  // Set once approved — traceability from request to the resulting org.
+  createdOrganizationId: uuid("created_organization_id").references(() => organizations.id, {
+    onDelete: "set null",
+  }),
+
+  ipAddress: varchar("ip_address", { length: 45 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 /**
@@ -248,3 +293,4 @@ export type OrganizationMemberRole = typeof organizationMemberRoles.$inferSelect
 export type Invitation = typeof invitations.$inferSelect;
 export type OrgRole = (typeof orgRoleEnum.enumValues)[number];
 export type OrganizationHelloAssoLink = typeof organizationHelloAssoLinks.$inferSelect;
+export type OrganizationSignupRequest = typeof organizationSignupRequests.$inferSelect;

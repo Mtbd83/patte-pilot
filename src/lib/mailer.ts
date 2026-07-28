@@ -25,6 +25,17 @@ export function organizationSmtpConfig(organization: {
   return { user: organization.smtpUser, appPassword: organization.smtpAppPassword };
 }
 
+/**
+ * The platform's own mailbox — used only for the handful of emails sent
+ * before an organization has configured its own (e.g. inviting the first
+ * admin of a newly approved association). Never used for anything
+ * candidate/member-facing on an organization's behalf.
+ */
+export function platformSmtpConfig(): OrganizationSmtpConfig | null {
+  if (!process.env.PLATFORM_SMTP_USER || !process.env.PLATFORM_SMTP_APP_PASSWORD) return null;
+  return { user: process.env.PLATFORM_SMTP_USER, appPassword: process.env.PLATFORM_SMTP_APP_PASSWORD };
+}
+
 function createTransporterFor({ user, appPassword }: OrganizationSmtpConfig) {
   const host = process.env.SMTP_HOST ?? DEFAULT_SMTP_HOST;
   const port = Number(process.env.SMTP_PORT ?? DEFAULT_SMTP_PORT);
@@ -65,9 +76,7 @@ export async function sendEmail({
   }
 
   if (!organizationSmtp) {
-    throw new Error(
-      "Configurez l'adresse email d'envoi de l'association dans Paramètres avant d'envoyer des emails.",
-    );
+    throw new Error("Configurez une adresse email d'envoi avant d'envoyer des emails.");
   }
 
   const displayName = fromName.replace(/["<>]/g, "");
@@ -99,6 +108,25 @@ export function invitationEmailHtml(params: {
     <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
       <h2>Vous êtes invité·e à rejoindre ${params.organizationName} 🐾</h2>
       <p>${params.inviterName} vous invite à rejoindre l'association <strong>${params.organizationName}</strong> avec le rôle : <strong>${rolesText}</strong>.</p>
+      <p>
+        <a href="${params.acceptUrl}" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">
+          Accepter l'invitation
+        </a>
+      </p>
+      <p style="color:#666;font-size:12px;">Ce lien expire dans 7 jours. Si vous ne vous attendiez pas à cet email, ignorez-le simplement.</p>
+    </div>
+  `;
+}
+
+/** Sent when a platform manager creates/approves a brand-new organization — the recipient becomes its first admin by accepting. */
+export function platformAdminInvitationEmailHtml(params: {
+  organizationName: string;
+  acceptUrl: string;
+}) {
+  return `
+    <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
+      <h2>Votre association a été validée sur PattePilot 🐾</h2>
+      <p><strong>${params.organizationName}</strong> est prête — acceptez l'invitation ci-dessous pour créer votre compte et devenir administrateur·rice de votre association.</p>
       <p>
         <a href="${params.acceptUrl}" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">
           Accepter l'invitation

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import {
   organizationMembers,
   organizationMemberRoles,
+  users,
   type OrgRole,
 } from "@/db/schema";
 
@@ -61,6 +62,23 @@ export async function requireRole(
 /** Convenience guard for admin-only actions. */
 export async function requireAdmin(userId: string, organizationId: string) {
   return requireRole(userId, organizationId, ["admin"]);
+}
+
+/**
+ * Platform-level operator status — independent of any organization's own
+ * roles (a user can be a platform manager and also a member of one or more
+ * organizations, or neither). No self-service path to become one.
+ */
+export async function isPlatformManager(userId: string): Promise<boolean> {
+  const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  return user?.isPlatformManager ?? false;
+}
+
+/** Server-side guard: throws ForbiddenError unless the user is a platform manager. */
+export async function requirePlatformManager(userId: string) {
+  if (!(await isPlatformManager(userId))) {
+    throw new ForbiddenError("Réservé aux gestionnaires de la plateforme.");
+  }
 }
 
 /** User IDs of every active admin of an organization — e.g. to notify them of a new adoption application. */

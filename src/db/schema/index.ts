@@ -5,6 +5,7 @@ import {
   organizationMembers,
   invitations,
   organizationHelloAssoLinks,
+  organizationSignupRequests,
 } from "./organizations";
 import { animals, animalHealthChecklists } from "./animals";
 import { fosterFamilies } from "./foster-families";
@@ -58,6 +59,16 @@ export const organizationHelloAssoLinksRelations = relations(
   ({ one }) => ({
     organization: one(organizations, {
       fields: [organizationHelloAssoLinks.organizationId],
+      references: [organizations.id],
+    }),
+  }),
+);
+
+export const organizationSignupRequestsRelations = relations(
+  organizationSignupRequests,
+  ({ one }) => ({
+    createdOrganization: one(organizations, {
+      fields: [organizationSignupRequests.createdOrganizationId],
       references: [organizations.id],
     }),
   }),
