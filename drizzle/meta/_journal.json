@@ -78,6 +78,13 @@
       "when": 1785240067436,
       "tag": "0010_clear_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785246809376,
+      "tag": "0011_volatile_sleeper",
+      "breakpoints": true
     }
   ]
 }

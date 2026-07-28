@@ -1,4 +1,6 @@
 import "dotenv/config";
+import { readFile } from "fs/promises";
+import path from "path";
 import type { FullConfig } from "@playwright/test";
 import { and, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -10,6 +12,7 @@ import {
   organizationMemberRoles,
   type OrgRole,
 } from "../src/db/schema";
+import { uploadDocument } from "../src/lib/uploads";
 
 const ADMIN_EMAIL = "admin@example.com";
 const ADMIN_PASSWORD = "Password123!";
@@ -80,6 +83,24 @@ export default async function globalSetup(config: FullConfig) {
     [org] = await db.insert(organizations).values({ name: ORG_NAME, slug: ORG_SLUG }).returning();
   }
   if (!org) throw new Error("Seed failed: could not create organization.");
+
+  // sendEngagementCertificate now requires the org's own uploaded PDF (no
+  // more bundled fallback file) — seed one so specs exercising it don't
+  // depend on a certificate having been configured by hand beforehand.
+  if (!org.certificateFileUrl) {
+    const placeholderPath = path.join(process.cwd(), "public", "documents", "certificat-engagement.pdf");
+    const bytes = await readFile(placeholderPath);
+    const file = new File([new Uint8Array(bytes)], "certificat-engagement.pdf", {
+      type: "application/pdf",
+    });
+    const certificateFileUrl = await uploadDocument(file, `documents/${org.id}/certificat-default`);
+    [org] = await db
+      .update(organizations)
+      .set({ certificateFileUrl })
+      .where(eq(organizations.id, org.id))
+      .returning();
+    if (!org) throw new Error("Seed failed: could not set the test org's certificate URL.");
+  }
 
   await ensureMemberWithRole(org.id, ADMIN_EMAIL, ADMIN_PASSWORD, "admin");
   await ensureMemberWithRole(org.id, BENEVOLE_EMAIL, BENEVOLE_PASSWORD, "benevole");

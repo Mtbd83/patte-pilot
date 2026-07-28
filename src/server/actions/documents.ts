@@ -1,12 +1,9 @@
 "use server";
 
-import { readFile } from "fs/promises";
-import path from "path";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { animals, documents, organizations, adoptionApplications, users } from "@/db/schema";
-import type { AnimalSpecies } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
 import { sendEmail, organizationSmtpConfig } from "@/lib/mailer";
@@ -21,13 +18,6 @@ import {
   DEFAULT_CONTRACT_EMAIL_SUBJECT,
   DEFAULT_CONTRACT_EMAIL_BODY,
 } from "@/lib/email-templates";
-
-const CERTIFICATE_FILE_PATHS: Record<AnimalSpecies, string> = {
-  chien: path.join(process.cwd(), "public", "documents", "certificat-engagement-chien.pdf"),
-  chat: path.join(process.cwd(), "public", "documents", "certificat-engagement.pdf"),
-  lapin: path.join(process.cwd(), "public", "documents", "certificat-engagement.pdf"),
-  autre: path.join(process.cwd(), "public", "documents", "certificat-engagement.pdf"),
-};
 
 async function loadAnimalAndOrganization(animalId: string, organizationId: string) {
   const [animal, organization] = await Promise.all([
@@ -125,8 +115,9 @@ const sendEngagementCertificateSchema = z.object({
  * Admin-only: emails the engagement certificate as-is (no filling — it's a
  * generic legal document the adopter signs on their own) alongside the
  * subject/body composed (and possibly edited) from the organization's
- * template. The association must place the real file at
- * public/documents/certificat-engagement.pdf.
+ * template. Each organization uploads its own certificate(s) in Paramètres
+ * — `certificateFileUrlChien` for chien, `certificateFileUrl` (the default)
+ * otherwise.
  */
 export async function sendEngagementCertificate(
   input: z.infer<typeof sendEngagementCertificateSchema>,
@@ -139,22 +130,26 @@ export async function sendEngagementCertificate(
 
   const { animal, organization } = await loadAnimalAndOrganization(data.animalId, data.organizationId);
 
-  const certificatePath = CERTIFICATE_FILE_PATHS[animal.species];
-  let fileBuffer: Buffer;
-  try {
-    fileBuffer = await readFile(certificatePath);
-  } catch {
+  const certificateUrl =
+    (animal.species === "chien" && organization.certificateFileUrlChien) || organization.certificateFileUrl;
+  if (!certificateUrl) {
     throw new Error(
-      `Le fichier du certificat d'engagement est introuvable. Ajoutez-le à public/documents/${path.basename(certificatePath)}.`,
+      "Aucun certificat d'engagement configuré pour cette association — ajoutez-en un dans Paramètres.",
     );
   }
+
+  const response = await fetch(certificateUrl);
+  if (!response.ok) {
+    throw new Error("Le certificat d'engagement configuré est introuvable — vérifiez-le dans Paramètres.");
+  }
+  const fileBuffer = Buffer.from(await response.arrayBuffer());
 
   await sendEmail({
     to: data.toEmail,
     subject: data.subject,
     html: textToHtml(data.body),
     attachments: [
-      { filename: path.basename(certificatePath), content: fileBuffer, contentType: "application/pdf" },
+      { filename: "certificat-engagement.pdf", content: fileBuffer, contentType: "application/pdf" },
     ],
     fromName: organization.name,
     replyTo: organization.contactEmail ?? undefined,

@@ -1,6 +1,7 @@
 "use server";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -69,27 +70,71 @@ const submitAdoptionApplicationSchema = z.object({
   specificAnimalName: z.string().max(120).optional(),
   targetAnimalId: z.string().uuid().optional(),
   additionalComments: z.string().optional(),
+
+  // Honeypot: a field real visitors never see or fill (hidden off-screen in
+  // the form) — bots that fill in every input trip it. Never persisted.
+  honeypot: z.string().optional(),
 });
 
 export type SubmitAdoptionApplicationInput = z.input<typeof submitAdoptionApplicationSchema>;
 
+const RATE_LIMIT_MAX_PER_HOUR = 5;
+
+function getClientIp() {
+  try {
+    const requestHeaders = headers();
+    const forwardedFor = requestHeaders.get("x-forwarded-for");
+    return forwardedFor?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip") || null;
+  } catch {
+    // Outside a real request scope (e.g. this action called directly from a
+    // test) — rate-limiting is simply skipped rather than failing the call.
+    return null;
+  }
+}
+
 /**
  * Public: anyone can submit an adoption application for an organization —
  * this is the public-facing adoption form, so deliberately no auth check.
+ * Two lightweight anti-spam measures given the total absence of auth here:
+ * a honeypot field, and a per-IP rate limit.
  */
 export async function submitAdoptionApplication(input: SubmitAdoptionApplicationInput) {
-  const data = submitAdoptionApplicationSchema.parse(input);
+  const { honeypot, ...rest } = submitAdoptionApplicationSchema.parse(input);
+
+  // A filled honeypot means a bot, not a real visitor — silently no-op
+  // instead of throwing, so the bot has no signal it was caught.
+  if (honeypot) {
+    return null;
+  }
+
+  const data = rest;
 
   const organization = await db.query.organizations.findFirst({
     where: eq(organizations.id, data.organizationId),
   });
   if (!organization) throw new Error("Organisation introuvable.");
 
+  const ipAddress = getClientIp();
+  if (ipAddress) {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentFromSameIp = await db.query.adoptionApplications.findMany({
+      where: and(
+        eq(adoptionApplications.organizationId, data.organizationId),
+        eq(adoptionApplications.ipAddress, ipAddress),
+        gte(adoptionApplications.createdAt, oneHourAgo),
+      ),
+    });
+    if (recentFromSameIp.length >= RATE_LIMIT_MAX_PER_HOUR) {
+      throw new Error("Trop de candidatures envoyées récemment — réessayez plus tard.");
+    }
+  }
+
   const [application] = await db
     .insert(adoptionApplications)
     .values({
       ...data,
       gardenAreaM2: data.gardenAreaM2 !== undefined ? data.gardenAreaM2.toString() : undefined,
+      ipAddress,
     })
     .returning();
   if (!application) throw new Error("Échec de l'envoi de la candidature.");

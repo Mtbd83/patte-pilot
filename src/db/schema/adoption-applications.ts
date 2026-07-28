@@ -126,6 +126,9 @@ export const adoptionApplications = pgTable(
     status: adoptionApplicationStatusEnum("status").default("en_attente").notNull(),
     reviewNotes: text("review_notes"),
 
+    // Captured for anti-spam auditing/rate-limiting — see submitAdoptionApplication.
+    ipAddress: varchar("ip_address", { length: 45 }), // 45 = max IPv6 textual length
+
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

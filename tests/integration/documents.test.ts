@@ -1,9 +1,11 @@
 /**
  * Integration tests for the document-generation server actions (engagement
  * certificate + adoption contract), run against a real (test) Postgres
- * database. Nodemailer is mocked so no real email is sent; the certificate
- * file is read from the real public/documents/certificat-engagement.pdf
- * placeholder shipped in the repo.
+ * database. Nodemailer is mocked so no real email is sent. The engagement
+ * certificate is now fetched from the organization's own uploaded URL
+ * (Supabase Storage) rather than a bundled file, so `fetch` is mocked to
+ * serve the real placeholder PDF (public/documents/certificat-engagement.pdf)
+ * without hitting the network.
  */
 jest.mock("@/lib/auth", () => ({
   auth: jest.fn(),
@@ -14,6 +16,8 @@ jest.mock("@/lib/mailer", () => ({
 }));
 
 import { randomUUID } from "crypto";
+import { readFileSync } from "fs";
+import path from "path";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { sendEmail } from "@/lib/mailer";
@@ -30,6 +34,20 @@ import { ForbiddenError } from "@/lib/permissions";
 
 const authMock = auth as unknown as jest.Mock;
 const sendEmailMock = sendEmail as unknown as jest.Mock;
+
+const PLACEHOLDER_CERTIFICATE_PATH = path.join(
+  process.cwd(),
+  "public",
+  "documents",
+  "certificat-engagement.pdf",
+);
+const FAKE_CERTIFICATE_URL = "https://storage.example.test/documents/certificat-engagement.pdf";
+
+global.fetch = jest.fn(async (url: string) => {
+  if (url !== FAKE_CERTIFICATE_URL) throw new Error(`Unexpected fetch in test: ${url}`);
+  const bytes = readFileSync(PLACEHOLDER_CERTIFICATE_PATH);
+  return { ok: true, arrayBuffer: async () => Uint8Array.from(bytes).buffer } as Response;
+}) as unknown as typeof fetch;
 
 describe("documents server actions", () => {
   let organizationId: string;
@@ -78,6 +96,10 @@ describe("documents server actions", () => {
       city: "Toulon",
       phone1: "0600000000",
     });
+    await db
+      .update(organizations)
+      .set({ certificateFileUrl: FAKE_CERTIFICATE_URL })
+      .where(eq(organizations.id, organizationId));
 
     const animal = await createAnimal({
       organizationId,
@@ -117,6 +139,62 @@ describe("documents server actions", () => {
     expect(call.to).toBe("adoptant@example.com");
     expect(call.subject).toBe("Certificat d'engagement — Biscotte");
     expect(call.attachments[0].filename).toBe("certificat-engagement.pdf");
+  });
+
+  it("falls back to the default certificate for a chien when no dog-specific one is configured", async () => {
+    const dog = await createAnimal({
+      organizationId,
+      name: "Rex",
+      species: "chien",
+      sex: "male",
+      intakeDate: "2026-01-01",
+      status: "adopte",
+    });
+
+    await sendEngagementCertificate({
+      organizationId,
+      animalId: dog.id,
+      toEmail: "adoptant@example.com",
+      subject: "Certificat d'engagement — Rex",
+      body: "Bonjour,",
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(FAKE_CERTIFICATE_URL);
+  });
+
+  it("rejects sending a certificate when none is configured for the organization", async () => {
+    const [bareOrg] = await db
+      .insert(organizations)
+      .values({ name: "Sans certificat", slug: `no-cert-${randomUUID().slice(0, 8)}` })
+      .returning();
+    if (!bareOrg) throw new Error("Seed setup failed.");
+    const [member] = await db
+      .insert(organizationMembers)
+      .values({ organizationId: bareOrg.id, userId: adminUserId })
+      .returning();
+    if (!member) throw new Error("Seed setup failed.");
+    await db.insert(organizationMemberRoles).values({ memberId: member.id, role: "admin" });
+
+    const bareAnimal = await createAnimal({
+      organizationId: bareOrg.id,
+      name: "Sans Certif",
+      species: "chat",
+      sex: "femelle",
+      intakeDate: "2026-01-01",
+      status: "adopte",
+    });
+
+    await expect(
+      sendEngagementCertificate({
+        organizationId: bareOrg.id,
+        animalId: bareAnimal.id,
+        toEmail: "adoptant@example.com",
+        subject: "Certificat",
+        body: "Bonjour,",
+      }),
+    ).rejects.toThrow(/Aucun certificat d'engagement configuré/);
+
+    await db.delete(organizations).where(eq(organizations.id, bareOrg.id));
   });
 
   it("rejects a non-admin from sending the certificate", async () => {

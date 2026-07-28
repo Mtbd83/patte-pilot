@@ -73,8 +73,27 @@ describe("adoption application server actions", () => {
       email: "jeanne@example.com",
       desiredSpecies: "chat",
     });
+    if (!application) throw new Error("Expected a real application, not a honeypot no-op.");
     expect(application.status).toBe("en_attente");
     expect(application.lastName).toBe("Dupont");
+  });
+
+  it("silently no-ops when the honeypot field is filled in", async () => {
+    authMock.mockResolvedValue(null);
+    const result = await submitAdoptionApplication({
+      organizationId,
+      lastName: "Bot",
+      firstName: "Spam",
+      phone: "0600000000",
+      email: "bot@example.com",
+      desiredSpecies: "chat",
+      honeypot: "https://spam.example",
+    });
+    expect(result).toBeNull();
+
+    authMock.mockResolvedValue({ user: { id: adminUserId, email: "admin@example.com" } });
+    const applications = await listAdoptionApplications({ organizationId });
+    expect(applications.some((a) => a.lastName === "Bot")).toBe(false);
   });
 
   it("rejects a submission for a non-existent organization", async () => {

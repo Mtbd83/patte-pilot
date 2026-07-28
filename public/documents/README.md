@@ -1,15 +1,17 @@
 # Documents statiques
 
-`certificat-engagement.pdf` et `certificat-engagement-chien.pdf` sont envoyés
-**tels quels** (sans remplissage) par le bouton "Envoyer le certificat
-d'engagement" — voir `src/server/actions/documents.ts`
-(`sendEngagementCertificate`). Le fichier choisi dépend de l'espèce de
-l'animal : `certificat-engagement-chien.pdf` pour un chien,
-`certificat-engagement.pdf` pour les autres espèces (chat, lapin, autre).
+`certificat-engagement.pdf` et `certificat-engagement-chien.pdf` ne sont
+**plus lus directement par l'application**. Chaque association uploade
+désormais son propre certificat (Paramètres → « Certificat d'engagement »),
+stocké dans Supabase Storage — voir `certificateFileUrl`/
+`certificateFileUrlChien` sur `organizations` et `sendEngagementCertificate`
+(`src/server/actions/documents.ts`), qui télécharge le fichier depuis cette
+URL au lieu du système de fichiers.
 
-Le fichier `certificat-engagement.pdf` initialement présent était un
-**placeholder** généré pour permettre aux tests (unitaires/intégration/e2e)
-de s'exécuter sans dépendre d'un vrai document — remplacez tout fichier
-placeholder restant par le vrai PDF de votre association avant toute
-utilisation réelle, sinon les adoptants recevront ce placeholder au lieu du
-vrai document.
+Ces deux PDF restent dans le repo comme **fixtures de test**
+(`tests/integration/documents.test.ts` les lit directement pour simuler le
+téléchargement depuis Supabase Storage, sans dépendre du réseau).
+
+`contrat-adoption-template.pdf` reste lui un fichier statique unique, partagé
+par toutes les associations — le rendre personnalisable par association
+demande un outil de mappage de positions plus conséquent, pas encore fait.

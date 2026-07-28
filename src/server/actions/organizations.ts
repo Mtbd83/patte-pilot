@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { organizations, organizationMembers, organizationMemberRoles } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, ForbiddenError } from "@/lib/permissions";
-import { uploadImage } from "@/lib/uploads";
+import { uploadImage, uploadDocument } from "@/lib/uploads";
 
 const createOrganizationSchema = z.object({
   name: z.string().min(2).max(200),
@@ -177,5 +177,50 @@ export async function uploadOrganizationLogo(formData: FormData) {
     .where(eq(organizations.id, organizationId))
     .returning();
   if (!updated) throw new Error("Échec de la mise à jour du logo.");
+  return updated;
+}
+
+const CERTIFICATE_SPECIES = ["default", "chien"] as const;
+type CertificateSpecies = (typeof CERTIFICATE_SPECIES)[number];
+const CERTIFICATE_COLUMN: Record<CertificateSpecies, "certificateFileUrl" | "certificateFileUrlChien"> = {
+  default: "certificateFileUrl",
+  chien: "certificateFileUrlChien",
+};
+
+/**
+ * Admin-only: uploads (or replaces) the organization's own engagement
+ * certificate PDF — sent as-is, no filling (see sendEngagementCertificate).
+ * `species` "default" covers chat/lapin/autre; "chien" is an optional
+ * override.
+ */
+export async function updateOrganizationCertificate(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const organizationId = formData.get("organizationId");
+  const species = formData.get("species");
+  const file = formData.get("file");
+  if (
+    typeof organizationId !== "string" ||
+    typeof species !== "string" ||
+    !CERTIFICATE_SPECIES.includes(species as CertificateSpecies) ||
+    !(file instanceof File)
+  ) {
+    throw new Error("Requête invalide.");
+  }
+
+  await requireAdmin(session.user.id, organizationId);
+
+  const certificateFileUrl = await uploadDocument(
+    file,
+    `documents/${organizationId}/certificat-${species}`,
+  );
+
+  const [updated] = await db
+    .update(organizations)
+    .set({ [CERTIFICATE_COLUMN[species as CertificateSpecies]]: certificateFileUrl, updatedAt: new Date() })
+    .where(eq(organizations.id, organizationId))
+    .returning();
+  if (!updated) throw new Error("Échec de la mise à jour du certificat.");
   return updated;
 }

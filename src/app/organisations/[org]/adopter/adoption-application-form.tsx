@@ -121,6 +121,9 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  // Honeypot: real visitors never see or focus this field (hidden off-screen
+  // below); bots that fill in every input on the page trip it.
+  const [honeypot, setHoneypot] = useState("");
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -133,6 +136,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
     try {
       await submitAdoptionApplication({
         organizationId,
+        honeypot,
         lastName: form.lastName,
         firstName: form.firstName,
         city: form.city || undefined,
@@ -203,6 +207,17 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {/* Honeypot — invisible and unreachable by keyboard for real visitors, so only bots fill it in. */}
+      <input
+        type="text"
+        name="website"
+        value={honeypot}
+        onChange={(e) => setHoneypot(e.target.value)}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Vos coordonnées</CardTitle>

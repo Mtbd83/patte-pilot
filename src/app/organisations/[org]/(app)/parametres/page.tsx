@@ -11,6 +11,7 @@ import { OrganizationLogoUpload } from "./organization-logo-upload";
 import { OrganizationEmailSettingsForm } from "./organization-email-settings-form";
 import { OrganizationHelloAssoLinksForm } from "./organization-helloasso-links-form";
 import { OrganizationEmailTemplatesForm } from "./organization-email-templates-form";
+import { OrganizationCertificatesUpload } from "./organization-certificates-upload";
 
 export default async function ParametresPage({
   params,
@@ -95,6 +96,24 @@ export default async function ParametresPage({
         </CardHeader>
         <CardContent>
           <OrganizationProfileForm organization={organization} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Certificat d&apos;engagement</CardTitle>
+          <CardDescription>
+            Envoyé tel quel (sans remplissage) depuis une fiche candidature — l&apos;adoptant·e le complète et
+            le signe de son côté. Le certificat chien est optionnel : sans lui, le certificat par défaut est
+            utilisé pour tous les animaux.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <OrganizationCertificatesUpload
+            organizationId={organization.id}
+            certificateFileUrl={organization.certificateFileUrl}
+            certificateFileUrlChien={organization.certificateFileUrlChien}
+          />
         </CardContent>
       </Card>
 

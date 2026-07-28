@@ -57,6 +57,15 @@ export const organizations = pgTable("organizations", {
   contactEmail: varchar("contact_email", { length: 255 }),
   logoUrl: text("logo_url"),
 
+  // Engagement certificate PDFs, uploaded per organization (sent as-is, no
+  // filling — see sendEngagementCertificate). `certificateFileUrl` covers
+  // chat/lapin/autre; `certificateFileUrlChien` optionally overrides it for
+  // chien. Falls back to nothing — an org without either configured gets a
+  // clear "configure it" error rather than silently sending someone else's
+  // document.
+  certificateFileUrl: text("certificate_file_url"),
+  certificateFileUrlChien: text("certificate_file_url_chien"),
+
   // Outgoing email identity: each organization sends through its own mailbox
   // (typically Gmail + an app password) so recipients only ever see that
   // organization's own address, never a shared/platform one. Emails fail
