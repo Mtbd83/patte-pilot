@@ -9,6 +9,7 @@ import { organizations, organizationSignupRequests, invitations, users } from "@
 import { auth } from "@/lib/auth";
 import { requirePlatformManager, ForbiddenError } from "@/lib/permissions";
 import { sendEmail, platformSmtpConfig, platformAdminInvitationEmailHtml } from "@/lib/mailer";
+import { getRequestOrigin } from "@/lib/request-origin";
 
 const INVITATION_TTL_DAYS = 7;
 const RATE_LIMIT_MAX_PER_HOUR = 5;
@@ -66,7 +67,7 @@ async function sendPlatformAdminInvite({
     .returning();
   if (!invitation) throw new Error("Échec de la création de l'invitation.");
 
-  const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`;
+  const acceptUrl = `${getRequestOrigin()}/invite/${token}`;
 
   await sendEmail({
     to: invitation.email,

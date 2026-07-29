@@ -16,6 +16,7 @@ import {
 import { auth } from "@/lib/auth";
 import { requireAdmin, ForbiddenError } from "@/lib/permissions";
 import { sendEmail, invitationEmailHtml, organizationSmtpConfig } from "@/lib/mailer";
+import { getRequestOrigin } from "@/lib/request-origin";
 
 const INVITATION_TTL_DAYS = 7;
 
@@ -64,7 +65,7 @@ export async function createInvitation(input: CreateInvitationInput) {
     .returning();
   if (!invitation) throw new Error("Échec de la création de l'invitation.");
 
-  const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`;
+  const acceptUrl = `${getRequestOrigin()}/invite/${token}`;
 
   await sendEmail({
     to: invitation.email,
