@@ -1,5 +1,24 @@
-import { statusNextAction } from "@/lib/animal-care";
+import { statusNextAction, animalStatusRank } from "@/lib/animal-care";
 import type { AnimalStatus } from "@/db/schema";
+
+describe("animalStatusRank", () => {
+  it("orders statuses à l'adoption, en famille d'accueil, quarantaine, en soins, visite, réservé, adopté, archivé", () => {
+    const order: AnimalStatus[] = [
+      "a_l_adoption",
+      "en_famille_accueil",
+      "quarantaine",
+      "en_soins",
+      "visite_en_cours",
+      "reserve",
+      "adopte",
+      "archive",
+    ];
+    const ranks = order.map(animalStatusRank);
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+    // Strictly increasing — no ties within the listed statuses.
+    expect(new Set(ranks).size).toBe(order.length);
+  });
+});
 
 describe("statusNextAction", () => {
   it("suggests nothing while in quarantine", () => {

@@ -7,8 +7,8 @@ import type { Animal, AnimalHealthChecklist, AnimalStatus } from "@/db/schema";
  * closed-out ones (adopted/archived) last.
  */
 export const ANIMAL_STATUS_ORDER: readonly AnimalStatus[] = [
-  "en_famille_accueil",
   "a_l_adoption",
+  "en_famille_accueil",
   "quarantaine",
   "en_soins",
   "visite_en_cours",
