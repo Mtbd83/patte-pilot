@@ -7,6 +7,7 @@ import { organizationMembers } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { InviteMemberDialog } from "./invite-member-dialog";
 import { MemberRolesForm } from "./member-roles-form";
@@ -25,12 +26,16 @@ export default async function MembresPage({
   const roles = await getMemberRoles(session.user.id, organization.id);
   if (!roles.includes("admin")) {
     return (
-      <div className="mx-auto max-w-md py-12 text-center">
-        <h1 className="text-lg font-semibold">Accès refusé</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Seul·e·s les administrateur·rice·s peuvent gérer les membres.
-        </p>
-      </div>
+      <Card className="mx-auto mt-16 max-w-md">
+        <CardHeader>
+          <CardTitle>Accès refusé</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Seul·e·s les administrateur·rice·s peuvent gérer les membres.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 

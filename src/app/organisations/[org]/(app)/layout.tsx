@@ -47,6 +47,7 @@ export default async function OrganizationLayout({
         orgSlug={params.org}
         orgName={organization.name}
         logoUrl={organization.logoUrl}
+        isAdmin={roles.includes("admin")}
         isPlatformManager={platformManager}
       />
       <div className="flex min-w-0 flex-1 flex-col">

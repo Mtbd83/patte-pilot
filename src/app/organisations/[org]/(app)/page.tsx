@@ -13,19 +13,21 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
-import { listAnimalsWithBoosterDue } from "@/server/actions/animals";
-import { boosterDueDate, isBoosterOverdue } from "@/lib/animal-care";
+import { getMemberRoles } from "@/lib/permissions";
+import { listAnimalsWithBoosterDue, listAnimals } from "@/server/actions/animals";
+import { boosterDueDate, isBoosterOwed, isBoosterOverdue } from "@/lib/animal-care";
+import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 const MODULES = [
   { href: "animaux", label: "Animaux", description: "Fiches, statuts, checklist santé.", icon: PawPrint },
   { href: "familles-accueil", label: "Familles d'accueil", description: "Coordonnées et animaux hébergés.", icon: Home },
-  { href: "comptabilite", label: "Comptabilité", description: "Entrées, sorties, solde.", icon: Wallet },
+  { href: "comptabilite", label: "Comptabilité", description: "Entrées, sorties, solde.", icon: Wallet, adminOnly: true },
   { href: "stock", label: "Stock", description: "Articles, quantités, alertes.", icon: Package },
   { href: "candidatures", label: "Candidatures d'adoption", description: "Formulaires reçus, contrats.", icon: HeartHandshake },
-  { href: "membres", label: "Membres", description: "Inviter et gérer les rôles.", icon: Users },
-  { href: "parametres", label: "Paramètres", description: "Profil légal de l'association.", icon: Settings },
+  { href: "membres", label: "Membres", description: "Inviter et gérer les rôles.", icon: Users, adminOnly: true },
+  { href: "parametres", label: "Paramètres", description: "Profil légal de l'association.", icon: Settings, adminOnly: true },
 ];
 
 export default async function OrganizationPage({
@@ -39,10 +41,19 @@ export default async function OrganizationPage({
   const organization = await findOrganizationByIdentifier(params.org);
   if (!organization) return null;
 
-  const animalsWithBoosterDue = await listAnimalsWithBoosterDue({
-    organizationId: organization.id,
-    withinDays: 14,
-  });
+  const roles = await getMemberRoles(session.user.id, organization.id);
+  const isAdmin = roles.includes("admin");
+  const isFamilleAccueil = roles.includes("famille_accueil");
+  const visibleModules = MODULES.filter((module) => !module.adminOnly || isAdmin);
+
+  const [animalsWithBoosterDue, myAnimals] = await Promise.all([
+    listAnimalsWithBoosterDue({ organizationId: organization.id, withinDays: 14 }),
+    isFamilleAccueil ? listAnimals({ organizationId: organization.id }) : Promise.resolve([]),
+  ]);
+
+  const myOwnAnimals = myAnimals.filter(
+    (animal) => animal.currentFosterFamily?.linkedUserId === session.user!.id,
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,6 +61,49 @@ export default async function OrganizationPage({
         <h1 className="text-2xl font-semibold">Tableau de bord</h1>
         <p className="mt-1 text-muted-foreground">Bienvenue sur votre espace de gestion.</p>
       </div>
+
+      {isFamilleAccueil && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PawPrint className="size-4 text-primary" />
+              Mes animaux
+            </CardTitle>
+            <CardDescription>
+              Les animaux actuellement chez vous — cliquez sur un animal pour remplir sa checklist santé.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {myOwnAnimals.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucun animal chez vous pour le moment.</p>
+            ) : (
+              myOwnAnimals.map((animal) => {
+                const owed = animal.healthChecklist ? isBoosterOwed(animal.healthChecklist, animal.status) : false;
+                const due = animal.healthChecklist ? boosterDueDate(animal.healthChecklist) : null;
+                const overdue = animal.healthChecklist ? isBoosterOverdue(animal.healthChecklist, animal.status) : false;
+                return (
+                  <Link
+                    key={animal.id}
+                    href={`/organisations/${params.org}/animaux/${animal.id}`}
+                    className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="font-medium">{animal.name}</span>
+                      <Badge variant={STATUS_BADGE_VARIANT[animal.status]}>{STATUS_LABELS[animal.status]}</Badge>
+                    </span>
+                    {owed && (
+                      <Badge variant={overdue ? "destructive" : "warning"}>
+                        Rappel à faire{due ? ` (${new Date(due).toLocaleDateString("fr-FR")})` : ""}
+                        {overdue ? " — dépassé" : ""}
+                      </Badge>
+                    )}
+                  </Link>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {animalsWithBoosterDue.length > 0 && (
         <Card>
@@ -85,7 +139,7 @@ export default async function OrganizationPage({
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {MODULES.map((module) => (
+        {visibleModules.map((module) => (
           <Link
             key={module.href}
             href={`/organisations/${params.org}/${module.href}`}

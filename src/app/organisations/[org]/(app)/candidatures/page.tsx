@@ -95,13 +95,17 @@ export default async function CandidaturesPage({
               <TableBody>
                 {applications.map((application) => (
                   <TableRow key={application.id} className={ADOPTION_STATUS_ROW_CLASS[application.status]}>
-                    <TableCell>
-                      <Link
-                        href={`/organisations/${params.org}/candidatures/${application.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {application.firstName} {application.lastName}
-                      </Link>
+                    <TableCell className="font-medium">
+                      {canEditStatus ? (
+                        <Link
+                          href={`/organisations/${params.org}/candidatures/${application.id}`}
+                          className="hover:underline"
+                        >
+                          {application.firstName} {application.lastName}
+                        </Link>
+                      ) : (
+                        `${application.firstName} ${application.lastName}`
+                      )}
                     </TableCell>
                     <TableCell>{application.city || "—"}</TableCell>
                     <TableCell>{application.email}</TableCell>

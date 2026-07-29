@@ -64,13 +64,17 @@ export default async function FamillesAccueilPage({
               <TableBody>
                 {fosterFamilies.map((family) => (
                   <TableRow key={family.id}>
-                    <TableCell>
-                      <Link
-                        href={`/organisations/${params.org}/familles-accueil/${family.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {family.firstName} {family.lastName}
-                      </Link>
+                    <TableCell className="font-medium">
+                      {isAdmin ? (
+                        <Link
+                          href={`/organisations/${params.org}/familles-accueil/${family.id}`}
+                          className="hover:underline"
+                        >
+                          {family.firstName} {family.lastName}
+                        </Link>
+                      ) : (
+                        `${family.firstName} ${family.lastName}`
+                      )}
                     </TableCell>
                     <TableCell>{family.phone || "—"}</TableCell>
                     <TableCell>{family.email || "—"}</TableCell>

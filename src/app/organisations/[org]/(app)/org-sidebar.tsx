@@ -36,17 +36,20 @@ function useIsMobile() {
 interface NavLink {
   href: string;
   label: string;
+  adminOnly?: boolean;
 }
 
 export function OrgSidebar({
   orgSlug,
   orgName,
   logoUrl,
+  isAdmin,
   isPlatformManager,
 }: {
   orgSlug: string;
   orgName: string;
   logoUrl: string | null;
+  isAdmin: boolean;
   isPlatformManager: boolean;
 }) {
   const isMobile = useIsMobile();
@@ -64,16 +67,17 @@ export function OrgSidebar({
     );
   }
 
-  const links: NavLink[] = [
+  const allLinks: NavLink[] = [
     { href: base, label: "Tableau de bord" },
     { href: `${base}/animaux`, label: "Animaux" },
     { href: `${base}/familles-accueil`, label: "Familles d'accueil" },
-    { href: `${base}/comptabilite`, label: "Comptabilité" },
+    { href: `${base}/comptabilite`, label: "Comptabilité", adminOnly: true },
     { href: `${base}/stock`, label: "Stock" },
     { href: `${base}/candidatures`, label: "Candidatures" },
-    { href: `${base}/membres`, label: "Membres" },
-    { href: `${base}/parametres`, label: "Paramètres" },
+    { href: `${base}/membres`, label: "Membres", adminOnly: true },
+    { href: `${base}/parametres`, label: "Paramètres", adminOnly: true },
   ];
+  const links = allLinks.filter((link) => !link.adminOnly || isAdmin);
 
   function isActive(href: string) {
     return href === base ? pathname === base : pathname.startsWith(href);
