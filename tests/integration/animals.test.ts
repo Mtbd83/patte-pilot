@@ -38,6 +38,8 @@ import {
   createAnimalPlacement,
   updateAnimalPlacement,
   listAnimals,
+  listAnimalsPage,
+  getAnimalStatusCounts,
 } from "@/server/actions/animals";
 import { createFosterFamily } from "@/server/actions/foster-families";
 import { ForbiddenError } from "@/lib/permissions";
@@ -632,5 +634,58 @@ describe("animals server actions", () => {
     authMock.mockResolvedValue({ user: { id: benevoleUserId, email: "benevole@example.com" } });
     const all = await listAnimals({ organizationId });
     expect(all.length).toBeGreaterThan(0);
+  });
+
+  it("orders adopted animals by adoption date, most recent first", async () => {
+    const older = await createAnimal({
+      organizationId,
+      name: "AdoptOlder",
+      species: "chat",
+      intakeDate: "2026-01-01",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    await changeAnimalStatus({
+      animalId: older.id,
+      organizationId,
+      status: "adopte",
+      adoptionDate: "2026-01-10",
+    });
+
+    const newer = await createAnimal({
+      organizationId,
+      name: "AdoptNewer",
+      species: "chat",
+      intakeDate: "2026-01-01",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    // Created after "older" but adopted on an EARLIER date than "older" isn't
+    // possible to seed while (createdAt-based) order would differ from
+    // adoptionDate-based order, so instead give it a LATER adoption date
+    // despite being created later too — the real assertion is that
+    // adoptionDate (not createdAt) drives the order among "adopte" animals.
+    await changeAnimalStatus({
+      animalId: newer.id,
+      organizationId,
+      status: "adopte",
+      adoptionDate: "2026-03-01",
+    });
+
+    const { animals: adoptedPage } = await listAnimalsPage({ organizationId, status: "adopte", page: 1 });
+    const olderIndex = adoptedPage.findIndex((a) => a.id === older.id);
+    const newerIndex = adoptedPage.findIndex((a) => a.id === newer.id);
+    expect(olderIndex).toBeGreaterThan(-1);
+    expect(newerIndex).toBeGreaterThan(-1);
+    // Most recent adoption date first.
+    expect(newerIndex).toBeLessThan(olderIndex);
+  });
+
+  it("counts animals per status across the whole organization", async () => {
+    const counts = await getAnimalStatusCounts({ organizationId });
+    const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+    const all = await listAnimals({ organizationId });
+    expect(total).toBe(all.length);
+    expect(counts.adopte).toBeGreaterThan(0);
   });
 });

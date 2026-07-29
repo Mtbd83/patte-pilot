@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
-import { listAnimalsPage } from "@/server/actions/animals";
+import { listAnimalsPage, getAnimalStatusCounts } from "@/server/actions/animals";
 import { listFosterFamilies } from "@/server/actions/foster-families";
 import { getAccountingTotalsByAnimal } from "@/server/actions/accounting";
 import { SPECIES_LABELS, STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
@@ -40,9 +40,10 @@ export default async function AnimauxPage({
       : undefined;
   const page = Math.max(1, Number(searchParams.page) || 1);
 
-  const [{ animals: animalsList, total, totalPages }, fosterFamilies] = await Promise.all([
+  const [{ animals: animalsList, total, totalPages }, fosterFamilies, statusCounts] = await Promise.all([
     listAnimalsPage({ organizationId: organization.id, status, page }),
     listFosterFamilies({ organizationId: organization.id }),
+    getAnimalStatusCounts({ organizationId: organization.id }),
   ]);
 
   const accountingTotals = isAdmin
@@ -59,6 +60,12 @@ export default async function AnimauxPage({
     const query = params.toString();
     return `/organisations/${organization!.slug}/animaux${query ? `?${query}` : ""}`;
   }
+
+  function statusHref(targetStatus: AnimalStatus) {
+    return `/organisations/${organization!.slug}/animaux?status=${targetStatus}`;
+  }
+
+  const totalAnimals = Object.values(statusCounts).reduce((sum, count) => sum + count, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -87,6 +94,19 @@ export default async function AnimauxPage({
         <span className="text-sm text-muted-foreground">
           {total} animaux
         </span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">{totalAnimals} au total</span>
+        {(Object.entries(STATUS_LABELS) as [AnimalStatus, string][])
+          .filter(([value]) => statusCounts[value] > 0)
+          .map(([value, label]) => (
+            <Link key={value} href={statusHref(value)}>
+              <Badge variant={STATUS_BADGE_VARIANT[value]}>
+                {statusCounts[value]} {label.toLowerCase()}
+              </Badge>
+            </Link>
+          ))}
       </div>
 
       <Table>

@@ -12,6 +12,7 @@ import {
   animalStatusEnum,
   fosterFamilies,
   organizations,
+  type AnimalStatus,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, getMemberRoles, ForbiddenError } from "@/lib/permissions";
@@ -667,6 +668,12 @@ export async function listAnimalsPage(input: z.infer<typeof listAnimalsPageSchem
     const rankDiff = animalStatusRank(a.status) - animalStatusRank(b.status);
     if (rankDiff !== 0) return rankDiff;
 
+    // Within "adopté", the adoption date is what actually matters to
+    // review, not when the row was created.
+    if (a.status === "adopte" && b.status === "adopte") {
+      return (b.adoptionDate ?? "").localeCompare(a.adoptionDate ?? "");
+    }
+
     return b.createdAt.getTime() - a.createdAt.getTime();
   });
 
@@ -681,6 +688,30 @@ export async function listAnimalsPage(input: z.infer<typeof listAnimalsPageSchem
     pageSize: ANIMALS_PAGE_SIZE,
     totalPages,
   };
+}
+
+const getAnimalStatusCountsSchema = z.object({ organizationId: z.string().uuid() });
+
+/** Any member: how many animals are in each status, across the whole org (not just the current page/filter) — feeds the stats summary on the Animaux page. */
+export async function getAnimalStatusCounts(
+  input: z.infer<typeof getAnimalStatusCountsSchema>,
+): Promise<Record<AnimalStatus, number>> {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId } = getAnimalStatusCountsSchema.parse(input);
+  await requireRole(session.user.id, organizationId, ["admin", "benevole", "famille_accueil"]);
+
+  const rows = await db.query.animals.findMany({
+    where: eq(animals.organizationId, organizationId),
+    columns: { status: true },
+  });
+
+  const counts = Object.fromEntries(
+    animalStatusEnum.enumValues.map((status) => [status, 0]),
+  ) as Record<AnimalStatus, number>;
+  for (const row of rows) counts[row.status] += 1;
+  return counts;
 }
 
 const listAnimalsWithBoosterDueSchema = z.object({
