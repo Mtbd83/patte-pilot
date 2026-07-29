@@ -85,7 +85,6 @@ export default async function CandidaturesPage({
                 <TableRow>
                   <TableHead>Nom</TableHead>
                   <TableHead>Ville</TableHead>
-                  <TableHead>Email</TableHead>
                   <TableHead>Animal souhaité</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Animal adopté</TableHead>
@@ -108,7 +107,6 @@ export default async function CandidaturesPage({
                       )}
                     </TableCell>
                     <TableCell>{application.city || "—"}</TableCell>
-                    <TableCell>{application.email}</TableCell>
                     <TableCell>
                       {application.desiredSpecies ? SPECIES_LABELS[application.desiredSpecies] : "—"}
                       {application.specificAnimalName ? ` (${application.specificAnimalName})` : ""}

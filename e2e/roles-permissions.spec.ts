@@ -96,7 +96,7 @@ test.describe("Bénévole", () => {
 
     await login(page, "admin@example.com", "Password123!");
     await page.goto("/organisations/asso-test/candidatures");
-    await page.getByRole("row", { name: new RegExp(applicantEmail) }).getByRole("link").click();
+    await page.getByRole("row", { name: new RegExp(`Candidat Refus-${suffix}`) }).getByRole("link").click();
     await expect(page.getByRole("heading", { name: `Candidat Refus-${suffix}` })).toBeVisible();
     const candidatureUrl = page.url();
 
@@ -263,7 +263,7 @@ test("un bénévole peut changer le statut d'une candidature et l'animal adopté
   // --- Bénévole: can change the status and record the adopted animal ---
   await login(page, "benevole-test@example.com", "Benevole123!");
   await page.goto("/organisations/asso-test/candidatures");
-  const row = page.getByRole("row", { name: new RegExp(applicantEmail) });
+  const row = page.getByRole("row", { name: new RegExp(`Perm Status-${suffix}`) });
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "Modifier le statut" }).click();
   await row.getByLabel("Statut").selectOption({ label: "Retenue" });
@@ -272,14 +272,14 @@ test("un bénévole peut changer le statut d'une candidature et l'animal adopté
   await expect(page.getByText("Statut mis à jour")).toBeVisible();
 
   await page.goto("/organisations/asso-test/candidatures");
-  const rowAfter = page.getByRole("row", { name: new RegExp(applicantEmail) });
+  const rowAfter = page.getByRole("row", { name: new RegExp(`Perm Status-${suffix}`) });
   await expect(rowAfter.getByRole("link", { name: animalName })).toBeVisible();
   await expect(rowAfter.getByRole("button", { name: "Supprimer" })).toHaveCount(0);
 
   // --- Famille d'accueil: read-only, no status control, no delete ---
   await login(page, "famille-accueil-test@example.com", "FamilleAccueil123!");
   await page.goto("/organisations/asso-test/candidatures");
-  const faRow = page.getByRole("row", { name: new RegExp(applicantEmail) });
+  const faRow = page.getByRole("row", { name: new RegExp(`Perm Status-${suffix}`) });
   await expect(faRow).toBeVisible();
   await expect(faRow.getByRole("combobox")).toHaveCount(0);
   await expect(faRow.getByRole("button", { name: "Supprimer" })).toHaveCount(0);

@@ -47,7 +47,7 @@ test("public adoption form → admin review → certificate + contract sent", as
 
   // --- The application shows up in the admin list ---
   await page.goto("/organisations/asso-test/candidatures");
-  const row = page.getByRole("row", { name: new RegExp(applicantEmail) });
+  const row = page.getByRole("row", { name: new RegExp(`Dupont-${suffix}`) });
   await expect(row).toBeVisible();
   await row.getByRole("link").click();
   await expect(page.getByRole("heading", { name: `Jeanne Dupont-${suffix}` })).toBeVisible();
@@ -68,7 +68,7 @@ test("public adoption form → admin review → certificate + contract sent", as
 
   // --- Back on the application: send the certificate as-is ---
   await page.goto("/organisations/asso-test/candidatures");
-  await page.getByRole("row", { name: new RegExp(applicantEmail) }).getByRole("link").click();
+  await page.getByRole("row", { name: new RegExp(`Dupont-${suffix}`) }).getByRole("link").click();
   await page.waitForLoadState("networkidle");
 
   await page.getByLabel("Animal", { exact: true }).first().selectOption({ label: animalName });
