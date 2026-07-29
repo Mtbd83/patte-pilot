@@ -127,9 +127,12 @@ export async function createAnimal(input: CreateAnimalInput) {
     });
 
     if (data.fosterFamilyId) {
+      // The first placement starts when the animal was actually taken in,
+      // not whenever this row happens to be created.
       await tx.insert(animalPlacements).values({
         animalId: animal.id,
         fosterFamilyId: data.fosterFamilyId,
+        startedAt: new Date(data.intakeDate),
       });
     }
 
@@ -243,6 +246,10 @@ const changeAnimalStatusSchema = z.object({
   status: z.enum(animalStatusEnum.enumValues),
   fosterFamilyId: z.string().uuid().optional(),
   adoptionDate: dateString.optional(),
+  // The actual date a foster-family change happened (not necessarily
+  // today) — closes the previous placement and opens the new one on this
+  // same date. Ignored for an adoption, which uses adoptionDate instead.
+  placementChangeDate: dateString.optional(),
   notes: z.string().optional(),
 });
 
@@ -281,15 +288,20 @@ export async function changeAnimalStatus(input: ChangeAnimalStatusInput) {
     const resolvedAdoptionDate =
       data.status === "adopte" ? data.adoptionDate ?? new Date().toISOString().slice(0, 10) : null;
 
+    // The date the change actually happened — the adoption date when it's
+    // an adoption, the admin-provided placement change date otherwise
+    // (defaulting to today if she's entering it same-day). Used as both
+    // the previous placement's end and the new one's start, so there's no
+    // gap or overlap in the timeline.
+    const changeDate =
+      data.status === "adopte"
+        ? new Date(resolvedAdoptionDate!)
+        : new Date(data.placementChangeDate ?? new Date().toISOString().slice(0, 10));
+
     if (animal.currentFosterFamilyId && animal.currentFosterFamilyId !== nextFosterFamilyId) {
-      // When the placement is closing because the animal was adopted, the
-      // placement's end date should reflect the actual adoption date (which
-      // may have been entered after the fact) rather than the moment this
-      // action happens to run.
-      const endedAt = data.status === "adopte" && resolvedAdoptionDate ? new Date(resolvedAdoptionDate) : new Date();
       await tx
         .update(animalPlacements)
-        .set({ endedAt })
+        .set({ endedAt: changeDate })
         .where(
           and(
             eq(animalPlacements.animalId, animal.id),
@@ -303,6 +315,7 @@ export async function changeAnimalStatus(input: ChangeAnimalStatusInput) {
       await tx.insert(animalPlacements).values({
         animalId: animal.id,
         fosterFamilyId: nextFosterFamilyId,
+        startedAt: changeDate,
         notes: data.notes,
       });
     }

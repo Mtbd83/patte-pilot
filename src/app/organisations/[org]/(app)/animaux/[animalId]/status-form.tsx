@@ -41,10 +41,17 @@ export function StatusForm({
   const [status, setStatus] = useState<AnimalStatus>(currentStatus);
   const [fosterFamilyId, setFosterFamilyId] = useState(currentFosterFamilyId ?? "");
   const [adoptionDate, setAdoptionDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [placementChangeDate, setPlacementChangeDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [familyOptions, setFamilyOptions] = useState(fosterFamilies);
   const [newFamilyModalOpen, setNewFamilyModalOpen] = useState(false);
 
   const needsFosterFamily = statusRequiresFosterFamily(status);
+  const nextFosterFamilyId = needsFosterFamily ? fosterFamilyId || null : null;
+  // Only relevant when this submit will actually close the current
+  // placement for a reason other than adoption (a genuine family change,
+  // or ending care via "archive") — mirrors the server's own condition.
+  const showPlacementChangeDate =
+    status !== "adopte" && currentFosterFamilyId !== null && currentFosterFamilyId !== nextFosterFamilyId;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,6 +70,7 @@ export function StatusForm({
         status,
         fosterFamilyId: needsFosterFamily ? fosterFamilyId : undefined,
         adoptionDate: status === "adopte" ? adoptionDate : undefined,
+        placementChangeDate: showPlacementChangeDate ? placementChangeDate : undefined,
       });
       toast.success("Statut mis à jour");
       router.refresh();
@@ -122,6 +130,21 @@ export function StatusForm({
             type="date"
             value={adoptionDate}
             onChange={(e) => setAdoptionDate(e.target.value)}
+          />
+        </Field>
+      )}
+
+      {showPlacementChangeDate && (
+        <Field
+          label="Date du changement"
+          htmlFor="status-placement-change-date"
+          hint="Termine le placement en cours et démarre le nouveau à cette date."
+        >
+          <Input
+            id="status-placement-change-date"
+            type="date"
+            value={placementChangeDate}
+            onChange={(e) => setPlacementChangeDate(e.target.value)}
           />
         </Field>
       )}

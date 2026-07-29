@@ -171,6 +171,8 @@ describe("animals server actions", () => {
       where: and(eq(animalPlacements.animalId, animal.id), isNull(animalPlacements.endedAt)),
     });
     expect(placement?.fosterFamilyId).toBe(fosterFamilyAId);
+    // The first placement starts on the intake date, not "whenever this row was created".
+    expect(placement?.startedAt.toISOString().slice(0, 10)).toBe("2026-01-10");
 
     // fosterFamilyA is linked to familleAccueilUserId (see beforeAll).
     expect(sendPushToUsersMock).toHaveBeenCalledWith(
@@ -296,6 +298,7 @@ describe("animals server actions", () => {
       organizationId,
       status: "en_famille_accueil",
       fosterFamilyId: fosterFamilyBId,
+      placementChangeDate: "2026-02-05",
     });
 
     expect(updated.currentFosterFamilyId).toBe(fosterFamilyBId);
@@ -308,6 +311,8 @@ describe("animals server actions", () => {
       ),
     });
     expect(oldPlacement?.endedAt).not.toBeNull();
+    // The date given for the change, not "whenever this action happened to run".
+    expect(oldPlacement?.endedAt?.toISOString().slice(0, 10)).toBe("2026-02-05");
 
     const newPlacement = await db.query.animalPlacements.findFirst({
       where: and(
@@ -317,6 +322,7 @@ describe("animals server actions", () => {
       ),
     });
     expect(newPlacement).toBeDefined();
+    expect(newPlacement?.startedAt.toISOString().slice(0, 10)).toBe("2026-02-05");
   });
 
   it("clears the foster family link and sets the adoption date when an animal is adopted", async () => {
@@ -344,6 +350,12 @@ describe("animals server actions", () => {
       where: and(eq(animalPlacements.animalId, animal.id), isNull(animalPlacements.endedAt)),
     });
     expect(openPlacement).toBeUndefined();
+
+    const closedPlacement = await db.query.animalPlacements.findFirst({
+      where: and(eq(animalPlacements.animalId, animal.id), eq(animalPlacements.fosterFamilyId, fosterFamilyAId)),
+    });
+    // Ends on the adoption date itself, not whenever this action ran.
+    expect(closedPlacement?.endedAt?.toISOString().slice(0, 10)).toBe("2026-02-01");
   });
 
   it("rejects switching to a status that requires a foster family without providing one", async () => {
