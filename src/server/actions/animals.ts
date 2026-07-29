@@ -11,6 +11,7 @@ import {
   animalSpeciesEnum,
   animalStatusEnum,
   fosterFamilies,
+  organizations,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, getMemberRoles, ForbiddenError } from "@/lib/permissions";
@@ -18,6 +19,33 @@ import { statusRequiresFosterFamily } from "@/lib/animal-status";
 import { animalStatusRank, boosterDueDate, isBoosterDueWithin, isBoosterOwed } from "@/lib/animal-care";
 import { dateString } from "@/lib/validation";
 import { uploadImage } from "@/lib/uploads";
+import { sendPushToUsers } from "@/lib/push";
+
+/**
+ * Best-effort: tells the linked user of `fosterFamilyId`, if any, that an
+ * animal has just been placed with them. Never throws — a notification
+ * failure must never break the status/creation flow that triggered it.
+ */
+async function notifyFosterFamilyOfPlacement(
+  fosterFamilyId: string,
+  animal: { id: string; name: string; organizationId: string },
+) {
+  try {
+    const [family, organization] = await Promise.all([
+      db.query.fosterFamilies.findFirst({ where: eq(fosterFamilies.id, fosterFamilyId) }),
+      db.query.organizations.findFirst({ where: eq(organizations.id, animal.organizationId) }),
+    ]);
+    if (!family?.linkedUserId || !organization) return;
+
+    await sendPushToUsers([family.linkedUserId], {
+      title: "Nouvel animal confié",
+      body: `${animal.name} vous a été confié·e.`,
+      url: `/organisations/${organization.slug}/animaux/${animal.id}`,
+    });
+  } catch (err) {
+    console.error("Échec de l'envoi de la notification de nouvel animal confié:", err);
+  }
+}
 
 const createAnimalSchema = z.object({
   organizationId: z.string().uuid(),
@@ -105,6 +133,15 @@ export async function createAnimal(input: CreateAnimalInput) {
       });
     }
 
+    return animal;
+  }).then(async (animal) => {
+    if (data.fosterFamilyId) {
+      await notifyFosterFamilyOfPlacement(data.fosterFamilyId, {
+        id: animal.id,
+        name: animal.name,
+        organizationId: data.organizationId,
+      });
+    }
     return animal;
   });
 }
@@ -238,8 +275,9 @@ export async function changeAnimalStatus(input: ChangeAnimalStatusInput) {
     );
   }
 
+  const nextFosterFamilyId = requiresFosterFamily ? data.fosterFamilyId! : null;
+
   return db.transaction(async (tx) => {
-    const nextFosterFamilyId = requiresFosterFamily ? data.fosterFamilyId! : null;
     const resolvedAdoptionDate =
       data.status === "adopte" ? data.adoptionDate ?? new Date().toISOString().slice(0, 10) : null;
 
@@ -280,6 +318,15 @@ export async function changeAnimalStatus(input: ChangeAnimalStatusInput) {
       .where(eq(animals.id, animal.id))
       .returning();
     if (!updated) throw new Error("Échec du changement de statut.");
+    return updated;
+  }).then(async (updated) => {
+    if (nextFosterFamilyId && nextFosterFamilyId !== animal.currentFosterFamilyId) {
+      await notifyFosterFamilyOfPlacement(nextFosterFamilyId, {
+        id: updated.id,
+        name: updated.name,
+        organizationId: data.organizationId,
+      });
+    }
     return updated;
   });
 }

@@ -10,10 +10,14 @@ jest.mock("@/lib/auth", () => ({
 jest.mock("@/lib/uploads", () => ({
   uploadImage: jest.fn().mockResolvedValue("https://storage.example.com/fake-photo.jpg"),
 }));
+jest.mock("@/lib/push", () => ({
+  sendPushToUsers: jest.fn().mockResolvedValue(undefined),
+}));
 
 import { randomUUID } from "crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { sendPushToUsers } from "@/lib/push";
 import { db } from "@/db";
 import {
   users,
@@ -36,6 +40,7 @@ import { createFosterFamily } from "@/server/actions/foster-families";
 import { ForbiddenError } from "@/lib/permissions";
 
 const authMock = auth as unknown as jest.Mock;
+const sendPushToUsersMock = sendPushToUsers as jest.Mock;
 
 describe("animals server actions", () => {
   let organizationId: string;
@@ -138,6 +143,7 @@ describe("animals server actions", () => {
 
   beforeEach(() => {
     authMock.mockResolvedValue({ user: { id: adminUserId, email: "admin@example.com" } });
+    sendPushToUsersMock.mockClear();
   });
 
   it("creates an animal with an initial placement and an empty health checklist", async () => {
@@ -165,6 +171,49 @@ describe("animals server actions", () => {
       where: and(eq(animalPlacements.animalId, animal.id), isNull(animalPlacements.endedAt)),
     });
     expect(placement?.fosterFamilyId).toBe(fosterFamilyAId);
+
+    // fosterFamilyA is linked to familleAccueilUserId (see beforeAll).
+    expect(sendPushToUsersMock).toHaveBeenCalledWith(
+      [familleAccueilUserId],
+      expect.objectContaining({ title: "Nouvel animal confié", body: expect.stringContaining("Filou") }),
+    );
+  });
+
+  it("sends no placement notification when the foster family has no linked account", async () => {
+    await createAnimal({
+      organizationId,
+      name: "Sans-Lien",
+      species: "chat",
+      intakeDate: "2026-01-10",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyBId,
+    });
+
+    expect(sendPushToUsersMock).not.toHaveBeenCalled();
+  });
+
+  it("sends a placement notification when moving an animal to a linked foster family", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "Voyageur",
+      species: "chat",
+      intakeDate: "2026-01-10",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyBId,
+    });
+    sendPushToUsersMock.mockClear();
+
+    await changeAnimalStatus({
+      animalId: animal.id,
+      organizationId,
+      status: "en_famille_accueil",
+      fosterFamilyId: fosterFamilyAId,
+    });
+
+    expect(sendPushToUsersMock).toHaveBeenCalledWith(
+      [familleAccueilUserId],
+      expect.objectContaining({ title: "Nouvel animal confié", body: expect.stringContaining("Voyageur") }),
+    );
   });
 
   it("rejects creating an animal in a status that requires a foster family without providing one", async () => {
