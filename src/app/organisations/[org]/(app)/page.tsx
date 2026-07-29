@@ -43,11 +43,18 @@ export default async function OrganizationPage({
 
   const roles = await getMemberRoles(session.user.id, organization.id);
   const isAdmin = roles.includes("admin");
+  const isBenevole = roles.includes("benevole");
   const isFamilleAccueil = roles.includes("famille_accueil");
   const visibleModules = MODULES.filter((module) => !module.adminOnly || isAdmin);
+  // The org-wide reminders card overlaps with "Mes animaux" for someone who's
+  // only a famille d'accueil — admins/bénévoles need the full-org view, she
+  // already gets hers (and only hers) in the card above.
+  const showOrgWideReminders = isAdmin || isBenevole;
 
   const [animalsWithBoosterDue, myAnimals] = await Promise.all([
-    listAnimalsWithBoosterDue({ organizationId: organization.id, withinDays: 14 }),
+    showOrgWideReminders
+      ? listAnimalsWithBoosterDue({ organizationId: organization.id, withinDays: 14 })
+      : Promise.resolve([]),
     isFamilleAccueil ? listAnimals({ organizationId: organization.id }) : Promise.resolve([]),
   ]);
 
