@@ -14,6 +14,13 @@ const DEFAULT_SMTP_PORT = 465;
 export interface OrganizationSmtpConfig {
   user: string;
   appPassword: string;
+  /**
+   * Address shown in the From header, if different from `user` (e.g. a
+   * Gmail "+alias" of the same mailbox, registered under Gmail's own
+   * "Send mail as" settings — otherwise Gmail rewrites it back to `user`).
+   * Note this does not hide the base address, only adds a suffix to it.
+   */
+  fromAddress?: string;
 }
 
 /** Builds the SMTP config for `sendEmail` from an organization row, or `null` if unset. */
@@ -33,7 +40,11 @@ export function organizationSmtpConfig(organization: {
  */
 export function platformSmtpConfig(): OrganizationSmtpConfig | null {
   if (!process.env.PLATFORM_SMTP_USER || !process.env.PLATFORM_SMTP_APP_PASSWORD) return null;
-  return { user: process.env.PLATFORM_SMTP_USER, appPassword: process.env.PLATFORM_SMTP_APP_PASSWORD };
+  return {
+    user: process.env.PLATFORM_SMTP_USER,
+    appPassword: process.env.PLATFORM_SMTP_APP_PASSWORD,
+    fromAddress: process.env.PLATFORM_SMTP_FROM || undefined,
+  };
 }
 
 function createTransporterFor({ user, appPassword }: OrganizationSmtpConfig) {
@@ -82,7 +93,7 @@ export async function sendEmail({
   const displayName = fromName.replace(/["<>]/g, "");
 
   await createTransporterFor(organizationSmtp).sendMail({
-    from: `"${displayName}" <${organizationSmtp.user}>`,
+    from: `"${displayName}" <${organizationSmtp.fromAddress ?? organizationSmtp.user}>`,
     to,
     replyTo,
     subject,
