@@ -149,6 +149,15 @@ describe("accounting server actions", () => {
     expect(summary.balance).toBeCloseTo(50 - 75.5);
   });
 
+  it("computes totals scoped to the same filters as the entry list", async () => {
+    const filtered = await getAccountingSummary({ organizationId, category: "veterinaire" });
+    expect(filtered.totalIn).toBe(0);
+    expect(filtered.totalOut).toBeCloseTo(75.5);
+
+    const filteredByAnimal = await getAccountingSummary({ organizationId, animalId });
+    expect(filteredByAnimal.totalOut).toBeCloseTo(75.5);
+  });
+
   it("deletes an entry", async () => {
     const entry = await createAccountingEntry({
       organizationId,

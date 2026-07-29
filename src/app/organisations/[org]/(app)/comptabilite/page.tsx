@@ -112,9 +112,11 @@ export default async function ComptabilitePage({
       page,
     }),
     listAccountingEntryYears({ organizationId: organization.id }),
-    getAccountingSummary({ organizationId: organization.id }),
+    getAccountingSummary({ organizationId: organization.id, category, animalId, dateFrom, dateTo }),
     listAnimals({ organizationId: organization.id }),
   ]);
+
+  const hasFilters = Boolean(category || animalId || dateFrom || dateTo);
 
   const animalOptions = animalsList.map((a) => ({ id: a.id, name: a.name }));
 
@@ -147,19 +149,19 @@ export default async function ComptabilitePage({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="py-4">
-            <p className="text-sm text-muted-foreground">Total entrées</p>
+            <p className="text-sm text-muted-foreground">Total entrées{hasFilters && " (filtré)"}</p>
             <p className="mt-1 text-xl font-semibold">{summary.totalIn.toFixed(2)} €</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="py-4">
-            <p className="text-sm text-muted-foreground">Total sorties</p>
+            <p className="text-sm text-muted-foreground">Total sorties{hasFilters && " (filtré)"}</p>
             <p className="mt-1 text-xl font-semibold">{summary.totalOut.toFixed(2)} €</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="py-4">
-            <p className="text-sm text-muted-foreground">Solde</p>
+            <p className="text-sm text-muted-foreground">Solde{hasFilters && " (filtré)"}</p>
             <p className="mt-1 text-xl font-semibold">{summary.balance.toFixed(2)} €</p>
           </CardContent>
         </Card>

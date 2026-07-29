@@ -161,12 +161,30 @@ export async function listAccountingEntries(
 
 const ACCOUNTING_PAGE_SIZE = 20;
 
-const listAccountingEntriesPageSchema = z.object({
+const accountingFiltersSchema = z.object({
   organizationId: z.string().uuid(),
   category: z.enum(accountingCategoryEnum.enumValues).optional(),
   animalId: z.string().uuid().optional(),
   dateFrom: dateString.optional(),
   dateTo: dateString.optional(),
+});
+
+function accountingFiltersWhere({
+  organizationId,
+  category,
+  animalId,
+  dateFrom,
+  dateTo,
+}: z.infer<typeof accountingFiltersSchema>) {
+  const conditions = [eq(accountingEntries.organizationId, organizationId)];
+  if (category) conditions.push(eq(accountingEntries.category, category));
+  if (animalId) conditions.push(eq(accountingEntries.animalId, animalId));
+  if (dateFrom) conditions.push(gte(accountingEntries.date, dateFrom));
+  if (dateTo) conditions.push(lte(accountingEntries.date, dateTo));
+  return and(...conditions);
+}
+
+const listAccountingEntriesPageSchema = accountingFiltersSchema.extend({
   page: z.number().int().min(1).default(1),
 });
 
@@ -181,16 +199,10 @@ export async function listAccountingEntriesPage(
   const session = await auth();
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
-  const { organizationId, category, animalId, dateFrom, dateTo, page } =
-    listAccountingEntriesPageSchema.parse(input);
+  const { organizationId, page, ...filters } = listAccountingEntriesPageSchema.parse(input);
   await requireAdmin(session.user.id, organizationId);
 
-  const conditions = [eq(accountingEntries.organizationId, organizationId)];
-  if (category) conditions.push(eq(accountingEntries.category, category));
-  if (animalId) conditions.push(eq(accountingEntries.animalId, animalId));
-  if (dateFrom) conditions.push(gte(accountingEntries.date, dateFrom));
-  if (dateTo) conditions.push(lte(accountingEntries.date, dateTo));
-  const where = and(...conditions);
+  const where = accountingFiltersWhere({ organizationId, ...filters });
 
   const all = await db.query.accountingEntries.findMany({
     where,
@@ -231,18 +243,16 @@ export async function listAccountingEntryYears(input: z.infer<typeof entryYearsS
   return [...years].sort((a, b) => b - a);
 }
 
-const summarySchema = z.object({ organizationId: z.string().uuid() });
-
-/** Admin-only: total in / total out / balance across all recorded entries. */
-export async function getAccountingSummary(input: z.infer<typeof summarySchema>) {
+/** Admin-only: total in / total out / balance — respects the same filters as listAccountingEntriesPage. */
+export async function getAccountingSummary(input: z.infer<typeof accountingFiltersSchema>) {
   const session = await auth();
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
-  const { organizationId } = summarySchema.parse(input);
+  const { organizationId, ...filters } = accountingFiltersSchema.parse(input);
   await requireAdmin(session.user.id, organizationId);
 
   const entries = await db.query.accountingEntries.findMany({
-    where: eq(accountingEntries.organizationId, organizationId),
+    where: accountingFiltersWhere({ organizationId, ...filters }),
   });
 
   let totalIn = 0;
