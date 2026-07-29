@@ -17,6 +17,7 @@ import { getMemberRoles } from "@/lib/permissions";
 import { listAnimalsWithBoosterDue, listAnimals } from "@/server/actions/animals";
 import { boosterDueDate, isBoosterOwed, isBoosterOverdue } from "@/lib/animal-care";
 import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
+import { ROLE_LABELS } from "@/lib/role-labels";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -66,7 +67,14 @@ export default async function OrganizationPage({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold">Tableau de bord</h1>
-        <p className="mt-1 text-muted-foreground">Bienvenue sur votre espace de gestion.</p>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <p className="text-muted-foreground">Bienvenue sur votre espace de gestion —</p>
+          {roles.map((role) => (
+            <Badge key={role} variant="secondary">
+              {ROLE_LABELS[role]}
+            </Badge>
+          ))}
+        </div>
       </div>
 
       {isFamilleAccueil && (
