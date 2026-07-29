@@ -1,6 +1,9 @@
+import { eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { db } from "@/db";
+import { organizationMembers } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
@@ -31,6 +34,22 @@ export default async function FamillesAccueilPage({
     includeInactive: true,
   });
 
+  const orgMembers = isAdmin
+    ? await db.query.organizationMembers.findMany({
+        where: eq(organizationMembers.organizationId, organization.id),
+        with: { user: true, roles: true },
+      })
+    : [];
+  const linkableUsers = orgMembers
+    .filter((member) => member.roles.some((role) => role.role === "famille_accueil"))
+    .map((member) => ({
+      id: member.user.id,
+      label:
+        member.user.firstName || member.user.lastName
+          ? `${member.user.firstName ?? ""} ${member.user.lastName ?? ""}`.trim()
+          : member.user.email,
+    }));
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -43,7 +62,9 @@ export default async function FamillesAccueilPage({
         <h1 className="mt-1 text-2xl font-semibold">Familles d&apos;accueil</h1>
       </div>
 
-      {isAdmin && <CreateFosterFamilyDialog organizationId={organization.id} />}
+      {isAdmin && (
+        <CreateFosterFamilyDialog organizationId={organization.id} linkableUsers={linkableUsers} />
+      )}
 
       <Card>
         <CardContent>

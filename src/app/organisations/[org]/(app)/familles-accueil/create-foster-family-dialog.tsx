@@ -8,10 +8,17 @@ import { createFosterFamily } from "@/server/actions/foster-families";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select } from "@/components/ui/select";
 import { Field, FieldRow } from "@/components/ui/field";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 
-export function CreateFosterFamilyDialog({ organizationId }: { organizationId: string }) {
+export function CreateFosterFamilyDialog({
+  organizationId,
+  linkableUsers,
+}: {
+  organizationId: string;
+  linkableUsers: { id: string; label: string }[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -25,6 +32,7 @@ export function CreateFosterFamilyDialog({ organizationId }: { organizationId: s
   const [hasCats, setHasCats] = useState(false);
   const [hasDogs, setHasDogs] = useState(false);
   const [hasRabbits, setHasRabbits] = useState(false);
+  const [linkedUserId, setLinkedUserId] = useState("");
 
   function reset() {
     setFirstName("");
@@ -35,6 +43,7 @@ export function CreateFosterFamilyDialog({ organizationId }: { organizationId: s
     setHasCats(false);
     setHasDogs(false);
     setHasRabbits(false);
+    setLinkedUserId("");
     setError(null);
   }
 
@@ -53,6 +62,7 @@ export function CreateFosterFamilyDialog({ organizationId }: { organizationId: s
         hasCats,
         hasDogs,
         hasRabbits,
+        linkedUserId: linkedUserId || undefined,
       });
       toast.success("Famille d'accueil ajoutée");
       setOpen(false);
@@ -101,6 +111,20 @@ export function CreateFosterFamilyDialog({ organizationId }: { organizationId: s
               <Input id="ff-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
           </FieldRow>
+
+          <Field label="Compte utilisateur lié" htmlFor="ff-linked-user">
+            <Select id="ff-linked-user" value={linkedUserId} onChange={(e) => setLinkedUserId(e.target.value)}>
+              <option value="">— Aucun —</option>
+              {linkableUsers.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.label}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Permet à cette famille d&apos;accueil de gérer la checklist des soins des animaux qui lui sont confiés.
+            </p>
+          </Field>
 
           <fieldset className="flex flex-col gap-2">
             <legend className="text-sm font-medium">Autres animaux déjà présents</legend>
