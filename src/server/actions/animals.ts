@@ -152,7 +152,11 @@ export async function updateAnimal(input: UpdateAnimalInput) {
   return updated;
 }
 
-/** Admin-only: uploads (or replaces) an animal's photo. */
+/**
+ * Admins can upload or replace any animal's photo. A famille d'accueil can
+ * only add one when the animal doesn't have one yet — not replace an
+ * existing photo — for the animal currently placed with her.
+ */
 export async function uploadAnimalPhoto(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
@@ -168,12 +172,22 @@ export async function uploadAnimalPhoto(formData: FormData) {
     throw new Error("Requête invalide.");
   }
 
-  await requireAdmin(session.user.id, organizationId);
-
   const animal = await db.query.animals.findFirst({
     where: and(eq(animals.id, animalId), eq(animals.organizationId, organizationId)),
   });
   if (!animal) throw new Error("Animal introuvable.");
+
+  const roles = await getMemberRoles(session.user.id, organizationId);
+  if (!roles.includes("admin")) {
+    if (animal.photoUrl) {
+      throw new ForbiddenError("Seul·e·s les administrateur·rice·s peuvent remplacer une photo existante.");
+    }
+    if (!(await isResponsibleForAnimal(roles, session.user.id, organizationId, animal))) {
+      throw new ForbiddenError(
+        "Seul·e·s les administrateur·rice·s ou la famille d'accueil responsable peuvent ajouter une photo.",
+      );
+    }
+  }
 
   const photoUrl = await uploadImage(file, `animaux/${animalId}`);
 
@@ -270,6 +284,24 @@ export async function changeAnimalStatus(input: ChangeAnimalStatusInput) {
   });
 }
 
+/** Whether `userId` is the foster family currently responsible for `animal` — the one exception to admin-only edits on a handful of fields (checklist, description, first photo). */
+async function isResponsibleForAnimal(
+  roles: string[],
+  userId: string,
+  organizationId: string,
+  animal: { currentFosterFamilyId: string | null },
+) {
+  if (!roles.includes("famille_accueil") || !animal.currentFosterFamilyId) return false;
+  const family = await db.query.fosterFamilies.findFirst({
+    where: and(
+      eq(fosterFamilies.id, animal.currentFosterFamilyId),
+      eq(fosterFamilies.organizationId, organizationId),
+      eq(fosterFamilies.linkedUserId, userId),
+    ),
+  });
+  return family !== undefined;
+}
+
 const updateHealthChecklistSchema = z.object({
   animalId: z.string().uuid(),
   organizationId: z.string().uuid(),
@@ -305,23 +337,10 @@ export async function updateAnimalHealthChecklist(input: UpdateHealthChecklistIn
   if (!animal) throw new Error("Animal introuvable.");
 
   const roles = await getMemberRoles(session.user.id, organizationId);
-  if (!roles.includes("admin")) {
-    const isResponsibleFosterFamily =
-      roles.includes("famille_accueil") &&
-      animal.currentFosterFamilyId !== null &&
-      (await db.query.fosterFamilies.findFirst({
-        where: and(
-          eq(fosterFamilies.id, animal.currentFosterFamilyId),
-          eq(fosterFamilies.organizationId, organizationId),
-          eq(fosterFamilies.linkedUserId, session.user.id),
-        ),
-      })) !== undefined;
-
-    if (!isResponsibleFosterFamily) {
-      throw new ForbiddenError(
-        "Seul·e·s les administrateur·rice·s ou la famille d'accueil responsable peuvent modifier cette checklist.",
-      );
-    }
+  if (!roles.includes("admin") && !(await isResponsibleForAnimal(roles, session.user.id, organizationId, animal))) {
+    throw new ForbiddenError(
+      "Seul·e·s les administrateur·rice·s ou la famille d'accueil responsable peuvent modifier cette checklist.",
+    );
   }
 
   const [updated] = await db
@@ -330,6 +349,46 @@ export async function updateAnimalHealthChecklist(input: UpdateHealthChecklistIn
     .where(eq(animalHealthChecklists.animalId, animalId))
     .returning();
   if (!updated) throw new Error("Checklist introuvable.");
+  return updated;
+}
+
+const updateAnimalDescriptionSchema = z.object({
+  animalId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  description: z.string().max(2000).optional(),
+});
+
+/**
+ * Admins can edit any animal's description. A famille d'accueil can only
+ * edit the description of the animal currently placed with her — lets her
+ * note its personality/needs without full edit access to the rest of the sheet.
+ */
+export async function updateAnimalDescription(
+  input: z.infer<typeof updateAnimalDescriptionSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { animalId, organizationId, description } = updateAnimalDescriptionSchema.parse(input);
+
+  const animal = await db.query.animals.findFirst({
+    where: and(eq(animals.id, animalId), eq(animals.organizationId, organizationId)),
+  });
+  if (!animal) throw new Error("Animal introuvable.");
+
+  const roles = await getMemberRoles(session.user.id, organizationId);
+  if (!roles.includes("admin") && !(await isResponsibleForAnimal(roles, session.user.id, organizationId, animal))) {
+    throw new ForbiddenError(
+      "Seul·e·s les administrateur·rice·s ou la famille d'accueil responsable peuvent modifier la description.",
+    );
+  }
+
+  const [updated] = await db
+    .update(animals)
+    .set({ description, updatedAt: new Date() })
+    .where(eq(animals.id, animalId))
+    .returning();
+  if (!updated) throw new Error("Échec de la mise à jour de la description.");
   return updated;
 }
 

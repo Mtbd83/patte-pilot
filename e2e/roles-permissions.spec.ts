@@ -5,8 +5,10 @@ import { test, expect, type Page } from "@playwright/test";
  * admins can manage everything; bénévoles and familles d'accueil (FA) get
  * read-only access to animaux/stock/familles-accueil/candidatures and are
  * refused on comptabilité/membres/paramètres and on any detail/management
- * page. A FA additionally gets edit rights on the health checklist of an
- * animal currently placed with her — and only that. A bénévole is also the
+ * page. A FA additionally gets edit rights, on an animal currently placed
+ * with her, on: the health checklist, the description (personality/needs),
+ * and adding a photo when there isn't one yet (not replacing an existing
+ * one) — nothing else on the sheet. A bénévole is also the
  * one exception to "read-only candidatures": she can open a candidature's
  * detail page and change its status / record the adopted animal (FA can't
  * open the detail page at all); the certificate/contract-sending cards on
@@ -181,21 +183,38 @@ test.describe("Famille d'accueil", () => {
     // --- Log in as the FA test account ---
     await login(page, "famille-accueil-test@example.com", "FamilleAccueil123!");
 
-    // Her own animal: the checklist is editable, the rest of the sheet isn't.
+    // Her own animal: checklist, description and (photo-less) photo upload
+    // are all editable — the rest of the sheet isn't.
     await page.goto("/organisations/asso-test/animaux");
     await page.getByRole("link", { name: responsibleAnimalName }).click();
     await page.waitForLoadState("networkidle");
-    await expect(page.getByRole("button", { name: "Ajouter une photo" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Changer le statut" })).toHaveCount(0);
+
+    await expect(page.getByRole("button", { name: "Ajouter une photo" })).toBeVisible();
+    const fileChooserPromise = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: "Ajouter une photo" }).click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles({ name: "photo.jpg", mimeType: "image/jpeg", buffer: Buffer.from("fake") });
+    await expect(page.getByText("Photo mise à jour")).toBeVisible();
+    // Now that it has a photo, she can no longer replace it.
+    await expect(page.getByRole("button", { name: "Ajouter une photo" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Changer la photo" })).toHaveCount(0);
+
+    await page.getByLabel("Description").fill("Câlin, un peu craintif avec les autres chats.");
+    await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
+    await expect(page.getByText("Description mise à jour")).toBeVisible();
+
     await expect(page.getByLabel("Primo vaccin fait")).toBeEnabled();
     await page.getByLabel("Primo vaccin fait").check();
     await page.getByRole("button", { name: "Enregistrer la checklist" }).click();
     await expect(page.getByText("Checklist santé mise à jour")).toBeVisible();
 
-    // Another foster family's animal: the checklist stays read-only too.
+    // Another foster family's animal: none of that is available.
     await page.goto("/organisations/asso-test/animaux");
     await page.getByRole("link", { name: otherAnimalName }).click();
     await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("button", { name: "Ajouter une photo" })).toHaveCount(0);
+    await expect(page.getByLabel("Description")).toHaveCount(0);
     await expect(page.getByLabel("Primo vaccin fait")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Enregistrer la checklist" })).toHaveCount(0);
   });

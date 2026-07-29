@@ -14,6 +14,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { AnimalEditForm } from "./animal-edit-form";
 import { AnimalPhotoUpload } from "./animal-photo-upload";
+import { AnimalDescriptionForm } from "./animal-description-form";
 import { HealthChecklistForm } from "./health-checklist-form";
 import { StatusForm } from "./status-form";
 
@@ -85,7 +86,7 @@ export default async function AnimalDetailPage({
           <CardTitle>Informations générales</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {isAdmin ? (
+          {isAdmin || (isResponsibleFosterFamily && !animal.photoUrl) ? (
             <AnimalPhotoUpload organizationId={organization.id} animalId={animal.id} photoUrl={animal.photoUrl} />
           ) : (
             animal.photoUrl && (
@@ -100,16 +101,25 @@ export default async function AnimalDetailPage({
           {isAdmin ? (
             <AnimalEditForm organizationId={organization.id} animal={animal} />
           ) : (
-            <dl>
-              <InfoRow label="Espèce" value={SPECIES_LABELS[animal.species]} />
-              <InfoRow label="Sexe" value={SEX_LABELS[animal.sex]} />
-              <InfoRow label="Race" value={animal.breed || "—"} />
-              <InfoRow label="Pelage" value={animal.coat || "—"} />
-              <InfoRow label="N° ICAD" value={animal.icadNumber || "—"} />
-              <InfoRow label="Date de naissance" value={animal.birthDate || "—"} />
-              <InfoRow label="Date de prise en charge" value={animal.intakeDate} />
-              <InfoRow label="Description" value={animal.description || "—"} />
-            </dl>
+            <>
+              <dl>
+                <InfoRow label="Espèce" value={SPECIES_LABELS[animal.species]} />
+                <InfoRow label="Sexe" value={SEX_LABELS[animal.sex]} />
+                <InfoRow label="Race" value={animal.breed || "—"} />
+                <InfoRow label="Pelage" value={animal.coat || "—"} />
+                <InfoRow label="N° ICAD" value={animal.icadNumber || "—"} />
+                <InfoRow label="Date de naissance" value={animal.birthDate || "—"} />
+                <InfoRow label="Date de prise en charge" value={animal.intakeDate} />
+                {!isResponsibleFosterFamily && <InfoRow label="Description" value={animal.description || "—"} />}
+              </dl>
+              {isResponsibleFosterFamily && (
+                <AnimalDescriptionForm
+                  organizationId={organization.id}
+                  animalId={animal.id}
+                  description={animal.description}
+                />
+              )}
+            </>
           )}
         </CardContent>
       </Card>

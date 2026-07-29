@@ -7,6 +7,9 @@
 jest.mock("@/lib/auth", () => ({
   auth: jest.fn(),
 }));
+jest.mock("@/lib/uploads", () => ({
+  uploadImage: jest.fn().mockResolvedValue("https://storage.example.com/fake-photo.jpg"),
+}));
 
 import { randomUUID } from "crypto";
 import { and, eq, isNull } from "drizzle-orm";
@@ -23,6 +26,8 @@ import {
 import {
   createAnimal,
   updateAnimal,
+  updateAnimalDescription,
+  uploadAnimalPhoto,
   changeAnimalStatus,
   updateAnimalHealthChecklist,
   listAnimals,
@@ -37,6 +42,7 @@ describe("animals server actions", () => {
   let adminUserId: string;
   let benevoleUserId: string;
   let outsiderUserId: string;
+  let familleAccueilUserId: string;
   let fosterFamilyAId: string;
   let fosterFamilyBId: string;
 
@@ -55,10 +61,17 @@ describe("animals server actions", () => {
       .insert(users)
       .values({ email: `outsider-an-${suffix}@example.com` })
       .returning();
-    if (!admin || !benevole || !outsider) throw new Error("Seed setup failed: users not created.");
+    const [familleAccueil] = await db
+      .insert(users)
+      .values({ email: `famille-accueil-an-${suffix}@example.com` })
+      .returning();
+    if (!admin || !benevole || !outsider || !familleAccueil) {
+      throw new Error("Seed setup failed: users not created.");
+    }
     adminUserId = admin.id;
     benevoleUserId = benevole.id;
     outsiderUserId = outsider.id;
+    familleAccueilUserId = familleAccueil.id;
 
     const [org] = await db
       .insert(organizations)
@@ -83,6 +96,15 @@ describe("animals server actions", () => {
       .insert(organizationMemberRoles)
       .values({ memberId: benevoleMember.id, role: "benevole" });
 
+    const [faMember] = await db
+      .insert(organizationMembers)
+      .values({ organizationId, userId: familleAccueilUserId })
+      .returning();
+    if (!faMember) throw new Error("Seed setup failed: famille d'accueil member not created.");
+    await db
+      .insert(organizationMemberRoles)
+      .values({ memberId: faMember.id, role: "famille_accueil" });
+
     authMock.mockResolvedValue({ user: { id: adminUserId, email: admin.email } });
     const fosterA = await createFosterFamily({
       organizationId,
@@ -91,6 +113,7 @@ describe("animals server actions", () => {
       hasCats: true,
       hasDogs: false,
       hasRabbits: false,
+      linkedUserId: familleAccueilUserId,
     });
     fosterFamilyAId = fosterA.id;
 
@@ -110,6 +133,7 @@ describe("animals server actions", () => {
     await db.delete(users).where(eq(users.id, adminUserId));
     await db.delete(users).where(eq(users.id, benevoleUserId));
     await db.delete(users).where(eq(users.id, outsiderUserId));
+    await db.delete(users).where(eq(users.id, familleAccueilUserId));
   });
 
   beforeEach(() => {
@@ -308,6 +332,99 @@ describe("animals server actions", () => {
     expect(checklist.firstVaccineDone).toBe(true);
     expect(checklist.firstVaccineDate).toBe("2026-01-20");
     expect(checklist.sterilizationDone).toBe(false);
+  });
+
+  it("lets the responsible famille d'accueil edit the description, but not another animal's", async () => {
+    const ownAnimal = await createAnimal({
+      organizationId,
+      name: "Mistigri",
+      species: "chat",
+      intakeDate: "2026-01-17",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    const otherAnimal = await createAnimal({
+      organizationId,
+      name: "Pixel",
+      species: "chat",
+      intakeDate: "2026-01-17",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyBId,
+    });
+
+    authMock.mockResolvedValue({ user: { id: familleAccueilUserId } });
+    const updated = await updateAnimalDescription({
+      animalId: ownAnimal.id,
+      organizationId,
+      description: "Très câlin, a peur des aspirateurs.",
+    });
+    expect(updated.description).toBe("Très câlin, a peur des aspirateurs.");
+
+    await expect(
+      updateAnimalDescription({ animalId: otherAnimal.id, organizationId, description: "Pas la mienne" }),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("rejects a bénévole from editing an animal's description", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "Nougat",
+      species: "chat",
+      intakeDate: "2026-01-17",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+
+    authMock.mockResolvedValue({ user: { id: benevoleUserId } });
+    await expect(
+      updateAnimalDescription({ animalId: animal.id, organizationId, description: "Non autorisé" }),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("lets the responsible famille d'accueil add a photo only when there isn't one yet", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "Réglisse",
+      species: "chat",
+      intakeDate: "2026-01-17",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+
+    const formData = new FormData();
+    formData.set("organizationId", organizationId);
+    formData.set("animalId", animal.id);
+    formData.set("file", new File(["fake"], "photo.jpg", { type: "image/jpeg" }));
+
+    authMock.mockResolvedValue({ user: { id: familleAccueilUserId } });
+    const updated = await uploadAnimalPhoto(formData);
+    expect(updated.photoUrl).toBe("https://storage.example.com/fake-photo.jpg");
+
+    // A second attempt must be rejected — she can add one, not replace it.
+    const secondFormData = new FormData();
+    secondFormData.set("organizationId", organizationId);
+    secondFormData.set("animalId", animal.id);
+    secondFormData.set("file", new File(["fake2"], "photo2.jpg", { type: "image/jpeg" }));
+    await expect(uploadAnimalPhoto(secondFormData)).rejects.toThrow(ForbiddenError);
+  });
+
+  it("rejects a famille d'accueil from adding a photo to another foster family's animal", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "Praline",
+      species: "chat",
+      intakeDate: "2026-01-17",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyBId,
+    });
+
+    const formData = new FormData();
+    formData.set("organizationId", organizationId);
+    formData.set("animalId", animal.id);
+    formData.set("file", new File(["fake"], "photo.jpg", { type: "image/jpeg" }));
+
+    authMock.mockResolvedValue({ user: { id: familleAccueilUserId } });
+    await expect(uploadAnimalPhoto(formData)).rejects.toThrow(ForbiddenError);
   });
 
   it("lists animals filtered by status", async () => {
