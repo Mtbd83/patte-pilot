@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { listOrganizationsForUser } from "@/lib/organizations";
+import { isPlatformManager } from "@/lib/permissions";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 /**
@@ -15,9 +16,10 @@ export default async function ApresConnexionPage() {
   if (!session?.user?.id) redirect("/connexion");
 
   const organizations = await listOrganizationsForUser(session.user.id);
+  const platformManager = await isPlatformManager(session.user.id);
 
   const [onlyOrganization] = organizations;
-  if (organizations.length === 1 && onlyOrganization) {
+  if (organizations.length === 1 && onlyOrganization && !platformManager) {
     redirect(`/organisations/${onlyOrganization.slug}`);
   }
 
@@ -49,6 +51,20 @@ export default async function ApresConnexionPage() {
                   <ArrowRight className="size-4 text-muted-foreground" />
                 </Link>
               ))}
+            </CardContent>
+          )}
+          {platformManager && (
+            <CardContent className={organizations.length > 0 ? "pt-0" : undefined}>
+              <Link
+                href="/plateforme"
+                className="flex items-center justify-between gap-2 rounded-md border border-border px-4 py-3 text-sm font-medium transition-colors hover:bg-accent"
+              >
+                <span className="flex items-center gap-2">
+                  <ShieldCheck className="size-4 text-muted-foreground" />
+                  Gestion plateforme
+                </span>
+                <ArrowRight className="size-4 text-muted-foreground" />
+              </Link>
             </CardContent>
           )}
         </Card>

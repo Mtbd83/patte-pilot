@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Menu, X, LogOut, User } from "lucide-react";
+import { Menu, X, LogOut, User, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -42,10 +42,12 @@ export function OrgSidebar({
   orgSlug,
   orgName,
   logoUrl,
+  isPlatformManager,
 }: {
   orgSlug: string;
   orgName: string;
   logoUrl: string | null;
+  isPlatformManager: boolean;
 }) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
@@ -100,6 +102,15 @@ export function OrgSidebar({
   function SignOutButton() {
     return (
       <div className="flex flex-col border-t border-border p-3">
+        {isPlatformManager && (
+          <Link
+            href="/plateforme"
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <ShieldCheck className="size-4" />
+            Gestion plateforme
+          </Link>
+        )}
         <Link
           href="/mon-compte"
           className="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"

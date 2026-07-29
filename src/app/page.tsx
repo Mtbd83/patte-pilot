@@ -109,6 +109,9 @@ export default async function HomePage() {
             <img src="/pattepilot-logo.svg" alt="PattePilot" className="h-20 w-auto" />
           </div>
           <p>© {new Date().getFullYear()} — Fait avec ❤️ pour les animaux</p>
+          <Link href="/rejoindre" className="underline-offset-4 hover:underline">
+            Vous représentez une association ? Rejoignez PattePilot
+          </Link>
         </div>
       </footer>
     </div>

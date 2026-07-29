@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { CreateAccountingEntryDialog } from "./create-accounting-entry-dialog";
 import { DeleteEntryButton } from "./delete-entry-button";
+import { AccountingType } from "@/db/schema";
 
 function formatAmount(amount: string) {
   return `${Number(amount).toFixed(2)} €`;
@@ -44,6 +45,11 @@ export default async function ComptabilitePage({
       </Card>
     );
   }
+  
+ const ACCOUNTING_TYPE_LABELS_COLOR: Record<AccountingType, string> = {
+    entree: "bg-emerald-50 dark:bg-emerald-500/10",
+    sortie: "bg-red-50 dark:bg-red-500/10",
+  };
 
   const [entries, summary, animalsList] = await Promise.all([
     listAccountingEntries({ organizationId: organization.id }),
@@ -108,7 +114,7 @@ export default async function ComptabilitePage({
               </TableHeader>
               <TableBody>
                 {entries.map((entry) => (
-                  <TableRow key={entry.id}>
+                  <TableRow key={entry.id} className={ACCOUNTING_TYPE_LABELS_COLOR[entry.type]} >
                     <TableCell>{entry.date}</TableCell>
                     <TableCell>{ACCOUNTING_TYPE_LABELS[entry.type]}</TableCell>
                     <TableCell>{ACCOUNTING_CATEGORY_LABELS[entry.category]}</TableCell>

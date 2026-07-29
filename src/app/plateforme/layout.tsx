@@ -28,7 +28,7 @@ export default async function PlateformeLayout({ children }: { children: React.R
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-4 sm:px-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/pattepilot-logo.svg" alt="PattePilot" className="h-8 w-auto" />
+          <img src="/pattepilot-logo.svg" alt="PattePilot" className="h-40 w-auto" />
           <nav className="flex gap-4 text-sm font-medium">
             <Link href="/plateforme" className="hover:text-primary">
               Demandes d&apos;inscription

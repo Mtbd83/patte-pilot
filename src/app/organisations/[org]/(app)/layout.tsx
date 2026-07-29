@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
-import { getMemberRoles } from "@/lib/permissions";
+import { getMemberRoles, isPlatformManager } from "@/lib/permissions";
 import { OrgSidebar } from "./org-sidebar";
 
 /**
@@ -39,9 +39,16 @@ export default async function OrganizationLayout({
     );
   }
 
+  const platformManager = await isPlatformManager(session.user.id);
+
   return (
     <div className="min-h-dvh bg-background md:flex">
-      <OrgSidebar orgSlug={params.org} orgName={organization.name} logoUrl={organization.logoUrl} />
+      <OrgSidebar
+        orgSlug={params.org}
+        orgName={organization.name}
+        logoUrl={organization.logoUrl}
+        isPlatformManager={platformManager}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-10">{children}</main>
       </div>
