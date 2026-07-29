@@ -344,6 +344,164 @@ export async function changeAnimalStatus(input: ChangeAnimalStatusInput) {
   });
 }
 
+const createAnimalPlacementSchema = z.object({
+  animalId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  fosterFamilyId: z.string().uuid(),
+  startedAt: dateString,
+  endedAt: dateString.optional(),
+  notes: z.string().optional(),
+});
+
+/**
+ * Admin-only: adds a placement record directly to an animal's history — for
+ * backfilling or correcting the timeline (e.g. an adopted or archived
+ * animal whose past placements were never recorded), not for opening a new
+ * *current* placement on an animal still in care — use changeAnimalStatus
+ * for that, so its status/currentFosterFamilyId stay in step with it.
+ */
+export async function createAnimalPlacement(input: z.infer<typeof createAnimalPlacementSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const data = createAnimalPlacementSchema.parse(input);
+  await requireAdmin(session.user.id, data.organizationId);
+
+  if (data.endedAt && data.endedAt < data.startedAt) {
+    throw new Error("La date de fin ne peut pas précéder la date de début.");
+  }
+
+  const animal = await db.query.animals.findFirst({
+    where: and(eq(animals.id, data.animalId), eq(animals.organizationId, data.organizationId)),
+  });
+  if (!animal) throw new Error("Animal introuvable.");
+
+  const fosterFamily = await db.query.fosterFamilies.findFirst({
+    where: and(eq(fosterFamilies.id, data.fosterFamilyId), eq(fosterFamilies.organizationId, data.organizationId)),
+  });
+  if (!fosterFamily) throw new Error("Famille d'accueil introuvable.");
+
+  if (!data.endedAt) {
+    const existingOpen = await db.query.animalPlacements.findFirst({
+      where: and(eq(animalPlacements.animalId, data.animalId), isNull(animalPlacements.endedAt)),
+    });
+    if (existingOpen) {
+      throw new Error(
+        "Un placement est déjà en cours pour cet animal — renseignez une date de fin, ou terminez-le d'abord.",
+      );
+    }
+  }
+
+  return db.transaction(async (tx) => {
+    const [placement] = await tx
+      .insert(animalPlacements)
+      .values({
+        animalId: data.animalId,
+        fosterFamilyId: data.fosterFamilyId,
+        startedAt: new Date(data.startedAt),
+        endedAt: data.endedAt ? new Date(data.endedAt) : null,
+        notes: data.notes,
+      })
+      .returning();
+    if (!placement) throw new Error("Échec de l'ajout du placement.");
+
+    // Keep the denormalized "current" pointer consistent if this newly
+    // added placement is the one that's actually open.
+    if (!data.endedAt) {
+      await tx
+        .update(animals)
+        .set({ currentFosterFamilyId: data.fosterFamilyId, updatedAt: new Date() })
+        .where(eq(animals.id, data.animalId));
+    }
+
+    return placement;
+  });
+}
+
+const updateAnimalPlacementSchema = z.object({
+  placementId: z.string().uuid(),
+  animalId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  fosterFamilyId: z.string().uuid(),
+  startedAt: dateString,
+  endedAt: dateString.optional(),
+  notes: z.string().optional(),
+});
+
+/** Admin-only: corrects an existing placement record (wrong dates, wrong family, notes). */
+export async function updateAnimalPlacement(input: z.infer<typeof updateAnimalPlacementSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const data = updateAnimalPlacementSchema.parse(input);
+  await requireAdmin(session.user.id, data.organizationId);
+
+  if (data.endedAt && data.endedAt < data.startedAt) {
+    throw new Error("La date de fin ne peut pas précéder la date de début.");
+  }
+
+  const placement = await db.query.animalPlacements.findFirst({
+    where: and(eq(animalPlacements.id, data.placementId), eq(animalPlacements.animalId, data.animalId)),
+  });
+  if (!placement) throw new Error("Placement introuvable.");
+
+  const fosterFamily = await db.query.fosterFamilies.findFirst({
+    where: and(eq(fosterFamilies.id, data.fosterFamilyId), eq(fosterFamilies.organizationId, data.organizationId)),
+  });
+  if (!fosterFamily) throw new Error("Famille d'accueil introuvable.");
+
+  const wasOpen = placement.endedAt === null;
+  const willBeOpen = !data.endedAt;
+
+  if (willBeOpen && !wasOpen) {
+    // Re-opening a previously-closed placement — only fine if there isn't
+    // already a different open one for this animal.
+    const existingOpen = await db.query.animalPlacements.findFirst({
+      where: and(eq(animalPlacements.animalId, data.animalId), isNull(animalPlacements.endedAt)),
+    });
+    if (existingOpen && existingOpen.id !== placement.id) {
+      throw new Error("Un placement est déjà en cours pour cet animal.");
+    }
+  }
+
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(animalPlacements)
+      .set({
+        fosterFamilyId: data.fosterFamilyId,
+        startedAt: new Date(data.startedAt),
+        endedAt: data.endedAt ? new Date(data.endedAt) : null,
+        notes: data.notes,
+      })
+      .where(eq(animalPlacements.id, data.placementId))
+      .returning();
+    if (!updated) throw new Error("Échec de la mise à jour du placement.");
+
+    // Keep animals.currentFosterFamilyId in step if this edit changed
+    // whether (or to whom) this placement is the open one.
+    const animal = await tx.query.animals.findFirst({
+      where: and(eq(animals.id, data.animalId), eq(animals.organizationId, data.organizationId)),
+    });
+    if (animal) {
+      if (willBeOpen) {
+        if (animal.currentFosterFamilyId !== data.fosterFamilyId) {
+          await tx
+            .update(animals)
+            .set({ currentFosterFamilyId: data.fosterFamilyId, updatedAt: new Date() })
+            .where(eq(animals.id, data.animalId));
+        }
+      } else if (wasOpen && animal.currentFosterFamilyId === placement.fosterFamilyId) {
+        await tx
+          .update(animals)
+          .set({ currentFosterFamilyId: null, updatedAt: new Date() })
+          .where(eq(animals.id, data.animalId));
+      }
+    }
+
+    return updated;
+  });
+}
+
 /** Whether `userId` is the foster family currently responsible for `animal` — the one exception to admin-only edits on a handful of fields (checklist, description, first photo). */
 async function isResponsibleForAnimal(
   roles: string[],

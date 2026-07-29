@@ -24,6 +24,7 @@ import {
   organizations,
   organizationMembers,
   organizationMemberRoles,
+  animals,
   animalHealthChecklists,
   animalPlacements,
 } from "@/db/schema";
@@ -34,6 +35,8 @@ import {
   uploadAnimalPhoto,
   changeAnimalStatus,
   updateAnimalHealthChecklist,
+  createAnimalPlacement,
+  updateAnimalPlacement,
   listAnimals,
 } from "@/server/actions/animals";
 import { createFosterFamily } from "@/server/actions/foster-families";
@@ -356,6 +359,137 @@ describe("animals server actions", () => {
     });
     // Ends on the adoption date itself, not whenever this action ran.
     expect(closedPlacement?.endedAt?.toISOString().slice(0, 10)).toBe("2026-02-01");
+  });
+
+  it("lets an admin add a historical placement to an already-adopted animal", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "Archive",
+      species: "chat",
+      intakeDate: "2026-01-01",
+      status: "adopte",
+    });
+    // No foster family at creation for an already-adopted animal — add its
+    // missing past placement directly.
+    const placement = await createAnimalPlacement({
+      animalId: animal.id,
+      organizationId,
+      fosterFamilyId: fosterFamilyAId,
+      startedAt: "2026-01-01",
+      endedAt: "2026-01-20",
+      notes: "Ajouté rétroactivement",
+    });
+
+    expect(placement.startedAt.toISOString().slice(0, 10)).toBe("2026-01-01");
+    expect(placement.endedAt?.toISOString().slice(0, 10)).toBe("2026-01-20");
+
+    // Adding a closed historical placement must not resurrect currentFosterFamilyId.
+    const unchanged = await db.query.animals.findFirst({ where: eq(animals.id, animal.id) });
+    expect(unchanged?.currentFosterFamilyId).toBeNull();
+  });
+
+  it("rejects adding a second open placement for the same animal", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "DoublePlacement",
+      species: "chat",
+      intakeDate: "2026-01-01",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+
+    await expect(
+      createAnimalPlacement({
+        animalId: animal.id,
+        organizationId,
+        fosterFamilyId: fosterFamilyBId,
+        startedAt: "2026-01-05",
+      }),
+    ).rejects.toThrow(/déjà en cours/);
+  });
+
+  it("rejects a placement whose end date precedes its start date", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "MauvaiseDate",
+      species: "chat",
+      intakeDate: "2026-01-01",
+      status: "adopte",
+    });
+
+    await expect(
+      createAnimalPlacement({
+        animalId: animal.id,
+        organizationId,
+        fosterFamilyId: fosterFamilyAId,
+        startedAt: "2026-01-10",
+        endedAt: "2026-01-01",
+      }),
+    ).rejects.toThrow(/ne peut pas précéder/);
+  });
+
+  it("lets an admin correct an existing placement's dates and family", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "AModifier",
+      species: "chat",
+      intakeDate: "2026-01-05",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+
+    const original = await db.query.animalPlacements.findFirst({
+      where: eq(animalPlacements.animalId, animal.id),
+    });
+    if (!original) throw new Error("Seed failed.");
+
+    const updated = await updateAnimalPlacement({
+      placementId: original.id,
+      animalId: animal.id,
+      organizationId,
+      fosterFamilyId: fosterFamilyAId,
+      startedAt: "2026-01-03", // corrected: intake was actually a couple days earlier
+      notes: "Date corrigée",
+    });
+
+    expect(updated.startedAt.toISOString().slice(0, 10)).toBe("2026-01-03");
+    expect(updated.notes).toBe("Date corrigée");
+  });
+
+  it("closing a placement via edit clears currentFosterFamilyId; reopening it restores it", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "ReouvrirFerme",
+      species: "chat",
+      intakeDate: "2026-01-05",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    const placement = await db.query.animalPlacements.findFirst({
+      where: eq(animalPlacements.animalId, animal.id),
+    });
+    if (!placement) throw new Error("Seed failed.");
+
+    await updateAnimalPlacement({
+      placementId: placement.id,
+      animalId: animal.id,
+      organizationId,
+      fosterFamilyId: fosterFamilyAId,
+      startedAt: "2026-01-05",
+      endedAt: "2026-01-10",
+    });
+    const closed = await db.query.animals.findFirst({ where: eq(animals.id, animal.id) });
+    expect(closed?.currentFosterFamilyId).toBeNull();
+
+    await updateAnimalPlacement({
+      placementId: placement.id,
+      animalId: animal.id,
+      organizationId,
+      fosterFamilyId: fosterFamilyAId,
+      startedAt: "2026-01-05",
+    });
+    const reopened = await db.query.animals.findFirst({ where: eq(animals.id, animal.id) });
+    expect(reopened?.currentFosterFamilyId).toBe(fosterFamilyAId);
   });
 
   it("rejects switching to a status that requires a foster family without providing one", async () => {

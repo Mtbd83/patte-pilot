@@ -17,6 +17,7 @@ import { AnimalPhotoUpload } from "./animal-photo-upload";
 import { AnimalDescriptionForm } from "./animal-description-form";
 import { HealthChecklistForm } from "./health-checklist-form";
 import { StatusForm } from "./status-form";
+import { PlacementDialog } from "./placement-dialog";
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -64,6 +65,11 @@ export default async function AnimalDetailPage({
 
   const fosterFamilies = isAdmin
     ? await listFosterFamilies({ organizationId: organization.id })
+    : [];
+  // Includes inactive families too — a historical placement may well have
+  // been with a family that's since been deactivated.
+  const allFosterFamilies = isAdmin
+    ? await listFosterFamilies({ organizationId: organization.id, includeInactive: true })
     : [];
 
   return (
@@ -217,8 +223,15 @@ export default async function AnimalDetailPage({
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Historique des placements</CardTitle>
+          {isAdmin && allFosterFamilies.length > 0 && (
+            <PlacementDialog
+              organizationId={organization.id}
+              animalId={animal.id}
+              fosterFamilies={allFosterFamilies.map((f) => ({ id: f.id, firstName: f.firstName, lastName: f.lastName }))}
+            />
+          )}
         </CardHeader>
         <CardContent>
           {animal.placements.length === 0 ? (
@@ -230,6 +243,7 @@ export default async function AnimalDetailPage({
                   <TableHead>Famille d&apos;accueil</TableHead>
                   <TableHead>Début</TableHead>
                   <TableHead>Fin</TableHead>
+                  {isAdmin && <TableHead />}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -244,6 +258,20 @@ export default async function AnimalDetailPage({
                         ? new Date(placement.endedAt).toLocaleDateString("fr-FR")
                         : "En cours"}
                     </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <PlacementDialog
+                          organizationId={organization.id}
+                          animalId={animal.id}
+                          fosterFamilies={allFosterFamilies.map((f) => ({
+                            id: f.id,
+                            firstName: f.firstName,
+                            lastName: f.lastName,
+                          }))}
+                          placement={placement}
+                        />
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
