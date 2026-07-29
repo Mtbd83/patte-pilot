@@ -3,11 +3,13 @@
 import { and, desc, eq, gte, lte, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { accountingEntries, accountingTypeEnum, accountingCategoryEnum } from "@/db/schema";
+import { accountingEntries, accountingTypeEnum, accountingCategoryEnum, organizations } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, ForbiddenError } from "@/lib/permissions";
 import { dateString } from "@/lib/validation";
-import { ACCOUNTING_CATEGORIES_BY_TYPE } from "@/lib/accounting-labels";
+import { ACCOUNTING_CATEGORIES_BY_TYPE, ACCOUNTING_TYPE_LABELS, ACCOUNTING_CATEGORY_LABELS } from "@/lib/accounting-labels";
+import { buildAccountingExportCsv } from "@/lib/accounting-export-csv";
+import { generateAccountingExportPdf } from "@/lib/accounting-export-pdf";
 
 /** A "sortie" can't take an income-only category ("don"...) and vice versa. */
 function refineCategoryMatchesType<T extends { type: (typeof accountingTypeEnum.enumValues)[number]; category: (typeof accountingCategoryEnum.enumValues)[number] }>(
@@ -302,4 +304,70 @@ export async function getAccountingTotalsByAnimal(
     totals[entry.animalId] = (totals[entry.animalId] ?? 0) + signed;
   }
   return totals;
+}
+
+/** Every entry matching the given filters, unpaginated — feeds both export formats. */
+async function fetchFilteredEntriesForExport(input: z.infer<typeof accountingFiltersSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const data = accountingFiltersSchema.parse(input);
+  await requireAdmin(session.user.id, data.organizationId);
+
+  return db.query.accountingEntries.findMany({
+    where: accountingFiltersWhere(data),
+    orderBy: desc(accountingEntries.date),
+    with: { animal: true },
+  });
+}
+
+/** Admin-only: the filtered entry list as a semicolon-delimited CSV (Excel-FR friendly). */
+export async function exportAccountingEntriesCsv(input: z.infer<typeof accountingFiltersSchema>) {
+  const entries = await fetchFilteredEntriesForExport(input);
+
+  const csv = buildAccountingExportCsv(
+    entries.map((entry) => ({
+      date: entry.date,
+      typeLabel: ACCOUNTING_TYPE_LABELS[entry.type],
+      categoryLabel: ACCOUNTING_CATEGORY_LABELS[entry.category],
+      amountLabel: Number(entry.amount).toFixed(2),
+      animalName: entry.animal?.name ?? "",
+      comment: entry.comment ?? "",
+    })),
+  );
+
+  return { csv };
+}
+
+const exportPdfSchema = accountingFiltersSchema.extend({ filterDescription: z.string() });
+
+/** Admin-only: the filtered entry list as a from-scratch PDF, stats in the header. */
+export async function exportAccountingEntriesPdf(input: z.infer<typeof exportPdfSchema>) {
+  const { filterDescription, ...filters } = exportPdfSchema.parse(input);
+  const [entries, summary, organization] = await Promise.all([
+    fetchFilteredEntriesForExport(filters),
+    getAccountingSummary(filters),
+    db.query.organizations.findFirst({ where: eq(organizations.id, filters.organizationId) }),
+  ]);
+  if (!organization) throw new Error("Association introuvable.");
+
+  const pdfBytes = await generateAccountingExportPdf({
+    organizationName: organization.name,
+    filterDescription,
+    summary: {
+      totalIn: summary.totalIn.toFixed(2),
+      totalOut: summary.totalOut.toFixed(2),
+      balance: summary.balance.toFixed(2),
+    },
+    rows: entries.map((entry) => ({
+      date: entry.date,
+      typeLabel: ACCOUNTING_TYPE_LABELS[entry.type],
+      categoryLabel: ACCOUNTING_CATEGORY_LABELS[entry.category],
+      amountLabel: `${Number(entry.amount).toFixed(2)} €`,
+      animalName: entry.animal?.name ?? "—",
+      comment: entry.comment ?? "",
+    })),
+  });
+
+  return { pdfBase64: Buffer.from(pdfBytes).toString("base64") };
 }

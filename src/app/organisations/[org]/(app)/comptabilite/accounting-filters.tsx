@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 
 const CATEGORY_OPTIONS = Object.entries(ACCOUNTING_CATEGORY_LABELS) as [AccountingCategory, string][];
-const MONTH_LABELS = [
+export const MONTH_LABELS = [
   "Janvier",
   "Février",
   "Mars",

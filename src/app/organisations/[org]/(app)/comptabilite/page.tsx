@@ -17,7 +17,8 @@ import { Button } from "@/components/ui/button";
 import { CreateAccountingEntryDialog } from "./create-accounting-entry-dialog";
 import { EditAccountingEntryDialog } from "./edit-accounting-entry-dialog";
 import { DeleteEntryButton } from "./delete-entry-button";
-import { AccountingFilters, type PeriodMode } from "./accounting-filters";
+import { AccountingFilters, MONTH_LABELS, type PeriodMode } from "./accounting-filters";
+import { AccountingExportButtons } from "./accounting-export-buttons";
 import { AccountingType, AccountingCategory } from "@/db/schema";
 
 function formatAmount(amount: string) {
@@ -120,6 +121,17 @@ export default async function ComptabilitePage({
 
   const animalOptions = animalsList.map((a) => ({ id: a.id, name: a.name }));
 
+  const filterParts: string[] = [];
+  if (periodMode === "year" && year) filterParts.push(`Année ${year}`);
+  else if (periodMode === "month" && year && month) {
+    filterParts.push(`${MONTH_LABELS[Number(month) - 1]} ${year}`);
+  } else if (periodMode === "custom" && (dateFrom || dateTo)) {
+    filterParts.push(`Du ${dateFrom ?? "…"} au ${dateTo ?? "…"}`);
+  }
+  if (category) filterParts.push(`Catégorie : ${ACCOUNTING_CATEGORY_LABELS[category]}`);
+  if (animalId) filterParts.push(`Animal : ${animalOptions.find((a) => a.id === animalId)?.name ?? ""}`);
+  const filterDescription = filterParts.length > 0 ? filterParts.join(" · ") : "Toutes les écritures";
+
   function pageHref(targetPage: number) {
     const query = new URLSearchParams();
     if (periodMode !== "all") query.set("periodMode", periodMode);
@@ -167,7 +179,13 @@ export default async function ComptabilitePage({
         </Card>
       </div>
 
-      <CreateAccountingEntryDialog organizationId={organization.id} animals={animalOptions} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <CreateAccountingEntryDialog organizationId={organization.id} animals={animalOptions} />
+        <AccountingExportButtons
+          filters={{ organizationId: organization.id, category, animalId, dateFrom, dateTo }}
+          filterDescription={filterDescription}
+        />
+      </div>
 
       <AccountingFilters
         periodMode={periodMode}

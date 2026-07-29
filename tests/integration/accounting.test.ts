@@ -21,6 +21,8 @@ import {
   listAccountingEntriesPage,
   listAccountingEntryYears,
   getAccountingSummary,
+  exportAccountingEntriesCsv,
+  exportAccountingEntriesPdf,
 } from "@/server/actions/accounting";
 import { createAnimal } from "@/server/actions/animals";
 import { ForbiddenError } from "@/lib/permissions";
@@ -293,6 +295,51 @@ describe("accounting server actions", () => {
     const filtered = await listAccountingEntriesPage({ organizationId, animalId, page: 1 });
     expect(filtered.entries.some((e) => e.id === entry.id)).toBe(true);
     expect(filtered.entries.every((e) => e.animalId === animalId)).toBe(true);
+
+    await deleteAccountingEntry({ entryId: entry.id, organizationId });
+  });
+
+  it("exports the filtered entries as CSV", async () => {
+    const entry = await createAccountingEntry({
+      organizationId,
+      date: "2026-08-01",
+      type: "entree",
+      category: "don",
+      amount: 33,
+      comment: "Export CSV test",
+    });
+
+    const { csv } = await exportAccountingEntriesCsv({ organizationId, category: "don" });
+    expect(csv).toContain("Date;Type;Catégorie;Montant;Animal;Commentaire");
+    expect(csv).toContain("2026-08-01;Entrée;Don;33.00;;Export CSV test");
+    expect(csv).not.toContain("Vétérinaire");
+
+    await deleteAccountingEntry({ entryId: entry.id, organizationId });
+  });
+
+  it("rejects a non-admin from exporting CSV", async () => {
+    authMock.mockResolvedValue({ user: { id: outsiderUserId } });
+    await expect(exportAccountingEntriesCsv({ organizationId })).rejects.toThrow(ForbiddenError);
+    authMock.mockResolvedValue({ user: { id: adminUserId } });
+  });
+
+  it("exports the filtered entries as a PDF", async () => {
+    const entry = await createAccountingEntry({
+      organizationId,
+      date: "2026-08-02",
+      type: "sortie",
+      category: "veterinaire",
+      amount: 44,
+      animalId,
+    });
+
+    const { pdfBase64 } = await exportAccountingEntriesPdf({
+      organizationId,
+      animalId,
+      filterDescription: `Animal : Simba`,
+    });
+    const bytes = Buffer.from(pdfBase64, "base64");
+    expect(bytes.subarray(0, 5).toString("utf-8")).toBe("%PDF-");
 
     await deleteAccountingEntry({ entryId: entry.id, organizationId });
   });
