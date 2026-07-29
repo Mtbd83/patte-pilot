@@ -1,27 +1,13 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ACCOUNTING_CATEGORY_LABELS } from "@/lib/accounting-labels";
+import { ACCOUNTING_CATEGORY_LABELS, MONTH_LABELS } from "@/lib/accounting-labels";
 import type { AccountingCategory } from "@/db/schema";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 
 const CATEGORY_OPTIONS = Object.entries(ACCOUNTING_CATEGORY_LABELS) as [AccountingCategory, string][];
-export const MONTH_LABELS = [
-  "Janvier",
-  "Février",
-  "Mars",
-  "Avril",
-  "Mai",
-  "Juin",
-  "Juillet",
-  "Août",
-  "Septembre",
-  "Octobre",
-  "Novembre",
-  "Décembre",
-];
 
 export type PeriodMode = "all" | "year" | "month" | "custom";
 

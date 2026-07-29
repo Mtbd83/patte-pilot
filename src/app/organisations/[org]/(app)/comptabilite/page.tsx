@@ -10,14 +10,14 @@ import {
   getAccountingSummary,
 } from "@/server/actions/accounting";
 import { listAnimals } from "@/server/actions/animals";
-import { ACCOUNTING_TYPE_LABELS, ACCOUNTING_CATEGORY_LABELS } from "@/lib/accounting-labels";
+import { ACCOUNTING_TYPE_LABELS, ACCOUNTING_CATEGORY_LABELS, MONTH_LABELS } from "@/lib/accounting-labels";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { CreateAccountingEntryDialog } from "./create-accounting-entry-dialog";
 import { EditAccountingEntryDialog } from "./edit-accounting-entry-dialog";
 import { DeleteEntryButton } from "./delete-entry-button";
-import { AccountingFilters, MONTH_LABELS, type PeriodMode } from "./accounting-filters";
+import { AccountingFilters, type PeriodMode } from "./accounting-filters";
 import { AccountingExportButtons } from "./accounting-export-buttons";
 import { AccountingType, AccountingCategory } from "@/db/schema";
 

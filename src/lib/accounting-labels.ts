@@ -20,3 +20,18 @@ export const ACCOUNTING_CATEGORIES_BY_TYPE: Record<AccountingType, AccountingCat
   entree: ["frais_adoption", "don", "adhesion", "autre"],
   sortie: ["nourriture", "veterinaire", "equipement", "autre"],
 };
+
+export const MONTH_LABELS = [
+  "Janvier",
+  "Février",
+  "Mars",
+  "Avril",
+  "Mai",
+  "Juin",
+  "Juillet",
+  "Août",
+  "Septembre",
+  "Octobre",
+  "Novembre",
+  "Décembre",
+];
