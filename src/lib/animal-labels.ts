@@ -17,6 +17,7 @@ export const STATUS_LABELS: Record<AnimalStatus, string> = {
   quarantaine: "En quarantaine",
   en_soins: "En soins",
   en_famille_accueil: "En famille d'accueil",
+  a_l_adoption: "À l'adoption",
   visite_en_cours: "Visite en cours",
   reserve: "Réservé",
   adopte: "Adopté",
@@ -25,11 +26,12 @@ export const STATUS_LABELS: Record<AnimalStatus, string> = {
 
 export const STATUS_BADGE_VARIANT: Record<
   AnimalStatus,
-  "default" | "secondary" | "outline" | "success" | "warning"
+  "default" | "secondary" | "outline" | "success" | "warning" | "info"
 > = {
   quarantaine: "warning",
   en_soins: "warning",
   en_famille_accueil: "default",
+  a_l_adoption: "info",
   visite_en_cours: "default",
   reserve: "default",
   adopte: "success",

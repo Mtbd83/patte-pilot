@@ -1,0 +1,1 @@
+ALTER TYPE "animal_status" ADD VALUE 'a_l_adoption';

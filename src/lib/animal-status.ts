@@ -9,6 +9,7 @@ export const STATUSES_REQUIRING_FOSTER_FAMILY: readonly AnimalStatus[] = [
   "quarantaine",
   "en_soins",
   "en_famille_accueil",
+  "a_l_adoption",
   "visite_en_cours",
   "reserve",
 ];

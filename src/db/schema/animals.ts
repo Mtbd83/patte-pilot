@@ -34,6 +34,7 @@ export const animalStatusEnum = pgEnum("animal_status", [
   "quarantaine",
   "en_soins",
   "en_famille_accueil",
+  "a_l_adoption",
   "visite_en_cours",
   "reserve",
   "adopte",

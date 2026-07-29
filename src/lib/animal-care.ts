@@ -8,6 +8,7 @@ import type { Animal, AnimalHealthChecklist, AnimalStatus } from "@/db/schema";
  */
 export const ANIMAL_STATUS_ORDER: readonly AnimalStatus[] = [
   "en_famille_accueil",
+  "a_l_adoption",
   "quarantaine",
   "en_soins",
   "visite_en_cours",
@@ -84,9 +85,9 @@ export function statusNextAction(
 ): NextAction | null {
   switch (animal.status) {
     case "en_famille_accueil":
-      return { label: "Trouver un·e adoptant·e", urgent: false };
-    case "quarantaine":
       return { label: "Créer l'annonce", urgent: false };
+    case "a_l_adoption":
+      return { label: "Trouver un·e adoptant·e", urgent: false };
     case "adopte":
       return animal.icadUpdatedAt
         ? null
