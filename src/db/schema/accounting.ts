@@ -18,6 +18,9 @@ export const accountingCategoryEnum = pgEnum("accounting_category", [
   "nourriture",
   "veterinaire",
   "equipement",
+  "frais_adoption",
+  "don",
+  "adhesion",
   "autre",
 ]);
 

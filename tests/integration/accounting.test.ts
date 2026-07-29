@@ -15,8 +15,11 @@ import { db } from "@/db";
 import { users, organizations, organizationMembers, organizationMemberRoles } from "@/db/schema";
 import {
   createAccountingEntry,
+  updateAccountingEntry,
   deleteAccountingEntry,
   listAccountingEntries,
+  listAccountingEntriesPage,
+  listAccountingEntryYears,
   getAccountingSummary,
 } from "@/server/actions/accounting";
 import { createAnimal } from "@/server/actions/animals";
@@ -157,5 +160,131 @@ describe("accounting server actions", () => {
     await deleteAccountingEntry({ entryId: entry.id, organizationId });
     const entries = await listAccountingEntries({ organizationId });
     expect(entries.find((e) => e.id === entry.id)).toBeUndefined();
+  });
+
+  it("rejects a category that doesn't match the type", async () => {
+    await expect(
+      createAccountingEntry({
+        organizationId,
+        date: "2026-01-19",
+        type: "sortie",
+        category: "don",
+        amount: 15,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("updates an entry in place", async () => {
+    const entry = await createAccountingEntry({
+      organizationId,
+      date: "2026-01-20",
+      type: "entree",
+      category: "don",
+      amount: 30,
+      comment: "Avant modif",
+    });
+
+    const updated = await updateAccountingEntry({
+      entryId: entry.id,
+      organizationId,
+      date: "2026-01-21",
+      type: "entree",
+      category: "adhesion",
+      amount: 45,
+      comment: "Après modif",
+    });
+
+    expect(updated.date).toBe("2026-01-21");
+    expect(updated.category).toBe("adhesion");
+    expect(updated.amount).toBe("45.00");
+    expect(updated.comment).toBe("Après modif");
+
+    await deleteAccountingEntry({ entryId: entry.id, organizationId });
+  });
+
+  it("rejects a non-admin from updating an entry", async () => {
+    const entry = await createAccountingEntry({
+      organizationId,
+      date: "2026-01-22",
+      type: "entree",
+      category: "don",
+      amount: 10,
+    });
+
+    authMock.mockResolvedValue({ user: { id: outsiderUserId } });
+    await expect(
+      updateAccountingEntry({
+        entryId: entry.id,
+        organizationId,
+        date: "2026-01-22",
+        type: "entree",
+        category: "don",
+        amount: 20,
+      }),
+    ).rejects.toThrow(ForbiddenError);
+
+    authMock.mockResolvedValue({ user: { id: adminUserId } });
+    await deleteAccountingEntry({ entryId: entry.id, organizationId });
+  });
+
+  it("lists distinct years with at least the current year", async () => {
+    const years = await listAccountingEntryYears({ organizationId });
+    expect(years).toContain(2026);
+  });
+
+  it("paginates filtered entries at 20 per page", async () => {
+    const seeded = [];
+    for (let i = 0; i < 25; i += 1) {
+      const day = String(i + 1).padStart(2, "0");
+      seeded.push(
+        await createAccountingEntry({
+          organizationId,
+          date: `2026-06-${day}`,
+          type: "entree",
+          category: "adhesion",
+          amount: 10 + i,
+          comment: `Pagination-${i}`,
+        }),
+      );
+    }
+
+    const firstPage = await listAccountingEntriesPage({
+      organizationId,
+      category: "adhesion",
+      dateFrom: "2026-06-01",
+      dateTo: "2026-06-30",
+      page: 1,
+    });
+    expect(firstPage.total).toBe(25);
+    expect(firstPage.entries).toHaveLength(20);
+    expect(firstPage.totalPages).toBe(2);
+
+    const secondPage = await listAccountingEntriesPage({
+      organizationId,
+      category: "adhesion",
+      dateFrom: "2026-06-01",
+      dateTo: "2026-06-30",
+      page: 2,
+    });
+    expect(secondPage.entries).toHaveLength(5);
+
+    await Promise.all(seeded.map((entry) => deleteAccountingEntry({ entryId: entry.id, organizationId })));
+  });
+
+  it("filters entries by linked animal", async () => {
+    const entry = await createAccountingEntry({
+      organizationId,
+      date: "2026-07-01",
+      type: "sortie",
+      category: "veterinaire",
+      amount: 12,
+      animalId,
+    });
+
+    const filtered = await listAccountingEntriesPage({ organizationId, animalId, page: 1 });
+    expect(filtered.entries.some((e) => e.id === entry.id)).toBe(true);
+    expect(filtered.entries.every((e) => e.animalId === animalId)).toBe(true);
+
+    await deleteAccountingEntry({ entryId: entry.id, organizationId });
   });
 });
