@@ -15,6 +15,8 @@ import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
 import { listAnimalsWithBoosterDue, listAnimals } from "@/server/actions/animals";
+import { listMySupplyRequests } from "@/server/actions/supply-requests";
+import { SupplyRequestWidget } from "./supply-request-widget";
 import { boosterDueDate, isBoosterOwed, isBoosterOverdue } from "@/lib/animal-care";
 import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
 import { ROLE_LABELS } from "@/lib/role-labels";
@@ -52,11 +54,12 @@ export default async function OrganizationPage({
   // already gets hers (and only hers) in the card above.
   const showOrgWideReminders = isAdmin || isBenevole;
 
-  const [animalsWithBoosterDue, myAnimals] = await Promise.all([
+  const [animalsWithBoosterDue, myAnimals, mySupplyRequests] = await Promise.all([
     showOrgWideReminders
       ? listAnimalsWithBoosterDue({ organizationId: organization.id, withinDays: 14 })
       : Promise.resolve([]),
     isFamilleAccueil ? listAnimals({ organizationId: organization.id }) : Promise.resolve([]),
+    isFamilleAccueil ? listMySupplyRequests({ organizationId: organization.id }) : Promise.resolve([]),
   ]);
 
   const myOwnAnimals = myAnimals.filter(
@@ -118,6 +121,10 @@ export default async function OrganizationPage({
             )}
           </CardContent>
         </Card>
+      )}
+
+      {isFamilleAccueil && (
+        <SupplyRequestWidget organizationId={organization.id} requests={mySupplyRequests} />
       )}
 
       {animalsWithBoosterDue.length > 0 && (

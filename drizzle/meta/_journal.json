@@ -106,6 +106,13 @@
       "when": 1785309888333,
       "tag": "0014_gigantic_malice",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1785326806302,
+      "tag": "0015_pretty_magik",
+      "breakpoints": true
     }
   ]
 }

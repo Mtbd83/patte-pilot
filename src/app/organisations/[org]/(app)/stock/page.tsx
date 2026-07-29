@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
 import { listInventoryItems } from "@/server/actions/inventory";
+import { listSupplyRequestsForAdmin } from "@/server/actions/supply-requests";
 import { INVENTORY_CATEGORY_LABELS, INVENTORY_STATUS_LABELS, INVENTORY_STATUS_BADGE_VARIANT } from "@/lib/inventory-labels";
 import { SPECIES_LABELS } from "@/lib/animal-labels";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { CreateInventoryItemDialog } from "./create-inventory-item-dialog";
 import { InventoryItemRow } from "./inventory-item-row";
+import { SupplyRequestsSection } from "./supply-requests-section";
 
 export default async function StockPage({
   params,
@@ -41,7 +43,10 @@ export default async function StockPage({
   }
 
   const isAdmin = roles.includes("admin");
-  const items = await listInventoryItems({ organizationId: organization.id });
+  const [items, supplyRequests] = await Promise.all([
+    listInventoryItems({ organizationId: organization.id }),
+    isAdmin ? listSupplyRequestsForAdmin({ organizationId: organization.id }) : Promise.resolve([]),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -54,6 +59,8 @@ export default async function StockPage({
         </Link>
         <h1 className="mt-1 text-2xl font-semibold">Stock</h1>
       </div>
+
+      {isAdmin && <SupplyRequestsSection organizationId={organization.id} requests={supplyRequests} />}
 
       {isAdmin && <CreateInventoryItemDialog organizationId={organization.id} />}
 

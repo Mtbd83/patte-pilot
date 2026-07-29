@@ -16,6 +16,7 @@ import { inventoryItems } from "./inventory";
 import { events } from "./events";
 import { documents } from "./documents";
 import { pushSubscriptions } from "./push-subscriptions";
+import { supplyRequests } from "./supply-requests";
 
 export * from "./organizations";
 export * from "./animals";
@@ -27,6 +28,7 @@ export * from "./inventory";
 export * from "./events";
 export * from "./documents";
 export * from "./push-subscriptions";
+export * from "./supply-requests";
 
 // ---------------------------------------------------------------------------
 // All relations() calls live here, one per table, so a table's relations
@@ -52,6 +54,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   events: many(events),
   documents: many(documents),
   helloAssoLinks: many(organizationHelloAssoLinks),
+  supplyRequests: many(supplyRequests),
 }));
 
 export const organizationHelloAssoLinksRelations = relations(
@@ -111,4 +114,16 @@ export const fosterFamiliesRelations = relations(fosterFamilies, ({ one, many })
   }),
   placements: many(animalPlacements),
   animalsHosted: many(animals),
+  supplyRequests: many(supplyRequests),
+}));
+
+export const supplyRequestsRelations = relations(supplyRequests, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [supplyRequests.organizationId],
+    references: [organizations.id],
+  }),
+  fosterFamily: one(fosterFamilies, {
+    fields: [supplyRequests.fosterFamilyId],
+    references: [fosterFamilies.id],
+  }),
 }));
