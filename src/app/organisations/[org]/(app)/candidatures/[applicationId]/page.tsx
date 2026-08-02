@@ -180,7 +180,7 @@ export default async function CandidatureDetailPage({
               label="Composition"
               value={`${application.familySize ?? "—"} personne(s), dont ${application.childrenCount ?? 0} enfant(s)`}
             />
-            <InfoRow label="Allergies" value={application.hasAllergies ? "Oui" : "Non"} />
+            <InfoRow label="Allergies" value={application.allergiesDetails || "Non"} />
             <InfoRow
               label="Niveau d'activité"
               value={application.activityLevel ? ACTIVITY_LEVEL_LABELS[application.activityLevel] : "—"}

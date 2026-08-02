@@ -18,6 +18,7 @@ import { AnimalDescriptionForm } from "./animal-description-form";
 import { HealthChecklistForm } from "./health-checklist-form";
 import { StatusForm } from "./status-form";
 import { PlacementDialog } from "./placement-dialog";
+import { DeletePlacementButton } from "./delete-placement-button";
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -260,16 +261,24 @@ export default async function AnimalDetailPage({
                     </TableCell>
                     {isAdmin && (
                       <TableCell>
-                        <PlacementDialog
-                          organizationId={organization.id}
-                          animalId={animal.id}
-                          fosterFamilies={allFosterFamilies.map((f) => ({
-                            id: f.id,
-                            firstName: f.firstName,
-                            lastName: f.lastName,
-                          }))}
-                          placement={placement}
-                        />
+                        <div className="flex gap-1">
+                          <PlacementDialog
+                            organizationId={organization.id}
+                            animalId={animal.id}
+                            fosterFamilies={allFosterFamilies.map((f) => ({
+                              id: f.id,
+                              firstName: f.firstName,
+                              lastName: f.lastName,
+                            }))}
+                            placement={placement}
+                          />
+                          <DeletePlacementButton
+                            organizationId={organization.id}
+                            animalId={animal.id}
+                            placementId={placement.id}
+                            familyName={`${placement.fosterFamily.firstName} ${placement.fosterFamily.lastName}`}
+                          />
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>

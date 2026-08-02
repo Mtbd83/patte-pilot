@@ -73,6 +73,7 @@ test.describe("Bénévole", () => {
     await page.goto("/organisations/asso-test/adopter");
     await page.getByLabel("Prénom", { exact: true }).fill("Candidat");
     await page.getByLabel("Nom", { exact: true }).fill(`Refus-${suffix}`);
+    await page.getByLabel("Ville", { exact: true }).fill("Toulon");
     await page.getByLabel("Téléphone").fill("0600000000");
     await page.getByLabel("Adresse mail").fill(applicantEmail);
     await page.getByLabel("Quel âge avez-vous ?").fill("35");
@@ -239,6 +240,7 @@ test("un bénévole peut changer le statut d'une candidature et l'animal adopté
   await page.goto("/organisations/asso-test/adopter");
   await page.getByLabel("Prénom", { exact: true }).fill("Perm");
   await page.getByLabel("Nom", { exact: true }).fill(`Status-${suffix}`);
+  await page.getByLabel("Ville", { exact: true }).fill("Toulon");
   await page.getByLabel("Téléphone").fill("0600000000");
   await page.getByLabel("Adresse mail").fill(applicantEmail);
   await page.getByLabel("Quel âge avez-vous ?").fill("35");

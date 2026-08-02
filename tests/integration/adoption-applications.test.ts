@@ -69,6 +69,7 @@ describe("adoption application server actions", () => {
       organizationId,
       lastName: "Dupont",
       firstName: "Jeanne",
+      city: "Toulon",
       phone: "0600000000",
       email: "jeanne@example.com",
       desiredSpecies: "chat",
@@ -84,6 +85,7 @@ describe("adoption application server actions", () => {
       organizationId,
       lastName: "Bot",
       firstName: "Spam",
+      city: "Toulon",
       phone: "0600000000",
       email: "bot@example.com",
       desiredSpecies: "chat",
@@ -102,6 +104,7 @@ describe("adoption application server actions", () => {
         organizationId: randomUUID(),
         lastName: "Dupont",
         firstName: "Jeanne",
+        city: "Toulon",
         phone: "0600000000",
         email: "jeanne@example.com",
       }),
@@ -114,10 +117,47 @@ describe("adoption application server actions", () => {
         organizationId,
         lastName: "Dupont",
         firstName: "Jeanne",
+        city: "Toulon",
         phone: "0600000000",
         email: "pas-un-email",
       }),
     ).rejects.toThrow();
+  });
+
+  it("rejects a submission with no city", async () => {
+    await expect(
+      submitAdoptionApplication({
+        organizationId,
+        lastName: "Dupont",
+        firstName: "Jeanne",
+        city: "",
+        phone: "0600000000",
+        email: "jeanne-no-city@example.com",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("stores free-text allergy details instead of a yes/no flag", async () => {
+    const withAllergies = await submitAdoptionApplication({
+      organizationId,
+      lastName: "Dupont",
+      firstName: "Jeanne",
+      city: "Toulon",
+      phone: "0600000000",
+      email: `allergies-${randomUUID().slice(0, 8)}@example.com`,
+      allergiesDetails: "Poils de chat chez le conjoint",
+    });
+    expect(withAllergies?.allergiesDetails).toBe("Poils de chat chez le conjoint");
+
+    const withoutAllergies = await submitAdoptionApplication({
+      organizationId,
+      lastName: "Dupont",
+      firstName: "Jeanne",
+      city: "Toulon",
+      phone: "0600000000",
+      email: `no-allergies-${randomUUID().slice(0, 8)}@example.com`,
+    });
+    expect(withoutAllergies?.allergiesDetails).toBeNull();
   });
 
   it("lets a member list and fetch applications, but rejects an outsider", async () => {

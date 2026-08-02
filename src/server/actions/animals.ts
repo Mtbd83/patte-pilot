@@ -503,6 +503,44 @@ export async function updateAnimalPlacement(input: z.infer<typeof updateAnimalPl
   });
 }
 
+const deleteAnimalPlacementSchema = z.object({
+  placementId: z.string().uuid(),
+  animalId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+});
+
+/** Admin-only: removes a placement record entirely — a mistaken entry, not a real historical placement. */
+export async function deleteAnimalPlacement(input: z.infer<typeof deleteAnimalPlacementSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const data = deleteAnimalPlacementSchema.parse(input);
+  await requireAdmin(session.user.id, data.organizationId);
+
+  const placement = await db.query.animalPlacements.findFirst({
+    where: and(eq(animalPlacements.id, data.placementId), eq(animalPlacements.animalId, data.animalId)),
+  });
+  if (!placement) throw new Error("Placement introuvable.");
+
+  return db.transaction(async (tx) => {
+    await tx.delete(animalPlacements).where(eq(animalPlacements.id, data.placementId));
+
+    // Deleting the currently-open placement leaves the animal with no
+    // foster family until a new one is recorded.
+    if (!placement.endedAt) {
+      const animal = await tx.query.animals.findFirst({
+        where: and(eq(animals.id, data.animalId), eq(animals.organizationId, data.organizationId)),
+      });
+      if (animal?.currentFosterFamilyId === placement.fosterFamilyId) {
+        await tx
+          .update(animals)
+          .set({ currentFosterFamilyId: null, updatedAt: new Date() })
+          .where(eq(animals.id, data.animalId));
+      }
+    }
+  });
+}
+
 /** Whether `userId` is the foster family currently responsible for `animal` — the one exception to admin-only edits on a handful of fields (checklist, description, first photo). */
 async function isResponsibleForAnimal(
   roles: string[],

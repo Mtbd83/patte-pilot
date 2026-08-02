@@ -77,7 +77,7 @@ export const adoptionApplications = pgTable(
     // Identité du candidat
     lastName: varchar("last_name", { length: 120 }).notNull(),
     firstName: varchar("first_name", { length: 120 }).notNull(),
-    city: varchar("city", { length: 120 }),
+    city: varchar("city", { length: 120 }).notNull(),
     phone: varchar("phone", { length: 30 }).notNull(),
     email: varchar("email", { length: 255 }).notNull(),
     age: integer("age"),
@@ -98,7 +98,7 @@ export const adoptionApplications = pgTable(
     // Foyer
     familySize: integer("family_size"),
     childrenCount: integer("children_count").default(0),
-    hasAllergies: boolean("has_allergies").default(false),
+    allergiesDetails: text("allergies_details"), // vide/absent = pas d'allergie ; sinon, précise à quoi
     activityLevel: activityLevelEnum("activity_level"),
     familyAgrees: boolean("family_agrees").default(true).notNull(),
     familyDisagreementReason: text("family_disagreement_reason"),

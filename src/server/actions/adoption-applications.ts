@@ -27,7 +27,7 @@ const submitAdoptionApplicationSchema = z.object({
   // Identité du candidat
   lastName: z.string().min(1).max(120),
   firstName: z.string().min(1).max(120),
-  city: z.string().max(120).optional(),
+  city: z.string().min(1).max(120),
   phone: z.string().min(1).max(30),
   email: z.string().email(),
   age: z.coerce.number().int().min(0).max(120).optional(),
@@ -48,7 +48,7 @@ const submitAdoptionApplicationSchema = z.object({
   // Foyer
   familySize: z.coerce.number().int().min(1).optional(),
   childrenCount: z.coerce.number().int().min(0).default(0),
-  hasAllergies: z.boolean().default(false),
+  allergiesDetails: z.string().max(500).optional(),
   activityLevel: z.enum(activityLevelEnum.enumValues).optional(),
   familyAgrees: z.boolean().default(true),
   familyDisagreementReason: z.string().optional(),

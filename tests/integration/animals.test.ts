@@ -37,6 +37,7 @@ import {
   updateAnimalHealthChecklist,
   createAnimalPlacement,
   updateAnimalPlacement,
+  deleteAnimalPlacement,
   listAnimals,
   listAnimalsPage,
   getAnimalStatusCounts,
@@ -492,6 +493,75 @@ describe("animals server actions", () => {
     });
     const reopened = await db.query.animals.findFirst({ where: eq(animals.id, animal.id) });
     expect(reopened?.currentFosterFamilyId).toBe(fosterFamilyAId);
+  });
+
+  it("lets an admin delete a placement, clearing currentFosterFamilyId if it was the open one", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "APlacementSupprimer",
+      species: "chat",
+      intakeDate: "2026-01-05",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    const placement = await db.query.animalPlacements.findFirst({
+      where: eq(animalPlacements.animalId, animal.id),
+    });
+    if (!placement) throw new Error("Seed failed.");
+
+    await deleteAnimalPlacement({ placementId: placement.id, animalId: animal.id, organizationId });
+
+    const gone = await db.query.animalPlacements.findFirst({ where: eq(animalPlacements.id, placement.id) });
+    expect(gone).toBeUndefined();
+
+    const updatedAnimal = await db.query.animals.findFirst({ where: eq(animals.id, animal.id) });
+    expect(updatedAnimal?.currentFosterFamilyId).toBeNull();
+  });
+
+  it("deleting a closed (historical) placement doesn't touch currentFosterFamilyId", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "HistoriqueSupprimer",
+      species: "chat",
+      intakeDate: "2026-01-05",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    const historical = await createAnimalPlacement({
+      animalId: animal.id,
+      organizationId,
+      fosterFamilyId: fosterFamilyBId,
+      startedAt: "2025-01-01",
+      endedAt: "2025-06-01",
+    });
+
+    await deleteAnimalPlacement({ placementId: historical.id, animalId: animal.id, organizationId });
+
+    const gone = await db.query.animalPlacements.findFirst({ where: eq(animalPlacements.id, historical.id) });
+    expect(gone).toBeUndefined();
+
+    const unchanged = await db.query.animals.findFirst({ where: eq(animals.id, animal.id) });
+    expect(unchanged?.currentFosterFamilyId).toBe(fosterFamilyAId);
+  });
+
+  it("rejects a non-admin from deleting a placement", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "PlacementProtege",
+      species: "chat",
+      intakeDate: "2026-01-05",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    const placement = await db.query.animalPlacements.findFirst({
+      where: eq(animalPlacements.animalId, animal.id),
+    });
+    if (!placement) throw new Error("Seed failed.");
+
+    authMock.mockResolvedValue({ user: { id: benevoleUserId } });
+    await expect(
+      deleteAnimalPlacement({ placementId: placement.id, animalId: animal.id, organizationId }),
+    ).rejects.toThrow(ForbiddenError);
   });
 
   it("rejects switching to a status that requires a foster family without providing one", async () => {

@@ -16,6 +16,7 @@ test("public adoption form → admin review → certificate + contract sent", as
   await page.goto("/organisations/asso-test/adopter");
   await page.getByLabel("Prénom", { exact: true }).fill("Jeanne");
   await page.getByLabel("Nom", { exact: true }).fill(`Dupont-${suffix}`);
+  await page.getByLabel("Ville", { exact: true }).fill("Toulon");
   await page.getByLabel("Téléphone").fill("0600000000");
   await page.getByLabel("Adresse mail").fill(applicantEmail);
   await page.getByLabel("Quel âge avez-vous ?").fill("35");

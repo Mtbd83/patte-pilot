@@ -59,7 +59,7 @@ interface FormState {
 
   familySize: string;
   childrenCount: string;
-  hasAllergies: boolean;
+  allergiesDetails: string;
   activityLevel: ActivityLevel | "";
   familyAgrees: boolean;
   familyDisagreementReason: string;
@@ -99,7 +99,7 @@ const INITIAL_STATE: FormState = {
   livingSituation: "",
   familySize: "",
   childrenCount: "",
-  hasAllergies: false,
+  allergiesDetails: "",
   activityLevel: "",
   familyAgrees: true,
   familyDisagreementReason: "",
@@ -139,7 +139,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
         honeypot,
         lastName: form.lastName,
         firstName: form.firstName,
-        city: form.city || undefined,
+        city: form.city,
         phone: form.phone,
         email: form.email,
         age: form.age ? Number(form.age) : undefined,
@@ -158,7 +158,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
 
         familySize: form.familySize ? Number(form.familySize) : undefined,
         childrenCount: form.childrenCount ? Number(form.childrenCount) : 0,
-        hasAllergies: form.hasAllergies,
+        allergiesDetails: form.allergiesDetails || undefined,
         activityLevel: form.activityLevel || undefined,
         familyAgrees: form.familyAgrees,
         familyDisagreementReason: form.familyAgrees
@@ -231,8 +231,8 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
               <Input id="ad-last-name" required value={form.lastName} onChange={(e) => set("lastName", e.target.value)} />
             </Field>
           </FieldRow>
-          <Field label="Ville" htmlFor="ad-city">
-            <Input id="ad-city" value={form.city} onChange={(e) => set("city", e.target.value)} />
+          <Field label="Ville" htmlFor="ad-city" required>
+            <Input id="ad-city" required value={form.city} onChange={(e) => set("city", e.target.value)} />
           </Field>
           <FieldRow>
             <Field label="Téléphone" htmlFor="ad-phone" className="flex-1" required>
@@ -412,10 +412,13 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
               />
             </Field>
           </FieldRow>
-          <label htmlFor="ad-allergies" className="flex items-center gap-2 text-sm">
-            <Checkbox id="ad-allergies" checked={form.hasAllergies} onChange={(e) => set("hasAllergies", e.target.checked)} />
-            Y a-t-il des cas d&apos;allergie dans la famille ?
-          </label>
+          <Field label="Y a-t-il des cas d'allergie dans la famille ?" htmlFor="ad-allergies" hint="Si oui, précisez à quoi. Laissez vide sinon.">
+            <Textarea
+              id="ad-allergies"
+              value={form.allergiesDetails}
+              onChange={(e) => set("allergiesDetails", e.target.value)}
+            />
+          </Field>
           <Field label="Quel est le niveau d'activité de la famille ?" htmlFor="ad-activity-level" required>
             <Select
               id="ad-activity-level"
