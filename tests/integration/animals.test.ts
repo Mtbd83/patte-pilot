@@ -41,6 +41,9 @@ import {
   listAnimals,
   listAnimalsPage,
   getAnimalStatusCounts,
+  listAnimalIntakeYears,
+  exportAnimalRegisterCsv,
+  exportAnimalRegisterPdf,
 } from "@/server/actions/animals";
 import { createFosterFamily } from "@/server/actions/foster-families";
 import { ForbiddenError } from "@/lib/permissions";
@@ -757,5 +760,55 @@ describe("animals server actions", () => {
     const all = await listAnimals({ organizationId });
     expect(total).toBe(all.length);
     expect(counts.adopte).toBeGreaterThan(0);
+  });
+
+  it("lists distinct intake years including the current year", async () => {
+    const years = await listAnimalIntakeYears({ organizationId });
+    expect(years).toContain(new Date().getFullYear());
+  });
+
+  it("exports the placement register as CSV, filtered by intake year", async () => {
+    const animal = await createAnimal({
+      organizationId,
+      name: "RegistreCsv",
+      species: "chat",
+      icadNumber: "250000000012345",
+      intakeDate: "2031-03-10",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    await changeAnimalStatus({
+      animalId: animal.id,
+      organizationId,
+      status: "adopte",
+      adoptionDate: "2031-04-01",
+    });
+
+    const { csv } = await exportAnimalRegisterCsv({ organizationId, year: 2031 });
+    expect(csv).toContain("Animal;N° ICAD;Date d'entrée;Date d'adoption;Date de changement ICAD");
+    expect(csv).toContain("RegistreCsv");
+    expect(csv).toContain("250000000012345");
+    expect(csv).toContain("10/03/2031");
+    expect(csv).toContain("01/04/2031");
+
+    const otherYear = await exportAnimalRegisterCsv({ organizationId, year: 2031 - 1 });
+    expect(otherYear.csv).not.toContain("RegistreCsv");
+  });
+
+  it("exports the placement register as a PDF", async () => {
+    const { pdfBase64 } = await exportAnimalRegisterPdf({
+      organizationId,
+      periodDescription: "Toutes les années",
+    });
+    const bytes = Buffer.from(pdfBase64, "base64");
+    expect(bytes.subarray(0, 5).toString("utf-8")).toBe("%PDF-");
+  });
+
+  it("rejects a non-admin from exporting the register", async () => {
+    authMock.mockResolvedValue({ user: { id: benevoleUserId } });
+    await expect(exportAnimalRegisterCsv({ organizationId })).rejects.toThrow(ForbiddenError);
+    await expect(
+      exportAnimalRegisterPdf({ organizationId, periodDescription: "Toutes les années" }),
+    ).rejects.toThrow(ForbiddenError);
   });
 });

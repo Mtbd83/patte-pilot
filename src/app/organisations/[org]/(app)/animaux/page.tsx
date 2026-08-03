@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
-import { listAnimalsPage, getAnimalStatusCounts } from "@/server/actions/animals";
+import { listAnimalsPage, getAnimalStatusCounts, listAnimalIntakeYears } from "@/server/actions/animals";
 import { listFosterFamilies } from "@/server/actions/foster-families";
 import { getAccountingTotalsByAnimal } from "@/server/actions/accounting";
 import { SPECIES_LABELS, STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { CreateAnimalDialog } from "./create-animal-dialog";
 import { AnimalStatusFilter } from "./animal-status-filter";
+import { AnimalRegisterExport } from "./animal-register-export";
 
 const STATUS_VALUES = new Set(Object.keys(STATUS_LABELS));
 
@@ -40,10 +41,11 @@ export default async function AnimauxPage({
       : undefined;
   const page = Math.max(1, Number(searchParams.page) || 1);
 
-  const [{ animals: animalsList, total, totalPages }, fosterFamilies, statusCounts] = await Promise.all([
+  const [{ animals: animalsList, total, totalPages }, fosterFamilies, statusCounts, intakeYears] = await Promise.all([
     listAnimalsPage({ organizationId: organization.id, status, page }),
     listFosterFamilies({ organizationId: organization.id }),
     getAnimalStatusCounts({ organizationId: organization.id }),
+    isAdmin ? listAnimalIntakeYears({ organizationId: organization.id }) : Promise.resolve([]),
   ]);
 
   const accountingTotals = isAdmin
@@ -224,6 +226,8 @@ export default async function AnimauxPage({
           </Button>
         </div>
       )}
+
+      {isAdmin && <AnimalRegisterExport organizationId={organization.id} years={intakeYears} />}
     </div>
   );
 }

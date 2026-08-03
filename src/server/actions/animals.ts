@@ -21,6 +21,8 @@ import { animalStatusRank, boosterDueDate, isBoosterDueWithin, isBoosterOwed } f
 import { dateString } from "@/lib/validation";
 import { uploadImage } from "@/lib/uploads";
 import { sendPushToUsers } from "@/lib/push";
+import { buildAnimalRegisterCsv } from "@/lib/animal-register-csv";
+import { generateAnimalRegisterPdf } from "@/lib/animal-register-pdf";
 
 /**
  * Best-effort: tells the linked user of `fosterFamilyId`, if any, that an
@@ -775,4 +777,97 @@ export async function listAnimalsWithBoosterDue(
   return all
     .filter((a) => a.healthChecklist && isBoosterDueWithin(a.healthChecklist, withinDays, a.status))
     .sort((a, b) => boosterDueDate(a.healthChecklist!)!.localeCompare(boosterDueDate(b.healthChecklist!)!));
+}
+
+const listAnimalIntakeYearsSchema = z.object({ organizationId: z.string().uuid() });
+
+/** Admin-only: distinct years with at least one animal intake, most recent first — feeds the register export's period filter. */
+export async function listAnimalIntakeYears(input: z.infer<typeof listAnimalIntakeYearsSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId } = listAnimalIntakeYearsSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  const rows = await db.query.animals.findMany({
+    where: eq(animals.organizationId, organizationId),
+    columns: { intakeDate: true },
+  });
+
+  const years = new Set(rows.map((row) => Number(row.intakeDate.slice(0, 4))));
+  years.add(new Date().getFullYear());
+  return [...years].sort((a, b) => b - a);
+}
+
+const animalRegisterFilterSchema = z.object({
+  organizationId: z.string().uuid(),
+  year: z.number().int().optional(),
+});
+
+/**
+ * Every animal for the org, most recently taken in first — the legally
+ * required "registre d'entrée et de sortie", optionally scoped to the
+ * year it was taken in (not the year it was adopted — an animal belongs
+ * to the register of the year it entered the association).
+ */
+async function fetchAnimalsForRegister(input: z.infer<typeof animalRegisterFilterSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId, year } = animalRegisterFilterSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  const all = await db.query.animals.findMany({
+    where: eq(animals.organizationId, organizationId),
+    orderBy: desc(animals.intakeDate),
+  });
+
+  return year ? all.filter((a) => Number(a.intakeDate.slice(0, 4)) === year) : all;
+}
+
+function formatRegisterDate(date: string | null) {
+  return date ? new Date(date).toLocaleDateString("fr-FR") : "—";
+}
+
+/** Admin-only: the legal placement register as a semicolon-delimited CSV (Excel-FR friendly), optionally filtered to one year. */
+export async function exportAnimalRegisterCsv(input: z.infer<typeof animalRegisterFilterSchema>) {
+  const animalsForRegister = await fetchAnimalsForRegister(input);
+
+  const csv = buildAnimalRegisterCsv(
+    animalsForRegister.map((a) => ({
+      animalName: a.name,
+      icadNumber: a.icadNumber ?? "—",
+      intakeDate: formatRegisterDate(a.intakeDate),
+      adoptionDate: formatRegisterDate(a.adoptionDate),
+      icadUpdatedAt: formatRegisterDate(a.icadUpdatedAt),
+    })),
+  );
+
+  return { csv };
+}
+
+const exportAnimalRegisterPdfSchema = animalRegisterFilterSchema.extend({ periodDescription: z.string() });
+
+/** Admin-only: the legal placement register as a PDF, optionally filtered to one year. */
+export async function exportAnimalRegisterPdf(input: z.infer<typeof exportAnimalRegisterPdfSchema>) {
+  const { periodDescription, ...filters } = exportAnimalRegisterPdfSchema.parse(input);
+  const [animalsForRegister, organization] = await Promise.all([
+    fetchAnimalsForRegister(filters),
+    db.query.organizations.findFirst({ where: eq(organizations.id, filters.organizationId) }),
+  ]);
+  if (!organization) throw new Error("Association introuvable.");
+
+  const pdfBytes = await generateAnimalRegisterPdf({
+    organizationName: organization.name,
+    periodDescription,
+    rows: animalsForRegister.map((a) => ({
+      animalName: a.name,
+      icadNumber: a.icadNumber ?? "—",
+      intakeDate: formatRegisterDate(a.intakeDate),
+      adoptionDate: formatRegisterDate(a.adoptionDate),
+      icadUpdatedAt: formatRegisterDate(a.icadUpdatedAt),
+    })),
+  });
+
+  return { pdfBase64: Buffer.from(pdfBytes).toString("base64") };
 }
