@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { changeAnimalStatus } from "@/server/actions/animals";
 import { statusRequiresFosterFamily } from "@/lib/animal-status";
@@ -75,7 +76,9 @@ export function StatusForm({
       toast.success("Statut mis à jour");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+      const message = err instanceof Error ? err.message : "Une erreur est survenue.";
+      setError(message);
+      toast.error(message);
     } finally {
       setPending(false);
     }
@@ -153,7 +156,8 @@ export function StatusForm({
 
       <div>
         <Button type="submit" disabled={pending}>
-          Changer le statut
+          {pending && <Loader2 className="animate-spin" />}
+          {pending ? "Mise à jour…" : "Changer le statut"}
         </Button>
       </div>
 

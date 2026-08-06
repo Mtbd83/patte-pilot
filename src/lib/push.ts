@@ -45,6 +45,9 @@ export async function sendPushToUsers(userIds: string[], payload: PushPayload) {
             keys: { p256dh: subscription.p256dh, auth: subscription.authKey },
           },
           JSON.stringify(payload),
+          // A slow/unresponsive push endpoint must never hold up the action
+          // that triggered the notification (e.g. a status change).
+          { timeout: 5000 },
         );
       } catch (err) {
         const statusCode = (err as { statusCode?: number }).statusCode;
