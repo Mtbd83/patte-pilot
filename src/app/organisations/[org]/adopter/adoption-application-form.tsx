@@ -51,6 +51,7 @@ interface FormState {
   housingZone: HousingZone | "";
   housingType: HousingType | "";
   gardenAreaM2: string;
+  apartmentAreaM2: string;
   fenceHeight: string;
   gardenAccessDetails: string;
   residencyStatus: ResidencyStatus | "";
@@ -92,6 +93,7 @@ const INITIAL_STATE: FormState = {
   housingZone: "",
   housingType: "",
   gardenAreaM2: "",
+  apartmentAreaM2: "",
   fenceHeight: "",
   gardenAccessDetails: "",
   residencyStatus: "",
@@ -150,6 +152,7 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
         housingZone: form.housingZone || undefined,
         housingType: form.housingType || undefined,
         gardenAreaM2: form.gardenAreaM2 ? Number(form.gardenAreaM2) : undefined,
+        apartmentAreaM2: form.apartmentAreaM2 ? Number(form.apartmentAreaM2) : undefined,
         fenceHeight: form.fenceHeight || undefined,
         gardenAccessDetails: form.gardenAccessDetails || undefined,
         residencyStatus: form.residencyStatus || undefined,
@@ -308,41 +311,56 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
               </Select>
             </Field>
           </FieldRow>
-          <FieldRow>
-            <Field
-              label="Superficie du jardin (m²)"
-              htmlFor="ad-garden-area"
-              className="flex-1"
-              required={form.housingType === "maison"}
-            >
+          {form.housingType === "appartement" ? (
+            <Field label="Superficie de l'appartement (m²)" htmlFor="ad-apartment-area" required>
               <Input
-                id="ad-garden-area"
+                id="ad-apartment-area"
                 type="number"
-                required={form.housingType === "maison" ? true: false}
+                required
                 min="0"
-                value={form.gardenAreaM2}
-                onChange={(e) => set("gardenAreaM2", e.target.value)}
+                value={form.apartmentAreaM2}
+                onChange={(e) => set("apartmentAreaM2", e.target.value)}
               />
             </Field>
-            <Field
-              label="Hauteur des clôtures (précisez si pas clôturé)"
-              htmlFor="ad-fence-height"
-              className="flex-1"
-              required={form.housingType === "maison"}
-            >
-              <Input id="ad-fence-height" required={form.housingType === "maison" ? true: false} value={form.fenceHeight} onChange={(e) => set("fenceHeight", e.target.value)} />
-            </Field>
-          </FieldRow>
-          <Field
-            label="Votre animal aura-t-il accès à votre jardin ? Si NAC, pourra-t-il être mis en liberté ?"
-            htmlFor="ad-garden-access"
-          >
-            <Textarea
-              id="ad-garden-access"
-              value={form.gardenAccessDetails}
-              onChange={(e) => set("gardenAccessDetails", e.target.value)}
-            />
-          </Field>
+          ) : (
+            <>
+              <FieldRow>
+                <Field
+                  label="Superficie du jardin (m²)"
+                  htmlFor="ad-garden-area"
+                  className="flex-1"
+                  required={form.housingType === "maison"}
+                >
+                  <Input
+                    id="ad-garden-area"
+                    type="number"
+                    required={form.housingType === "maison" ? true: false}
+                    min="0"
+                    value={form.gardenAreaM2}
+                    onChange={(e) => set("gardenAreaM2", e.target.value)}
+                  />
+                </Field>
+                <Field
+                  label="Hauteur des clôtures (précisez si pas clôturé)"
+                  htmlFor="ad-fence-height"
+                  className="flex-1"
+                  required={form.housingType === "maison"}
+                >
+                  <Input id="ad-fence-height" required={form.housingType === "maison" ? true: false} value={form.fenceHeight} onChange={(e) => set("fenceHeight", e.target.value)} />
+                </Field>
+              </FieldRow>
+              <Field
+                label="Votre animal aura-t-il accès à votre jardin ? Si NAC, pourra-t-il être mis en liberté ?"
+                htmlFor="ad-garden-access"
+              >
+                <Textarea
+                  id="ad-garden-access"
+                  value={form.gardenAccessDetails}
+                  onChange={(e) => set("gardenAccessDetails", e.target.value)}
+                />
+              </Field>
+            </>
+          )}
           <FieldRow>
             <Field label="Vous êtes" htmlFor="ad-residency-status" className="flex-1" required>
               <Select

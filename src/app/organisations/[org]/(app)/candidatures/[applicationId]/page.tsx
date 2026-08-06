@@ -143,16 +143,25 @@ export default async function CandidatureDetailPage({
           <dl>
             <InfoRow label="Zone" value={application.housingZone ? HOUSING_ZONE_LABELS[application.housingZone] : "—"} />
             <InfoRow label="Type" value={application.housingType ? HOUSING_TYPE_LABELS[application.housingType] : "—"} />
-            <InfoRow
-              label="Jardin"
-              value={
-                <>
-                  {application.gardenAreaM2 ? `${application.gardenAreaM2} m²` : "—"}
-                  {application.fenceHeight ? ` — clôture : ${application.fenceHeight}` : ""}
-                </>
-              }
-            />
-            <InfoRow label="Accès jardin / mise en liberté" value={application.gardenAccessDetails || "—"} />
+            {application.housingType === "appartement" ? (
+              <InfoRow
+                label="Superficie"
+                value={application.apartmentAreaM2 ? `${application.apartmentAreaM2} m²` : "—"}
+              />
+            ) : (
+              <>
+                <InfoRow
+                  label="Jardin"
+                  value={
+                    <>
+                      {application.gardenAreaM2 ? `${application.gardenAreaM2} m²` : "—"}
+                      {application.fenceHeight ? ` — clôture : ${application.fenceHeight}` : ""}
+                    </>
+                  }
+                />
+                <InfoRow label="Accès jardin / mise en liberté" value={application.gardenAccessDetails || "—"} />
+              </>
+            )}
             <InfoRow
               label="Statut résidence"
               value={

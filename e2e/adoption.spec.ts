@@ -22,6 +22,7 @@ test("public adoption form → admin review → certificate + contract sent", as
   await page.getByLabel("Quel âge avez-vous ?").fill("35");
   await page.getByLabel('Votre logement est en zone').selectOption({ label: "Urbaine" });
   await page.getByLabel('Votre logement est un/une').selectOption({ label: "Appartement" });
+  await page.getByLabel("Superficie de l'appartement (m²)").fill("45");
   await page.getByLabel("Quelle est votre profession ?").fill("Vétérinaire");
   await page.getByLabel("Vous êtes").selectOption({ label: "Propriétaire" });
   await page.getByLabel("Vivez-vous", { exact: true }).selectOption({ label: "En couple" });

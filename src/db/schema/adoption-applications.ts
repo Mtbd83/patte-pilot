@@ -89,6 +89,7 @@ export const adoptionApplications = pgTable(
     housingZone: housingZoneEnum("housing_zone"),
     housingType: housingTypeEnum("housing_type"),
     gardenAreaM2: numeric("garden_area_m2", { precision: 8, scale: 2 }),
+    apartmentAreaM2: numeric("apartment_area_m2", { precision: 8, scale: 2 }),
     fenceHeight: varchar("fence_height", { length: 120 }), // texte libre : hauteur ou "non clôturé"
     gardenAccessDetails: text("garden_access_details"), // accès jardin / mise en liberté pour NAC
     residencyStatus: residencyStatusEnum("residency_status"),

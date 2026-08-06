@@ -39,6 +39,7 @@ const submitAdoptionApplicationSchema = z.object({
   housingZone: z.enum(housingZoneEnum.enumValues).optional(),
   housingType: z.enum(housingTypeEnum.enumValues).optional(),
   gardenAreaM2: z.coerce.number().min(0).optional(),
+  apartmentAreaM2: z.coerce.number().min(0).optional(),
   fenceHeight: z.string().max(120).optional(),
   gardenAccessDetails: z.string().optional(),
   residencyStatus: z.enum(residencyStatusEnum.enumValues).optional(),
@@ -134,6 +135,7 @@ export async function submitAdoptionApplication(input: SubmitAdoptionApplication
     .values({
       ...data,
       gardenAreaM2: data.gardenAreaM2 !== undefined ? data.gardenAreaM2.toString() : undefined,
+      apartmentAreaM2: data.apartmentAreaM2 !== undefined ? data.apartmentAreaM2.toString() : undefined,
       ipAddress,
     })
     .returning();

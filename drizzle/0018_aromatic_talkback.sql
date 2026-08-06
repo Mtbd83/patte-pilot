@@ -1,0 +1,1 @@
+ALTER TABLE "adoption_applications" ADD COLUMN "apartment_area_m2" numeric(8, 2);

@@ -160,6 +160,34 @@ describe("adoption application server actions", () => {
     expect(withoutAllergies?.allergiesDetails).toBeNull();
   });
 
+  it("stores the apartment surface area separately from the garden area", async () => {
+    const apartment = await submitAdoptionApplication({
+      organizationId,
+      lastName: "Dupont",
+      firstName: "Jeanne",
+      city: "Toulon",
+      phone: "0600000000",
+      email: `apartment-${randomUUID().slice(0, 8)}@example.com`,
+      housingType: "appartement",
+      apartmentAreaM2: 45,
+    });
+    expect(apartment?.apartmentAreaM2).toBe("45.00");
+    expect(apartment?.gardenAreaM2).toBeNull();
+
+    const house = await submitAdoptionApplication({
+      organizationId,
+      lastName: "Dupont",
+      firstName: "Jeanne",
+      city: "Toulon",
+      phone: "0600000000",
+      email: `house-${randomUUID().slice(0, 8)}@example.com`,
+      housingType: "maison",
+      gardenAreaM2: 200,
+    });
+    expect(house?.gardenAreaM2).toBe("200.00");
+    expect(house?.apartmentAreaM2).toBeNull();
+  });
+
   it("lets a member list and fetch applications, but rejects an outsider", async () => {
     authMock.mockResolvedValue({ user: { id: adminUserId, email: "admin@example.com" } });
     const applications = await listAdoptionApplications({ organizationId });
