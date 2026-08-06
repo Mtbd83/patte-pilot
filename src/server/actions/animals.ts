@@ -17,7 +17,7 @@ import {
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, getMemberRoles, ForbiddenError } from "@/lib/permissions";
 import { statusRequiresFosterFamily } from "@/lib/animal-status";
-import { animalStatusRank, boosterDueDate, isBoosterDueWithin, isBoosterOwed } from "@/lib/animal-care";
+import { animalStatusRank, boosterDueDate, isBoosterDueWithin } from "@/lib/animal-care";
 import { dateString } from "@/lib/validation";
 import { uploadImage } from "@/lib/uploads";
 import { sendPushToUsers } from "@/lib/push";
@@ -701,8 +701,8 @@ export async function listAnimalsPage(input: z.infer<typeof listAnimalsPageSchem
   });
 
   const sorted = [...all].sort((a, b) => {
-    const aOwed = a.healthChecklist ? isBoosterOwed(a.healthChecklist, a.status) : false;
-    const bOwed = b.healthChecklist ? isBoosterOwed(b.healthChecklist, b.status) : false;
+    const aOwed = a.healthChecklist ? isBoosterDueWithin(a.healthChecklist, 14, a.status) : false;
+    const bOwed = b.healthChecklist ? isBoosterDueWithin(b.healthChecklist, 14, b.status) : false;
     if (aOwed !== bOwed) return aOwed ? -1 : 1;
 
     const rankDiff = animalStatusRank(a.status) - animalStatusRank(b.status);

@@ -8,7 +8,7 @@ import { listAnimalsPage, getAnimalStatusCounts, listAnimalIntakeYears } from "@
 import { listFosterFamilies } from "@/server/actions/foster-families";
 import { getAccountingTotalsByAnimal } from "@/server/actions/accounting";
 import { SPECIES_LABELS, STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
-import { isBoosterOwed, boosterDueDate, statusNextAction } from "@/lib/animal-care";
+import { isBoosterDueWithin, boosterDueDate, statusNextAction } from "@/lib/animal-care";
 import type { AnimalStatus } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -124,7 +124,7 @@ export default async function AnimauxPage({
         </TableHeader>
         <TableBody>
           {animalsList.map((animal) => {
-            const boosterOwed = animal.healthChecklist ? isBoosterOwed(animal.healthChecklist, animal.status) : false;
+            const boosterOwed = animal.healthChecklist ? isBoosterDueWithin(animal.healthChecklist, 14, animal.status) : false;
             const dueDate = boosterOwed ? boosterDueDate(animal.healthChecklist!) : null;
             const nextAction = statusNextAction(animal);
             const accountingTotal = accountingTotals[animal.id];

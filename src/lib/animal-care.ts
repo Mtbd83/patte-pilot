@@ -55,7 +55,7 @@ export function isBoosterOverdue(
   return due < new Date().toISOString().slice(0, 10);
 }
 
-/** Owed, due within the next `days` (defaults to 14), whether or not it's already overdue. */
+/** Owed, due within the next `days` (defaults to 14, matching the dashboard's reminder window), whether or not it's already overdue. */
 export function isBoosterDueWithin(
   checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "firstVaccineDate" | "boosterDone">,
   days = 14,

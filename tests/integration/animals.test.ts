@@ -754,6 +754,54 @@ describe("animals server actions", () => {
     expect(newerIndex).toBeLessThan(olderIndex);
   });
 
+  it("only prioritizes a booster reminder that's actually due soon, not one owed but weeks away", async () => {
+    const today = new Date();
+
+    const dueSoon = await createAnimal({
+      organizationId,
+      name: "BoosterDueSoon",
+      species: "chat",
+      intakeDate: "2026-01-01",
+      status: "en_soins",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    // Booster due 30 days after the first vaccine — dated so it falls within
+    // the next 14 days.
+    const dueSoonVaccineDate = new Date(today);
+    dueSoonVaccineDate.setDate(dueSoonVaccineDate.getDate() - 25);
+    await updateAnimalHealthChecklist({
+      animalId: dueSoon.id,
+      organizationId,
+      firstVaccineDone: true,
+      firstVaccineDate: dueSoonVaccineDate.toISOString().slice(0, 10),
+    });
+
+    const dueFar = await createAnimal({
+      organizationId,
+      name: "BoosterDueFar",
+      species: "chat",
+      intakeDate: "2026-01-01",
+      status: "en_soins",
+      fosterFamilyId: fosterFamilyBId,
+    });
+    // Owed (first vaccine done, booster not done) but not due for weeks.
+    await updateAnimalHealthChecklist({
+      animalId: dueFar.id,
+      organizationId,
+      firstVaccineDone: true,
+      firstVaccineDate: today.toISOString().slice(0, 10),
+    });
+
+    const { animals: page } = await listAnimalsPage({ organizationId, status: "en_soins", page: 1 });
+    const dueSoonIndex = page.findIndex((a) => a.id === dueSoon.id);
+    const dueFarIndex = page.findIndex((a) => a.id === dueFar.id);
+    expect(dueSoonIndex).toBeGreaterThan(-1);
+    expect(dueFarIndex).toBeGreaterThan(-1);
+    // Both are "en_soins" (same status rank), so only the imminent reminder
+    // should bump its animal ahead of the one whose booster isn't due yet.
+    expect(dueSoonIndex).toBeLessThan(dueFarIndex);
+  });
+
   it("counts animals per status across the whole organization", async () => {
     const counts = await getAnimalStatusCounts({ organizationId });
     const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
