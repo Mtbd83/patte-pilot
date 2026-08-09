@@ -331,6 +331,33 @@ describe("documents server actions", () => {
     expect(Buffer.from(call.attachments[0].content).slice(0, 5).toString("latin1")).toBe("%PDF-");
   });
 
+  it("generates the contract without a postal code — not collected by the public adoption form", async () => {
+    const otherAnimal = await createAnimal({
+      organizationId,
+      name: "Sans Code Postal",
+      species: "chat",
+      sex: "femelle",
+      intakeDate: "2026-01-01",
+      status: "adopte",
+    });
+    const document = await generateAndSendAdoptionContract({
+      organizationId,
+      animalId: otherAnimal.id,
+      toEmail: "adoptant@example.com",
+      adopterFullName: "GALEA Sandrine",
+      adopterCity: "Belgentier",
+      adopterPhone1: "0609709861",
+      sterilizationDone: false,
+      healthCertificateOk: true,
+      vetFeesAmount: 180,
+      signaturePlace: "Garéoult",
+      signatureDate: "2026-07-22",
+      emailSubject: "Contrat d'adoption — Biscotte",
+      emailBody: "Bonjour,\n\nVeuillez trouver ci-joint le contrat d'adoption.",
+    });
+    expect(document.type).toBe("contrat_adoption");
+  });
+
   it("rejects a non-admin from generating the contract", async () => {
     authMock.mockResolvedValue({ user: { id: outsiderUserId, email: "outsider@example.com" } });
     await expect(

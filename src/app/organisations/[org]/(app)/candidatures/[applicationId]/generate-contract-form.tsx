@@ -213,7 +213,6 @@ export function GenerateContractForm({
         <Field label="Code postal" htmlFor="contract-adopter-postal-code" className="flex-1">
           <Input
             id="contract-adopter-postal-code"
-            required
             value={adopterPostalCode}
             onChange={(e) => setAdopterPostalCode(e.target.value)}
           />

@@ -182,7 +182,9 @@ const generateContractSchema = z.object({
   // Not collected by the public adoption form, so left to the admin's
   // discretion — the contract is still valid with this line left blank.
   adopterAddress: z.string().optional(),
-  adopterPostalCode: z.string().min(1, "Le code postal est requis.").max(10),
+  // Not collected by the public adoption form either — same reasoning as
+  // adopterAddress above.
+  adopterPostalCode: z.string().max(10).optional(),
   adopterCity: z.string().min(1, "La ville est requise.").max(120),
   adopterPhone1: z.string().min(1, "Le téléphone est requis.").max(30),
   adopterPhone2: z.string().max(30).optional(),
@@ -316,7 +318,7 @@ async function buildContractPdfBytes(input: GenerateContractInput) {
       adopter: {
         fullName: data.adopterFullName,
         address: data.adopterAddress ?? "",
-        postalCode: data.adopterPostalCode,
+        postalCode: data.adopterPostalCode ?? "",
         city: data.adopterCity,
         phone1: data.adopterPhone1,
         phone2: data.adopterPhone2,
