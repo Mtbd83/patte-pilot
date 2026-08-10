@@ -24,8 +24,21 @@ export function animalStatusRank(status: AnimalStatus): number {
 
 const BOOSTER_DELAY_DAYS = 30; // "1 mois après la primo-vaccination"
 
-/** The expected booster ("rappel") date, one month after the first vaccine — only meaningful once the first vaccine is actually done. */
-export function boosterDueDate(checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "firstVaccineDate">): string | null {
+/**
+ * The next expected booster ("rappel") date: one month after the first
+ * vaccine until that first booster is actually done, then exactly one year
+ * after the most recent booster — an annual cycle that keeps recurring for
+ * as long as the animal stays in the association's care.
+ */
+export function boosterDueDate(
+  checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "firstVaccineDate" | "boosterDone" | "boosterDate">,
+): string | null {
+  if (checklist.boosterDone) {
+    if (!checklist.boosterDate) return null;
+    const due = new Date(checklist.boosterDate);
+    due.setFullYear(due.getFullYear() + 1);
+    return due.toISOString().slice(0, 10);
+  }
   if (!checklist.firstVaccineDone || !checklist.firstVaccineDate) return null;
   const due = new Date(checklist.firstVaccineDate);
   due.setDate(due.getDate() + BOOSTER_DELAY_DAYS);
@@ -35,18 +48,23 @@ export function boosterDueDate(checklist: Pick<AnimalHealthChecklist, "firstVacc
 /** Statuses where the association is no longer the one responsible for the animal's care — the adopter takes it from here. */
 const STATUSES_WITHOUT_BOOSTER_REMINDER: readonly AnimalStatus[] = ["adopte", "archive"];
 
-/** True once the first vaccine is done but the booster itself still isn't — the booster is "owed" regardless of whether its due date has passed yet. Never true once adopted/archived: it's the adopter's responsibility from then on. */
+/**
+ * True for as long as the animal is on an active vaccine schedule: the first
+ * booster still isn't done, or (once it is) the next annual recall keeps
+ * coming due every year after. Never true once adopted/archived: it's the
+ * adopter's responsibility from then on.
+ */
 export function isBoosterOwed(
-  checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "boosterDone">,
+  checklist: Pick<AnimalHealthChecklist, "firstVaccineDone">,
   status?: AnimalStatus,
 ): boolean {
   if (status && STATUSES_WITHOUT_BOOSTER_REMINDER.includes(status)) return false;
-  return checklist.firstVaccineDone && !checklist.boosterDone;
+  return checklist.firstVaccineDone;
 }
 
 /** Owed AND past its expected due date — the case that should be flagged in red. */
 export function isBoosterOverdue(
-  checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "firstVaccineDate" | "boosterDone">,
+  checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "firstVaccineDate" | "boosterDone" | "boosterDate">,
   status?: AnimalStatus,
 ): boolean {
   if (!isBoosterOwed(checklist, status)) return false;
@@ -57,7 +75,7 @@ export function isBoosterOverdue(
 
 /** Owed, due within the next `days` (defaults to 14, matching the dashboard's reminder window), whether or not it's already overdue. */
 export function isBoosterDueWithin(
-  checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "firstVaccineDate" | "boosterDone">,
+  checklist: Pick<AnimalHealthChecklist, "firstVaccineDone" | "firstVaccineDate" | "boosterDone" | "boosterDate">,
   days = 14,
   status?: AnimalStatus,
 ): boolean {

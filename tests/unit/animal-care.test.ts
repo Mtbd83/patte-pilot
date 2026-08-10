@@ -1,5 +1,18 @@
-import { statusNextAction, animalStatusRank } from "@/lib/animal-care";
+import {
+  statusNextAction,
+  animalStatusRank,
+  boosterDueDate,
+  isBoosterOwed,
+  isBoosterOverdue,
+  isBoosterDueWithin,
+} from "@/lib/animal-care";
 import type { AnimalStatus } from "@/db/schema";
+
+function isoDaysFromNow(days: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 
 describe("animalStatusRank", () => {
   it("orders statuses à l'adoption, en famille d'accueil, quarantaine, en soins, visite, réservé, adopté, archivé", () => {
@@ -53,4 +66,69 @@ describe("statusNextAction", () => {
       expect(statusNextAction({ status, icadUpdatedAt: null })).toBeNull();
     },
   );
+});
+
+describe("booster ('rappel') scheduling", () => {
+  it("is due one month after the first vaccine, before the first booster is done", () => {
+    const checklist = {
+      firstVaccineDone: true,
+      firstVaccineDate: isoDaysFromNow(-10),
+      boosterDone: false,
+      boosterDate: null,
+    };
+    expect(boosterDueDate(checklist)).toBe(isoDaysFromNow(20));
+    expect(isBoosterOwed(checklist)).toBe(true);
+  });
+
+  it("keeps recurring every year for as long as the animal isn't adopted/archived", () => {
+    const boosterDate = isoDaysFromNow(-355);
+    const expectedDue = (() => {
+      const d = new Date(boosterDate);
+      d.setFullYear(d.getFullYear() + 1);
+      return d.toISOString().slice(0, 10);
+    })();
+    const checklist = {
+      firstVaccineDone: true,
+      firstVaccineDate: isoDaysFromNow(-400),
+      boosterDone: true,
+      boosterDate,
+    };
+
+    expect(boosterDueDate(checklist)).toBe(expectedDue);
+    expect(isBoosterOwed(checklist, "en_famille_accueil")).toBe(true);
+    expect(isBoosterDueWithin(checklist, 14, "en_famille_accueil")).toBe(true);
+
+    // Once adopted (or archived), it's no longer the association's concern.
+    expect(isBoosterOwed(checklist, "adopte")).toBe(false);
+    expect(isBoosterDueWithin(checklist, 14, "adopte")).toBe(false);
+  });
+
+  it("is null once booster is marked done but its date is missing", () => {
+    expect(
+      boosterDueDate({
+        firstVaccineDone: true,
+        firstVaccineDate: isoDaysFromNow(-400),
+        boosterDone: true,
+        boosterDate: null,
+      }),
+    ).toBeNull();
+  });
+
+  it("flags overdue only once the (first or recurring) due date has actually passed", () => {
+    const notYetOverdue = {
+      firstVaccineDone: true,
+      firstVaccineDate: isoDaysFromNow(-10),
+      boosterDone: false,
+      boosterDate: null,
+    };
+    expect(isBoosterOverdue(notYetOverdue)).toBe(false);
+
+    const recurringOverdue = {
+      firstVaccineDone: true,
+      firstVaccineDate: isoDaysFromNow(-400),
+      boosterDone: true,
+      boosterDate: isoDaysFromNow(-370), // due date was 5 days ago
+    };
+    expect(isBoosterOverdue(recurringOverdue)).toBe(true);
+  });
 });

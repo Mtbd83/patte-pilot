@@ -156,4 +156,64 @@ describe("GET /api/cron/booster-reminders", () => {
       expect.objectContaining({ body: expect.stringContaining("DejaFait") }),
     );
   });
+
+  it("notifies again a year after the last booster, for as long as the animal isn't adopted", async () => {
+    // Booster given 355 days ago -> next annual recall due in 10 days.
+    const boosterDate = isoDaysFromNow(-355);
+
+    const [stillInCare] = await db
+      .insert(animals)
+      .values({
+        organizationId,
+        name: "RappelAnnuel",
+        species: "chat",
+        intakeDate: isoDaysFromNow(-400),
+        status: "en_famille_accueil",
+        currentFosterFamilyId: fosterFamilyId,
+      })
+      .returning();
+    if (!stillInCare) throw new Error("Seed failed.");
+    await db.insert(animalHealthChecklists).values({
+      animalId: stillInCare.id,
+      firstVaccineDone: true,
+      firstVaccineDate: isoDaysFromNow(-400),
+      boosterDone: true,
+      boosterDate,
+    });
+
+    // Same annual due date, but already adopted -> must NOT trigger.
+    const [adopted] = await db
+      .insert(animals)
+      .values({
+        organizationId,
+        name: "RappelAnnuelAdopte",
+        species: "chat",
+        intakeDate: isoDaysFromNow(-400),
+        status: "adopte",
+      })
+      .returning();
+    if (!adopted) throw new Error("Seed failed.");
+    await db.insert(animalHealthChecklists).values({
+      animalId: adopted.id,
+      firstVaccineDone: true,
+      firstVaccineDate: isoDaysFromNow(-400),
+      boosterDone: true,
+      boosterDate,
+    });
+
+    const response = await GET(request(process.env.CRON_SECRET));
+    expect(response.status).toBe(200);
+
+    expect(sendPushToUsersMock).toHaveBeenCalledWith(
+      [linkedUserId],
+      expect.objectContaining({
+        title: "Rappel à prévoir",
+        body: expect.stringContaining("RappelAnnuel"),
+      }),
+    );
+    expect(sendPushToUsersMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ body: expect.stringContaining("RappelAnnuelAdopte") }),
+    );
+  });
 });

@@ -17,7 +17,7 @@ import { getMemberRoles } from "@/lib/permissions";
 import { listAnimalsWithBoosterDue, listAnimals } from "@/server/actions/animals";
 import { listMySupplyRequests } from "@/server/actions/supply-requests";
 import { SupplyRequestWidget } from "./supply-request-widget";
-import { boosterDueDate, isBoosterOwed, isBoosterOverdue } from "@/lib/animal-care";
+import { boosterDueDate, isBoosterDueWithin, isBoosterOverdue } from "@/lib/animal-care";
 import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
 import { ROLE_LABELS } from "@/lib/role-labels";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -96,7 +96,7 @@ export default async function OrganizationPage({
               <p className="text-sm text-muted-foreground">Aucun animal chez vous pour le moment.</p>
             ) : (
               myOwnAnimals.map((animal) => {
-                const owed = animal.healthChecklist ? isBoosterOwed(animal.healthChecklist, animal.status) : false;
+                const owed = animal.healthChecklist ? isBoosterDueWithin(animal.healthChecklist, 14, animal.status) : false;
                 const due = animal.healthChecklist ? boosterDueDate(animal.healthChecklist) : null;
                 const overdue = animal.healthChecklist ? isBoosterOverdue(animal.healthChecklist, animal.status) : false;
                 return (
