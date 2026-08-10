@@ -8,7 +8,9 @@ import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
 import { listFosterFamilies } from "@/server/actions/foster-families";
+import { listAccountingEntriesPage, getAccountingSummary } from "@/server/actions/accounting";
 import { SPECIES_LABELS, SEX_LABELS, STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
+import { ACCOUNTING_TYPE_LABELS, ACCOUNTING_CATEGORY_LABELS } from "@/lib/accounting-labels";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -72,6 +74,13 @@ export default async function AnimalDetailPage({
   const allFosterFamilies = isAdmin
     ? await listFosterFamilies({ organizationId: organization.id, includeInactive: true })
     : [];
+
+  const [{ entries: accountingEntries, total: accountingTotalCount }, accountingSummary] = isAdmin
+    ? await Promise.all([
+        listAccountingEntriesPage({ organizationId: organization.id, animalId: animal.id, page: 1 }),
+        getAccountingSummary({ organizationId: organization.id, animalId: animal.id }),
+      ])
+    : [{ entries: [], total: 0 }, { totalIn: 0, totalOut: 0, balance: 0 }];
 
   return (
     <div className="flex flex-col gap-6">
@@ -288,6 +297,65 @@ export default async function AnimalDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle>Comptabilité</CardTitle>
+            <Link
+              href={`/organisations/${params.org}/comptabilite?animalId=${animal.id}`}
+              className="text-sm text-primary hover:underline"
+            >
+              Voir dans la comptabilité
+            </Link>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-sm">
+              Entrées : <strong>{accountingSummary.totalIn.toFixed(2)} €</strong> — Sorties :{" "}
+              <strong>{accountingSummary.totalOut.toFixed(2)} €</strong> — Solde :{" "}
+              <strong>{accountingSummary.balance.toFixed(2)} €</strong>
+            </p>
+            {accountingEntries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune écriture comptable liée à cet animal.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Catégorie</TableHead>
+                    <TableHead>Montant</TableHead>
+                    <TableHead>Commentaire</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {accountingEntries.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell>{entry.date}</TableCell>
+                      <TableCell>{ACCOUNTING_TYPE_LABELS[entry.type]}</TableCell>
+                      <TableCell>{ACCOUNTING_CATEGORY_LABELS[entry.category]}</TableCell>
+                      <TableCell>{Number(entry.amount).toFixed(2)} €</TableCell>
+                      <TableCell>{entry.comment || "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            {accountingTotalCount > accountingEntries.length && (
+              <p className="text-sm text-muted-foreground">
+                {accountingTotalCount} écritures au total —{" "}
+                <Link
+                  href={`/organisations/${params.org}/comptabilite?animalId=${animal.id}`}
+                  className="text-primary hover:underline"
+                >
+                  voir toutes les écritures
+                </Link>
+                .
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
