@@ -56,6 +56,11 @@ export function StatusForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Only the submit button being disabled isn't enough to stop a
+    // re-submission — e.g. pressing Enter in one of the date fields below
+    // still fires this handler directly. Without this guard, a second
+    // request could fire while the first is still in flight.
+    if (pending) return;
     setError(null);
 
     if (needsFosterFamily && !fosterFamilyId) {
@@ -87,7 +92,12 @@ export function StatusForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <Field label="Statut" htmlFor="status-select">
-        <Select id="status-select" value={status} onChange={(e) => setStatus(e.target.value as AnimalStatus)}>
+        <Select
+          id="status-select"
+          value={status}
+          disabled={pending}
+          onChange={(e) => setStatus(e.target.value as AnimalStatus)}
+        >
           {STATUS_OPTIONS.map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -104,7 +114,8 @@ export function StatusForm({
             <button
               type="button"
               onClick={() => setNewFamilyModalOpen(true)}
-              className="text-primary hover:underline"
+              disabled={pending}
+              className="text-primary hover:underline disabled:pointer-events-none disabled:opacity-50"
             >
               + Nouvelle famille d&apos;accueil
             </button>
@@ -113,6 +124,7 @@ export function StatusForm({
           <Select
             id="status-foster-family"
             required
+            disabled={pending}
             value={fosterFamilyId}
             onChange={(e) => setFosterFamilyId(e.target.value)}
           >
@@ -132,6 +144,7 @@ export function StatusForm({
             id="status-adoption-date"
             type="date"
             value={adoptionDate}
+            disabled={pending}
             onChange={(e) => setAdoptionDate(e.target.value)}
           />
         </Field>
@@ -147,6 +160,7 @@ export function StatusForm({
             id="status-placement-change-date"
             type="date"
             value={placementChangeDate}
+            disabled={pending}
             onChange={(e) => setPlacementChangeDate(e.target.value)}
           />
         </Field>

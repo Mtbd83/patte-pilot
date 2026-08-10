@@ -56,7 +56,7 @@ test.describe("Animaux et familles d'accueil", () => {
     await page.getByLabel("Statut", { exact: true }).selectOption({ label: "Adopté" });
     await page.getByRole("button", { name: "Changer le statut" }).click();
     await expect(page.getByText("Statut mis à jour")).toBeVisible();
-    await expect(page.getByRole("strong")).toHaveText("Adopté");
+    await expect(page.getByText("Statut actuel :")).toContainText("Adopté");
 
     // --- The foster family is now free, so it can be deactivated ---
     await page.goto("/organisations/asso-test/familles-accueil");
