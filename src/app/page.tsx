@@ -113,6 +113,17 @@ export default async function HomePage() {
             Vous représentez une association ? Rejoignez PattePilot
           </Link>
         </div>
+        <div className="mx-auto flex max-w-5xl flex-wrap justify-center gap-x-4 gap-y-1 px-4 pb-6 text-xs text-muted-foreground sm:justify-start sm:px-6">
+          <Link href="/mentions-legales" className="hover:underline">
+            Mentions légales
+          </Link>
+          <Link href="/cgu" className="hover:underline">
+            CGU
+          </Link>
+          <Link href="/confidentialite" className="hover:underline">
+            Politique de confidentialité
+          </Link>
+        </div>
       </footer>
     </div>
   );
