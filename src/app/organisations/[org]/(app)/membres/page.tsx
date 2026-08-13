@@ -12,11 +12,12 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { InviteMemberDialog } from "./invite-member-dialog";
 import { MemberRolesForm } from "./member-roles-form";
 
-export default async function MembresPage({
-  params,
-}: {
-  params: { org: string };
-}) {
+export default async function MembresPage(
+  props: {
+    params: Promise<{ org: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) redirect(`/connexion?callbackUrl=/organisations/${params.org}/membres`);
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 
 const LEGAL_LINKS = [
   { href: "/mentions-legales", label: "Mentions légales" },
@@ -6,8 +7,19 @@ const LEGAL_LINKS = [
   { href: "/confidentialite", label: "Politique de confidentialité" },
 ];
 
-/** Shared chrome for the platform's public legal pages (mentions légales, CGU, confidentialité) — not per-organization, PattePilot's own as editor of the software. */
-export default function LegalLayout({ children }: { children: React.ReactNode }) {
+/**
+ * Shared chrome for the platform's public legal pages (mentions légales,
+ * CGU, confidentialité) — not per-organization, PattePilot's own as editor
+ * of the software.
+ *
+ * Forces dynamic rendering for the whole group — required for the CSP
+ * nonce (see src/proxy.ts) to actually reach these pages' scripts: a
+ * statically-prerendered page has no per-request nonce to embed, so the
+ * browser blocks every script tag (including the app shell's own, e.g. the
+ * toaster/service worker registration in the root layout).
+ */
+export default async function LegalLayout({ children }: { children: React.ReactNode }) {
+  await connection();
   return (
     <div className="min-h-dvh bg-background">
       <header className="border-b border-border">

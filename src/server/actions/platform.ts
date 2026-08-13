@@ -20,9 +20,9 @@ const slugSchema = z
   .max(200)
   .regex(/^[a-z0-9-]+$/, "Le slug ne doit contenir que des lettres minuscules, chiffres et tirets.");
 
-function getClientIp() {
+async function getClientIp() {
   try {
-    const requestHeaders = headers();
+    const requestHeaders = await headers();
     const forwardedFor = requestHeaders.get("x-forwarded-for");
     return forwardedFor?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip") || null;
   } catch {
@@ -67,7 +67,7 @@ async function sendPlatformAdminInvite({
     .returning();
   if (!invitation) throw new Error("Échec de la création de l'invitation.");
 
-  const acceptUrl = `${getRequestOrigin()}/invite/${token}`;
+  const acceptUrl = `${await getRequestOrigin()}/invite/${token}`;
 
   await sendEmail({
     to: invitation.email,
@@ -108,7 +108,7 @@ export async function submitOrganizationSignupRequest(
     return null;
   }
 
-  const ipAddress = getClientIp();
+  const ipAddress = await getClientIp();
   if (ipAddress) {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const recentFromSameIp = await db.query.organizationSignupRequests.findMany({

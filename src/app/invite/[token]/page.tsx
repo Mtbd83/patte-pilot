@@ -21,11 +21,12 @@ function InviteShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default async function InvitePage({
-  params,
-}: {
-  params: { token: string };
-}) {
+export default async function InvitePage(
+  props: {
+    params: Promise<{ token: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth();
 
   const invitation = await db.query.invitations.findFirst({

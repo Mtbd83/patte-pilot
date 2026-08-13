@@ -10,13 +10,18 @@ import { OrgSidebar } from "./org-sidebar";
  * page. Pages still re-check role for their own admin-only sections, but no
  * longer need to redirect/notFound/access-denied themselves.
  */
-export default async function OrganizationLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: { org: string };
-}) {
+export default async function OrganizationLayout(
+  props: {
+    children: React.ReactNode;
+    params: Promise<{ org: string }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    children
+  } = props;
+
   const session = await auth();
   if (!session?.user?.id) {
     redirect(`/connexion?callbackUrl=/organisations/${params.org}`);

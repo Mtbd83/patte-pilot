@@ -14,11 +14,12 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { FosterFamilyEditForm } from "./foster-family-edit-form";
 import { DeactivateFosterFamilyButton } from "./deactivate-foster-family-button";
 
-export default async function FosterFamilyDetailPage({
-  params,
-}: {
-  params: { org: string; fosterFamilyId: string };
-}) {
+export default async function FosterFamilyDetailPage(
+  props: {
+    params: Promise<{ org: string; fosterFamilyId: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) {
     redirect(

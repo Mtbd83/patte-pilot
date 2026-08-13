@@ -13,11 +13,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { CreateFosterFamilyDialog } from "./create-foster-family-dialog";
 
-export default async function FamillesAccueilPage({
-  params,
-}: {
-  params: { org: string };
-}) {
+export default async function FamillesAccueilPage(
+  props: {
+    params: Promise<{ org: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) {
     redirect(`/connexion?callbackUrl=/organisations/${params.org}/familles-accueil`);

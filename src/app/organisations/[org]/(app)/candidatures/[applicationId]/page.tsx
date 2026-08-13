@@ -40,11 +40,12 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export default async function CandidatureDetailPage({
-  params,
-}: {
-  params: { org: string; applicationId: string };
-}) {
+export default async function CandidatureDetailPage(
+  props: {
+    params: Promise<{ org: string; applicationId: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) {
     redirect(

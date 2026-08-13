@@ -18,11 +18,12 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { InlineStatusForm } from "./inline-status-form";
 import { DeleteApplicationButton } from "./delete-application-button";
 
-export default async function CandidaturesPage({
-  params,
-}: {
-  params: { org: string };
-}) {
+export default async function CandidaturesPage(
+  props: {
+    params: Promise<{ org: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) {
     redirect(`/connexion?callbackUrl=/organisations/${params.org}/candidatures`);

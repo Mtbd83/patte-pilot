@@ -7,11 +7,12 @@ import { getMemberRoles } from "@/lib/permissions";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ContractFieldMapper } from "./contract-field-mapper-loader";
 
-export default async function ContratParametresPage({
-  params,
-}: {
-  params: { org: string };
-}) {
+export default async function ContratParametresPage(
+  props: {
+    params: Promise<{ org: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) {
     redirect(`/connexion?callbackUrl=/organisations/${params.org}/parametres/contrat`);

@@ -33,11 +33,12 @@ const MODULES = [
   { href: "parametres", label: "Paramètres", description: "Profil légal de l'association.", icon: Settings, adminOnly: true },
 ];
 
-export default async function OrganizationPage({
-  params,
-}: {
-  params: { org: string };
-}) {
+export default async function OrganizationPage(
+  props: {
+    params: Promise<{ org: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) redirect(`/connexion?callbackUrl=/organisations/${params.org}`);
 

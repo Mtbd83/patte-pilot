@@ -83,7 +83,7 @@ function applyCorsHeaders(response: NextResponse, origin: string | null) {
   return response;
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const nonce = crypto.randomUUID().replace(/-/g, "");
 
   if (request.nextUrl.pathname.startsWith("/api/")) {

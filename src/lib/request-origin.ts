@@ -9,9 +9,9 @@ import { headers } from "next/headers";
  * until rebuilt. Reading the host header instead is always correct for
  * whatever domain actually served the request, previews included.
  */
-export function getRequestOrigin(): string {
+export async function getRequestOrigin(): Promise<string> {
   try {
-    const requestHeaders = headers();
+    const requestHeaders = await headers();
     const host = requestHeaders.get("host");
     if (host) {
       const proto = requestHeaders.get("x-forwarded-proto") ?? "https";

@@ -15,11 +15,12 @@ import { CreateInventoryItemDialog } from "./create-inventory-item-dialog";
 import { InventoryItemRow } from "./inventory-item-row";
 import { SupplyRequestsSection } from "./supply-requests-section";
 
-export default async function StockPage({
-  params,
-}: {
-  params: { org: string };
-}) {
+export default async function StockPage(
+  props: {
+    params: Promise<{ org: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) {
     redirect(`/connexion?callbackUrl=/organisations/${params.org}/stock`);

@@ -65,7 +65,7 @@ export async function createInvitation(input: CreateInvitationInput) {
     .returning();
   if (!invitation) throw new Error("Échec de la création de l'invitation.");
 
-  const acceptUrl = `${getRequestOrigin()}/invite/${token}`;
+  const acceptUrl = `${await getRequestOrigin()}/invite/${token}`;
 
   await sendEmail({
     to: invitation.email,

@@ -1,7 +1,12 @@
+import { connection } from "next/server";
 import { OrganizationSignupRequestForm } from "./organization-signup-request-form";
 
 /** Fully public page — no authentication required to request that an association join the platform. */
-export default function RejoindrePage() {
+// Forces dynamic rendering — required for the CSP nonce (see src/proxy.ts)
+// to actually reach this page's scripts: a statically-prerendered page has
+// no per-request nonce to embed, so the browser blocks every script tag.
+export default async function RejoindrePage() {
+  await connection();
   return (
     <div className="min-h-dvh bg-background">
       <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-10 sm:px-6">

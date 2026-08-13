@@ -1,8 +1,13 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ConnexionForm } from "./connexion-form";
 
-export default function ConnexionPage() {
+// Forces dynamic rendering — required for the CSP nonce (see src/proxy.ts)
+// to actually reach this page's scripts: a statically-prerendered page has
+// no per-request nonce to embed, so the browser blocks every script tag.
+export default async function ConnexionPage() {
+  await connection();
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-sm">

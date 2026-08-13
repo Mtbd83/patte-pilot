@@ -39,22 +39,23 @@ function monthRange(year: string, month: string) {
   return { from: `${year}-${month}-01`, to: `${year}-${month}-${String(lastDay).padStart(2, "0")}` };
 }
 
-export default async function ComptabilitePage({
-  params,
-  searchParams,
-}: {
-  params: { org: string };
-  searchParams: {
-    periodMode?: string;
-    year?: string;
-    month?: string;
-    dateFrom?: string;
-    dateTo?: string;
-    category?: string;
-    animalId?: string;
-    page?: string;
-  };
-}) {
+export default async function ComptabilitePage(
+  props: {
+    params: Promise<{ org: string }>;
+    searchParams: Promise<{
+      periodMode?: string;
+      year?: string;
+      month?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      category?: string;
+      animalId?: string;
+      page?: string;
+    }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) {
     redirect(`/connexion?callbackUrl=/organisations/${params.org}/comptabilite`);

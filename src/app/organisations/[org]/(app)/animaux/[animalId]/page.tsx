@@ -31,11 +31,12 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export default async function AnimalDetailPage({
-  params,
-}: {
-  params: { org: string; animalId: string };
-}) {
+export default async function AnimalDetailPage(
+  props: {
+    params: Promise<{ org: string; animalId: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) {
     redirect(`/connexion?callbackUrl=/organisations/${params.org}/animaux/${params.animalId}`);

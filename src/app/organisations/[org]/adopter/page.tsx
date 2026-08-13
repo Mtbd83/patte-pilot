@@ -3,11 +3,12 @@ import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { AdoptionApplicationForm } from "./adoption-application-form";
 
 /** Fully public page — no authentication required to submit an adoption application. */
-export default async function AdopterPage({
-  params,
-}: {
-  params: { org: string };
-}) {
+export default async function AdopterPage(
+  props: {
+    params: Promise<{ org: string }>;
+  }
+) {
+  const params = await props.params;
   const organization = await findOrganizationByIdentifier(params.org);
   if (!organization) notFound();
 

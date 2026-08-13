@@ -14,11 +14,12 @@ import { OrganizationHelloAssoLinksForm } from "./organization-helloasso-links-f
 import { OrganizationEmailTemplatesForm } from "./organization-email-templates-form";
 import { OrganizationCertificatesUpload } from "./organization-certificates-upload";
 
-export default async function ParametresPage({
-  params,
-}: {
-  params: { org: string };
-}) {
+export default async function ParametresPage(
+  props: {
+    params: Promise<{ org: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) {
     redirect(`/connexion?callbackUrl=/organisations/${params.org}/parametres`);

@@ -19,13 +19,14 @@ import { AnimalRegisterExport } from "./animal-register-export";
 
 const STATUS_VALUES = new Set(Object.keys(STATUS_LABELS));
 
-export default async function AnimauxPage({
-  params,
-  searchParams,
-}: {
-  params: { org: string };
-  searchParams: { status?: string; page?: string };
-}) {
+export default async function AnimauxPage(
+  props: {
+    params: Promise<{ org: string }>;
+    searchParams: Promise<{ status?: string; page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const session = await auth();
   if (!session?.user?.id) redirect(`/connexion?callbackUrl=/organisations/${params.org}/animaux`);
 

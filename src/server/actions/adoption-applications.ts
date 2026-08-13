@@ -81,9 +81,9 @@ export type SubmitAdoptionApplicationInput = z.input<typeof submitAdoptionApplic
 
 const RATE_LIMIT_MAX_PER_HOUR = 5;
 
-function getClientIp() {
+async function getClientIp() {
   try {
-    const requestHeaders = headers();
+    const requestHeaders = await headers();
     const forwardedFor = requestHeaders.get("x-forwarded-for");
     return forwardedFor?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip") || null;
   } catch {
@@ -115,7 +115,7 @@ export async function submitAdoptionApplication(input: SubmitAdoptionApplication
   });
   if (!organization) throw new Error("Organisation introuvable.");
 
-  const ipAddress = getClientIp();
+  const ipAddress = await getClientIp();
   if (ipAddress) {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const recentFromSameIp = await db.query.adoptionApplications.findMany({
