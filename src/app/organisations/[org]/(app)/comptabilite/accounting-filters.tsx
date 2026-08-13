@@ -6,6 +6,7 @@ import type { AccountingCategory } from "@/db/schema";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 const CATEGORY_OPTIONS = Object.entries(ACCOUNTING_CATEGORY_LABELS) as [AccountingCategory, string][];
 
@@ -158,19 +159,14 @@ export function AccountingFilters({
       </Field>
 
       <Field label="Animal" htmlFor="filter-animal">
-        <Select
+        <SearchableSelect
           id="filter-animal"
-          className="w-auto"
+          className="w-48"
           value={animalId}
-          onChange={(e) => navigate({ animalId: e.target.value })}
-        >
-          <option value="">Tous les animaux</option>
-          {animals.map((animal) => (
-            <option key={animal.id} value={animal.id}>
-              {animal.name}
-            </option>
-          ))}
-        </Select>
+          onChange={(value) => navigate({ animalId: value })}
+          options={animals.map((animal) => ({ value: animal.id, label: animal.name }))}
+          placeholder="Tous les animaux"
+        />
       </Field>
     </div>
   );

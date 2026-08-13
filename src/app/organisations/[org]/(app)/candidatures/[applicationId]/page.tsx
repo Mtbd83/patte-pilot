@@ -85,6 +85,12 @@ export default async function CandidatureDetailPage({
     isAdmin ? listHelloAssoLinks({ organizationId: organization.id }) : Promise.resolve([]),
   ]);
 
+  // Only animals still available to place: one already adopted or archived
+  // shouldn't be pickable for a new certificate/contract.
+  const adoptableAnimals = animalsList.filter(
+    (animal) => animal.status !== "adopte" && animal.status !== "archive",
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -285,7 +291,7 @@ export default async function CandidatureDetailPage({
             <SendCertificateForm
               organizationId={organization.id}
               applicationId={application.id}
-              animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
+              animals={adoptableAnimals.map((a) => ({ id: a.id, name: a.name }))}
               defaultAnimalId={application.targetAnimalId ?? ""}
               defaultEmail={application.email}
             />
@@ -305,7 +311,7 @@ export default async function CandidatureDetailPage({
             <GenerateContractForm
               organizationId={organization.id}
               applicationId={application.id}
-              animals={animalsList.map((a) => ({ id: a.id, name: a.name }))}
+              animals={adoptableAnimals.map((a) => ({ id: a.id, name: a.name }))}
               helloAssoLinks={helloAssoLinksList.map((l) => ({ id: l.id, label: l.label, url: l.url }))}
               defaultAnimalId={application.targetAnimalId ?? ""}
               defaultEmail={application.email}

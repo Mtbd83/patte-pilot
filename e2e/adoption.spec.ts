@@ -64,7 +64,7 @@ test("public adoption form → admin review → certificate + contract sent", as
   await page.goto("/organisations/asso-test/animaux");
   await page.getByRole("button", { name: "Ajouter un animal" }).click();
   await page.getByLabel("Nom", { exact: true }).fill(animalName);
-  await page.getByLabel("Statut", { exact: true }).selectOption({ label: "Adopté" });
+  await page.getByLabel("Famille d'accueil", { exact: true }).selectOption({ label: "Famille Test" });
   await page.getByRole("button", { name: "Ajouter l'animal" }).click();
   await expect(page.getByText("Animal ajouté")).toBeVisible();
 

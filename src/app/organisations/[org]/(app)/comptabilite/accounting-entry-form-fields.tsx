@@ -3,6 +3,7 @@ import type { AccountingCategory, AccountingType } from "@/db/schema";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Field, FieldRow } from "@/components/ui/field";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 const TYPE_OPTIONS = Object.entries(ACCOUNTING_TYPE_LABELS) as [AccountingType, string][];
 
@@ -106,14 +107,13 @@ export function AccountingEntryFormFields({
       </Field>
 
       <Field label="Animal lié (optionnel)" htmlFor={`${idPrefix}-animal`}>
-        <Select id={`${idPrefix}-animal`} value={animalId} onChange={(e) => onAnimalIdChange(e.target.value)}>
-          <option value="">— Aucun —</option>
-          {animals.map((animal) => (
-            <option key={animal.id} value={animal.id}>
-              {animal.name}
-            </option>
-          ))}
-        </Select>
+        <SearchableSelect
+          id={`${idPrefix}-animal`}
+          value={animalId}
+          onChange={onAnimalIdChange}
+          options={animals.map((animal) => ({ value: animal.id, label: animal.name }))}
+          placeholder="— Aucun —"
+        />
       </Field>
 
       <Field label="Commentaire" htmlFor={`${idPrefix}-comment`}>
