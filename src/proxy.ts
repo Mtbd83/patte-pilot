@@ -44,7 +44,14 @@ function buildCspHeader(nonce: string) {
     `worker-src 'self'`,
     // The adoption-contract PDF preview renders into an <iframe src="blob:…">.
     `frame-src 'self' blob:`,
-    `frame-ancestors 'none'`,
+    // 'self' rather than 'none': WebKit/Safari has a known bug where it
+    // (incorrectly) cross-checks a same-page blob: iframe load against
+    // frame-ancestors, not just frame-src — with 'none' it silently refuses
+    // to load the blob (blank iframe, no console error), even though
+    // frame-src explicitly allows it. 'self' still blocks any other origin
+    // from framing us (the actual clickjacking protection this directive is
+    // for); it only additionally allows the page to frame itself.
+    `frame-ancestors 'self'`,
     `form-action 'self'`,
     `base-uri 'self'`,
     `object-src 'none'`,
@@ -55,7 +62,10 @@ function buildCspHeader(nonce: string) {
 function applySecurityHeaders(response: NextResponse, nonce: string) {
   response.headers.set("Content-Security-Policy", buildCspHeader(nonce));
   response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
+  // SAMEORIGIN to match frame-ancestors 'self' above — kept consistent so a
+  // browser that only understands this legacy header (not CSP
+  // frame-ancestors) still lands on the same policy.
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
   response.headers.set(
     "Strict-Transport-Security",
     "max-age=31536000; includeSubDomains; preload",
