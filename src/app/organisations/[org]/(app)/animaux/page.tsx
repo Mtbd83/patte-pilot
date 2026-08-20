@@ -7,7 +7,7 @@ import { getMemberRoles } from "@/lib/permissions";
 import { listAnimalsPage, getAnimalStatusCounts, listAnimalIntakeYears } from "@/server/actions/animals";
 import { listFosterFamilies } from "@/server/actions/foster-families";
 import { getAccountingTotalsByAnimal } from "@/server/actions/accounting";
-import { SPECIES_LABELS, STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
+import { SPECIES_LABELS, STATUS_LABELS, STATUS_BADGE_VARIANT, statusLabelForCount } from "@/lib/animal-labels";
 import { isBoosterDueWithin, boosterDueDate, statusNextAction } from "@/lib/animal-care";
 import type { AnimalStatus } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
@@ -101,12 +101,12 @@ export default async function AnimauxPage(
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted-foreground">{totalAnimals} au total</span>
-        {(Object.entries(STATUS_LABELS) as [AnimalStatus, string][])
-          .filter(([value]) => statusCounts[value] > 0)
-          .map(([value, label]) => (
+        {(Object.keys(STATUS_LABELS) as AnimalStatus[])
+          .filter((value) => statusCounts[value] > 0)
+          .map((value) => (
             <Link key={value} href={statusHref(value)}>
               <Badge variant={STATUS_BADGE_VARIANT[value]}>
-                {statusCounts[value]} {label.toLowerCase()}
+                {statusCounts[value]} {statusLabelForCount(value, statusCounts[value]).toLowerCase()}
               </Badge>
             </Link>
           ))}

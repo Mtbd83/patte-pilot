@@ -122,4 +122,17 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Every clickable element in the app is a Link (<a>), the shared Button,
+     or an explicit role="button" — hover: alone gives no feedback on touch,
+     which reads as "not clickable" and invites repeated taps. */
+  a,
+  button:not(:disabled),
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+  a:active,
+  button:not(:disabled):active,
+  [role="button"]:active {
+    opacity: 0.6;
+  }
 }

@@ -24,6 +24,22 @@ export const STATUS_LABELS: Record<AnimalStatus, string> = {
   archive: "Archivé",
 };
 
+// Only the bare-adjective statuses (the others are invariant prepositional
+// phrases, e.g. "En soins") agree in number — used for the "8 réservés"
+// style counts on the animaux list page.
+const PLURAL_STATUS_LABELS: Partial<Record<AnimalStatus, string>> = {
+  reserve: "Réservés",
+  adopte: "Adoptés",
+  archive: "Archivés",
+};
+
+export function statusLabelForCount(status: AnimalStatus, count: number): string {
+  if (count > 1 && PLURAL_STATUS_LABELS[status]) {
+    return PLURAL_STATUS_LABELS[status]!;
+  }
+  return STATUS_LABELS[status];
+}
+
 export const STATUS_BADGE_VARIANT: Record<
   AnimalStatus,
   "default" | "secondary" | "outline" | "success" | "warning" | "info"
