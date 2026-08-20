@@ -6,8 +6,14 @@ import { toast } from "sonner";
 import { updateOrganizationEmailSettings } from "@/server/actions/organizations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field } from "@/components/ui/field";
+import { Field, FieldRow } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+
+const GMAIL_HOST = "smtp.gmail.com";
+const GMAIL_PORT = "465";
+
+type Provider = "gmail" | "other";
 
 export function OrganizationEmailSettingsForm({
   organizationId,
@@ -25,17 +31,35 @@ export function OrganizationEmailSettingsForm({
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A custom host already saved means this org picked "other" before —
+  // otherwise Gmail (the simple default) is the starting point.
+  const [provider, setProvider] = useState<Provider>(smtpHost ? "other" : "gmail");
   const [email, setEmail] = useState(smtpUser ?? "");
-  const [appPassword, setAppPassword] = useState("");
+  const [password, setPassword] = useState("");
   const [host, setHost] = useState(smtpHost ?? "");
   const [port, setPort] = useState(smtpPort ? String(smtpPort) : "");
+  const isGmail = provider === "gmail";
+
+  function handleProviderChange(next: Provider) {
+    setProvider(next);
+    // Switching to Gmail always uses its fixed host/port — drop any
+    // previously entered custom values so they don't get silently resaved.
+    if (next === "gmail") {
+      setHost("");
+      setPort("");
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (!hasAppPassword && !appPassword) {
-      setError("Le mot de passe d'application est requis pour la première configuration.");
+    if (!hasAppPassword && !password) {
+      setError("Le mot de passe est requis pour la première configuration.");
+      return;
+    }
+    if (!isGmail && (!host || !port)) {
+      setError("Le serveur SMTP et le port sont requis pour un autre fournisseur que Gmail.");
       return;
     }
 
@@ -44,12 +68,12 @@ export function OrganizationEmailSettingsForm({
       await updateOrganizationEmailSettings({
         organizationId,
         smtpUser: email,
-        smtpAppPassword: appPassword || undefined,
-        smtpHost: host || undefined,
-        smtpPort: port ? Number(port) : undefined,
+        smtpAppPassword: password || undefined,
+        smtpHost: isGmail ? undefined : host,
+        smtpPort: isGmail ? undefined : Number(port),
       });
       toast.success("Adresse d'envoi mise à jour");
-      setAppPassword("");
+      setPassword("");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue.");
@@ -72,7 +96,40 @@ export function OrganizationEmailSettingsForm({
         )}
       </div>
 
-      <Field label="Adresse email d'envoi" htmlFor="org-smtp-user">
+      <Field label="1. Fournisseur d'envoi" htmlFor="org-smtp-provider">
+        <Select
+          id="org-smtp-provider"
+          value={provider}
+          onChange={(e) => handleProviderChange(e.target.value as Provider)}
+        >
+          <option value="gmail">Gmail (recommandé)</option>
+          <option value="other">Autre fournisseur SMTP (Outlook, OVH...)</option>
+        </Select>
+      </Field>
+
+      <FieldRow>
+        <Field label="2. Serveur SMTP" htmlFor="org-smtp-host" className="flex-[2]">
+          <Input
+            id="org-smtp-host"
+            disabled={isGmail}
+            required={!isGmail}
+            value={isGmail ? GMAIL_HOST : host}
+            onChange={(e) => setHost(e.target.value)}
+          />
+        </Field>
+        <Field label="Port" htmlFor="org-smtp-port" className="flex-1">
+          <Input
+            id="org-smtp-port"
+            type="number"
+            disabled={isGmail}
+            required={!isGmail}
+            value={isGmail ? GMAIL_PORT : port}
+            onChange={(e) => setPort(e.target.value)}
+          />
+        </Field>
+      </FieldRow>
+
+      <Field label={isGmail ? "3. Adresse Gmail d'envoi" : "3. Adresse d'envoi"} htmlFor="org-smtp-user">
         <Input
           id="org-smtp-user"
           type="email"
@@ -83,14 +140,14 @@ export function OrganizationEmailSettingsForm({
       </Field>
 
       <Field
-        label="Mot de passe d'application"
+        label={isGmail ? "Mot de passe d'application" : "Mot de passe SMTP"}
         htmlFor="org-smtp-password"
         hint={
           hasAppPassword ? (
             "Laissez vide pour conserver le mot de passe déjà enregistré."
-          ) : (
+          ) : isGmail ? (
             <>
-              Avec un compte Gmail : générez-le sur{" "}
+              Générez-le sur{" "}
               <a
                 href="https://myaccount.google.com/apppasswords"
                 target="_blank"
@@ -108,8 +165,10 @@ export function OrganizationEmailSettingsForm({
               >
                 le tutoriel Google
               </a>
-              ). Avec un autre fournisseur, utilisez le mot de passe SMTP fourni par celui-ci, ci-dessous.
+              ).
             </>
+          ) : (
+            "Le mot de passe SMTP fourni par votre fournisseur d'adresse email."
           )
         }
       >
@@ -118,39 +177,10 @@ export function OrganizationEmailSettingsForm({
           type="password"
           autoComplete="new-password"
           placeholder={hasAppPassword ? "••••••••••••••••" : undefined}
-          value={appPassword}
-          onChange={(e) => setAppPassword(e.target.value)}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
         />
       </Field>
-
-      <details className="rounded-md border border-border">
-        <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-muted-foreground">
-          Autre fournisseur que Gmail
-        </summary>
-        <div className="flex flex-col gap-4 border-t border-border p-3">
-          <p className="text-xs text-muted-foreground">
-            Laissez vide pour utiliser Gmail. Sinon, renseignez le serveur SMTP de votre fournisseur (Outlook,
-            OVH, votre hébergeur...).
-          </p>
-          <Field label="Serveur SMTP" htmlFor="org-smtp-host">
-            <Input
-              id="org-smtp-host"
-              placeholder="smtp.gmail.com"
-              value={host}
-              onChange={(e) => setHost(e.target.value)}
-            />
-          </Field>
-          <Field label="Port" htmlFor="org-smtp-port">
-            <Input
-              id="org-smtp-port"
-              type="number"
-              placeholder="465"
-              value={port}
-              onChange={(e) => setPort(e.target.value)}
-            />
-          </Field>
-        </div>
-      </details>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
