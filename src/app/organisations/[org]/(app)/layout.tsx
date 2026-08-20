@@ -1,4 +1,7 @@
 import { notFound, redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles, isPlatformManager } from "@/lib/permissions";
@@ -45,6 +48,7 @@ export default async function OrganizationLayout(
   }
 
   const platformManager = await isPlatformManager(session.user.id);
+  const currentUser = await db.query.users.findFirst({ where: eq(users.id, session.user.id) });
 
   return (
     <div className="min-h-dvh bg-background md:flex">
@@ -54,6 +58,7 @@ export default async function OrganizationLayout(
         logoUrl={organization.logoUrl}
         isAdmin={roles.includes("admin")}
         isPlatformManager={platformManager}
+        showOnboardingTour={!currentUser?.onboardingCompletedAt}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-10">{children}</main>

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Menu, X, LogOut, User, ShieldCheck } from "lucide-react";
+import { Menu, X, LogOut, User, ShieldCheck, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { OnboardingTour, type OnboardingTourHandle } from "./onboarding-tour";
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -45,17 +46,20 @@ export function OrgSidebar({
   logoUrl,
   isAdmin,
   isPlatformManager,
+  showOnboardingTour,
 }: {
   orgSlug: string;
   orgName: string;
   logoUrl: string | null;
   isAdmin: boolean;
   isPlatformManager: boolean;
+  showOnboardingTour: boolean;
 }) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const base = `/organisations/${orgSlug}`;
+  const onboardingRef = useRef<OnboardingTourHandle>(null);
 
   function BrandIcon() {
     return logoUrl ? (
@@ -123,6 +127,13 @@ export function OrgSidebar({
           Mon compte
         </Link>
         <button
+          onClick={() => onboardingRef.current?.open()}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          <HelpCircle className="size-4" />
+          Revoir le tutoriel
+        </button>
+        <button
           onClick={() => signOut()}
           className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         >
@@ -175,6 +186,7 @@ export function OrgSidebar({
             </div>
           </div>
         )}
+        <OnboardingTour ref={onboardingRef} isAdmin={isAdmin} initialOpen={showOnboardingTour} />
       </>
     );
   }
@@ -187,6 +199,7 @@ export function OrgSidebar({
       </Link>
       <NavLinks />
       <SignOutButton />
+      <OnboardingTour ref={onboardingRef} isAdmin={isAdmin} initialOpen={showOnboardingTour} />
     </aside>
   );
 }

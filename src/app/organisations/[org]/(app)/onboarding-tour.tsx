@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { Sparkles, Settings, Users, PawPrint, Home, Wallet, Package, User, ArrowRight } from "lucide-react";
+import { forwardRef, useImperativeHandle, useState } from "react";
+import { Sparkles, Settings, Users, PawPrint, Home, Wallet, Package, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -12,12 +11,12 @@ type Step = {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   description: string;
-  href?: string;
-  linkLabel?: string;
 };
 
-function buildSteps(orgSlug: string, isAdmin: boolean): Step[] {
-  const base = `/organisations/${orgSlug}`;
+// Purely explanatory — deliberately no "go to this tab" links. A step that
+// navigates away unmounts this dialog entirely, and the tour is lost with
+// no way back to where you were (reported after a first version had them).
+function buildSteps(isAdmin: boolean): Step[] {
   const steps: Step[] = [
     {
       icon: Sparkles,
@@ -33,17 +32,13 @@ function buildSteps(orgSlug: string, isAdmin: boolean): Step[] {
         icon: Settings,
         title: "Configurez votre association",
         description:
-          "Renseignez le profil légal (SIREN, adresse), le logo, l'expéditeur des emails et le modèle de contrat d'adoption.",
-        href: `${base}/parametres`,
-        linkLabel: "Paramètres",
+          "Dans l'onglet Paramètres : profil légal (SIREN, adresse), logo, expéditeur des emails et modèle de contrat d'adoption.",
       },
       {
         icon: Users,
         title: "Invitez vos membres",
         description:
-          "Envoyez une invitation par email à vos bénévoles et familles d'accueil, avec le rôle qui leur correspond : admin, bénévole ou famille d'accueil.",
-        href: `${base}/membres`,
-        linkLabel: "Membres",
+          "Dans l'onglet Membres : invitez vos bénévoles et familles d'accueil par email, avec le rôle qui leur correspond — admin, bénévole ou famille d'accueil.",
       },
     );
   }
@@ -53,80 +48,67 @@ function buildSteps(orgSlug: string, isAdmin: boolean): Step[] {
       icon: PawPrint,
       title: "Ajoutez vos animaux",
       description:
-        "Créez une fiche par animal : espèce, statut, checklist santé. Les candidatures d'adoption reçues s'y rattachent automatiquement.",
-      href: `${base}/animaux`,
-      linkLabel: "Animaux",
+        "Dans l'onglet Animaux : créez une fiche par animal (espèce, statut, checklist santé). Les candidatures d'adoption reçues s'y rattachent automatiquement.",
     },
     {
       icon: Home,
       title: "Ajoutez vos familles d'accueil",
-      description: "Enregistrez leurs coordonnées et associez-leur les animaux qu'elles hébergent.",
-      href: `${base}/familles-accueil`,
-      linkLabel: "Familles d'accueil",
+      description:
+        "Dans l'onglet Familles d'accueil : enregistrez leurs coordonnées et associez-leur les animaux qu'elles hébergent.",
     },
     {
       icon: isAdmin ? Wallet : Package,
       title: isAdmin ? "Gérez comptabilité et stock" : "Gérez le stock",
       description: isAdmin
-        ? "Suivez vos entrées et sorties comptables, et gérez le stock d'articles (croquettes, matériel...)."
-        : "Suivez le stock d'articles de l'association (croquettes, matériel...) et signalez les besoins.",
-      href: isAdmin ? `${base}/comptabilite` : `${base}/stock`,
-      linkLabel: isAdmin ? "Comptabilité" : "Stock",
+        ? "Dans les onglets Comptabilité et Stock : suivez vos entrées/sorties comptables et le stock d'articles (croquettes, matériel...)."
+        : "Dans l'onglet Stock : suivez les articles de l'association (croquettes, matériel...) et signalez vos besoins.",
     },
     {
       icon: User,
       title: "Gérez votre compte",
-      description: "Changez votre mot de passe, retrouvez vos associations, ou supprimez votre compte.",
-      href: "/mon-compte",
-      linkLabel: "Mon compte",
+      description:
+        "Depuis \"Mon compte\" : changez votre mot de passe, retrouvez vos associations, ou supprimez votre compte.",
     },
   );
 
   return steps;
 }
 
+export type OnboardingTourHandle = { open: () => void };
+
 /**
- * First-login guided tour of the org dashboard's tabs — auto-opens once
- * (see completeOnboarding/onboardingCompletedAt) and stays reachable
- * afterwards via the "Revoir le tutoriel" button it renders.
+ * First-login guided tour of the org's tabs. Mounted once in OrgSidebar (so
+ * it auto-opens no matter which page a first-time visitor lands on, not
+ * just the dashboard) — has no trigger of its own; OrgSidebar's "Revoir le
+ * tutoriel" entry opens it via this ref, since that's the one spot reachable
+ * identically from the mobile drawer and the desktop sidebar.
  */
-export function OnboardingTour({
-  orgSlug,
-  isAdmin,
-  initialOpen,
-}: {
-  orgSlug: string;
-  isAdmin: boolean;
-  initialOpen: boolean;
-}) {
-  const [open, setOpen] = useState(initialOpen);
-  const [stepIndex, setStepIndex] = useState(0);
-  const steps = buildSteps(orgSlug, isAdmin);
-  // stepIndex is only ever moved within [0, steps.length) by this
-  // component's own handlers below.
-  const step = steps[stepIndex]!;
-  const isFirst = stepIndex === 0;
-  const isLast = stepIndex === steps.length - 1;
-  const Icon = step.icon;
+export const OnboardingTour = forwardRef<OnboardingTourHandle, { isAdmin: boolean; initialOpen: boolean }>(
+  function OnboardingTour({ isAdmin, initialOpen }, ref) {
+    const [open, setOpen] = useState(initialOpen);
+    const [stepIndex, setStepIndex] = useState(0);
+    const steps = buildSteps(isAdmin);
+    // stepIndex is only ever moved within [0, steps.length) by this
+    // component's own handlers below.
+    const step = steps[stepIndex]!;
+    const isFirst = stepIndex === 0;
+    const isLast = stepIndex === steps.length - 1;
+    const Icon = step.icon;
 
-  function close() {
-    setOpen(false);
-    setStepIndex(0);
-    completeOnboarding().catch(() => {});
-  }
+    useImperativeHandle(ref, () => ({
+      open: () => {
+        setStepIndex(0);
+        setOpen(true);
+      },
+    }));
 
-  return (
-    <>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => {
-          setStepIndex(0);
-          setOpen(true);
-        }}
-      >
-        Revoir le tutoriel
-      </Button>
+    function close() {
+      setOpen(false);
+      setStepIndex(0);
+      completeOnboarding().catch(() => {});
+    }
+
+    return (
       <Dialog open={open} onClose={close} title={step.title}>
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-3">
@@ -135,16 +117,6 @@ export function OnboardingTour({
             </div>
             <p className="text-sm text-muted-foreground">{step.description}</p>
           </div>
-          {step.href && (
-            <Link
-              href={step.href}
-              onClick={close}
-              className="inline-flex w-fit items-center gap-1 text-sm font-medium text-primary hover:underline"
-            >
-              Aller à {step.linkLabel}
-              <ArrowRight className="size-3.5" />
-            </Link>
-          )}
           <div className="flex items-center justify-between pt-2">
             <div className="flex gap-1.5">
               {steps.map((_, i) => (
@@ -173,6 +145,6 @@ export function OnboardingTour({
           </div>
         </div>
       </Dialog>
-    </>
-  );
-}
+    );
+  },
+);
