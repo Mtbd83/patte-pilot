@@ -3,7 +3,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { animals, documents, organizations, adoptionApplications, users } from "@/db/schema";
+import { animals, documents, organizations, adoptionApplications, users, type AnimalSpecies } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
 import { sendEmail, organizationSmtpConfig } from "@/lib/mailer";
@@ -111,13 +111,32 @@ const sendEngagementCertificateSchema = z.object({
   body: z.string().min(1, "Le corps du message est requis."),
 });
 
+// Which certificate column applies to a given animal — chat and chien each
+// get their own, lapin/autre ("NAC" — nouveaux animaux de compagnie) share
+// one. No default/fallback: a species group with nothing configured is a
+// hard error, not a silent substitution.
+const CERTIFICATE_COLUMN_BY_SPECIES: Record<
+  AnimalSpecies,
+  "certificateFileUrlChat" | "certificateFileUrlNac" | "certificateFileUrlChien"
+> = {
+  chat: "certificateFileUrlChat",
+  lapin: "certificateFileUrlNac",
+  autre: "certificateFileUrlNac",
+  chien: "certificateFileUrlChien",
+};
+const CERTIFICATE_GROUP_LABEL_BY_SPECIES: Record<AnimalSpecies, string> = {
+  chat: "Chat",
+  lapin: "NAC",
+  autre: "NAC",
+  chien: "Chien",
+};
+
 /**
  * Admin-only: emails the engagement certificate as-is (no filling — it's a
  * generic legal document the adopter signs on their own) alongside the
  * subject/body composed (and possibly edited) from the organization's
- * template. Each organization uploads its own certificate(s) in Paramètres
- * — `certificateFileUrlChien` for chien, `certificateFileUrl` (the default)
- * otherwise.
+ * template. Each organization uploads one certificate per species group in
+ * Paramètres — see CERTIFICATE_COLUMN_BY_SPECIES.
  */
 export async function sendEngagementCertificate(
   input: z.infer<typeof sendEngagementCertificateSchema>,
@@ -130,11 +149,10 @@ export async function sendEngagementCertificate(
 
   const { animal, organization } = await loadAnimalAndOrganization(data.animalId, data.organizationId);
 
-  const certificateUrl =
-    (animal.species === "chien" && organization.certificateFileUrlChien) || organization.certificateFileUrl;
+  const certificateUrl = organization[CERTIFICATE_COLUMN_BY_SPECIES[animal.species]];
   if (!certificateUrl) {
     throw new Error(
-      "Aucun certificat d'engagement configuré pour cette association — ajoutez-en un dans Paramètres.",
+      `Aucun certificat d'engagement configuré pour "${CERTIFICATE_GROUP_LABEL_BY_SPECIES[animal.species]}" — ajoutez-en un dans Paramètres.`,
     );
   }
 

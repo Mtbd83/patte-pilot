@@ -91,12 +91,13 @@ export const organizations = pgTable("organizations", {
   logoUrl: text("logo_url"),
 
   // Engagement certificate PDFs, uploaded per organization (sent as-is, no
-  // filling — see sendEngagementCertificate). `certificateFileUrl` covers
-  // chat/lapin/autre; `certificateFileUrlChien` optionally overrides it for
-  // chien. Falls back to nothing — an org without either configured gets a
-  // clear "configure it" error rather than silently sending someone else's
-  // document.
-  certificateFileUrl: text("certificate_file_url"),
+  // filling — see sendEngagementCertificate). One required per species
+  // group, chosen by the adopted animal's species — chat, "NAC" (lapin +
+  // autre), or chien. No default/fallback: an org missing the certificate
+  // for a given species group gets a clear "configure it" error rather than
+  // silently sending the wrong document.
+  certificateFileUrlChat: text("certificate_file_url_chat"),
+  certificateFileUrlNac: text("certificate_file_url_nac"),
   certificateFileUrlChien: text("certificate_file_url_chien"),
 
   // The organization's own adoption contract PDF (uploaded as-is) and where

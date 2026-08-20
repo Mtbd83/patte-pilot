@@ -42,6 +42,7 @@ const PLACEHOLDER_CERTIFICATE_PATH = path.join(
   "certificat-engagement.pdf",
 );
 const FAKE_CERTIFICATE_URL = "https://storage.example.test/documents/certificat-engagement.pdf";
+const FAKE_CHIEN_CERTIFICATE_URL = "https://storage.example.test/documents/certificat-chien.pdf";
 
 const CONTRACT_TEMPLATE_PATH = path.join(
   process.cwd(),
@@ -82,7 +83,7 @@ const CONTRACT_POSITIONS = {
 };
 
 global.fetch = jest.fn(async (url: string) => {
-  if (url === FAKE_CERTIFICATE_URL) {
+  if (url === FAKE_CERTIFICATE_URL || url === FAKE_CHIEN_CERTIFICATE_URL) {
     const bytes = readFileSync(PLACEHOLDER_CERTIFICATE_PATH);
     return { ok: true, arrayBuffer: async () => Uint8Array.from(bytes).buffer } as Response;
   }
@@ -143,7 +144,7 @@ describe("documents server actions", () => {
     await db
       .update(organizations)
       .set({
-        certificateFileUrl: FAKE_CERTIFICATE_URL,
+        certificateFileUrlChat: FAKE_CERTIFICATE_URL,
         contractTemplateUrl: FAKE_CONTRACT_URL,
         contractFieldPositions: CONTRACT_POSITIONS,
       })
@@ -189,7 +190,12 @@ describe("documents server actions", () => {
     expect(call.attachments[0].filename).toBe("certificat-engagement.pdf");
   });
 
-  it("falls back to the default certificate for a chien when no dog-specific one is configured", async () => {
+  it("sends the chien-specific certificate for a chien, not the chat one", async () => {
+    await db
+      .update(organizations)
+      .set({ certificateFileUrlChien: FAKE_CHIEN_CERTIFICATE_URL })
+      .where(eq(organizations.id, organizationId));
+
     const dog = await createAnimal({
       organizationId,
       name: "Rex",
@@ -207,7 +213,31 @@ describe("documents server actions", () => {
       body: "Bonjour,",
     });
 
-    expect(global.fetch).toHaveBeenCalledWith(FAKE_CERTIFICATE_URL);
+    expect(global.fetch).toHaveBeenCalledWith(FAKE_CHIEN_CERTIFICATE_URL);
+  });
+
+  it("rejects sending for a species group with nothing configured, even though others are (no fallback)", async () => {
+    // This org only has certificateFileUrlChat/Chien set (see beforeAll and
+    // the previous test) — lapin/autre ("NAC") was never configured, and
+    // must not silently borrow the chat certificate.
+    const rabbit = await createAnimal({
+      organizationId,
+      name: "Caramel",
+      species: "lapin",
+      sex: "femelle",
+      intakeDate: "2026-01-01",
+      status: "adopte",
+    });
+
+    await expect(
+      sendEngagementCertificate({
+        organizationId,
+        animalId: rabbit.id,
+        toEmail: "adoptant@example.com",
+        subject: "Certificat",
+        body: "Bonjour,",
+      }),
+    ).rejects.toThrow(/Aucun certificat d'engagement configuré pour "NAC"/);
   });
 
   it("rejects sending a certificate when none is configured for the organization", async () => {

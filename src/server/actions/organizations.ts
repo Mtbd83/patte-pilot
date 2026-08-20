@@ -180,18 +180,23 @@ export async function uploadOrganizationLogo(formData: FormData) {
   return updated;
 }
 
-const CERTIFICATE_SPECIES = ["default", "chien"] as const;
+const CERTIFICATE_SPECIES = ["chat", "nac", "chien"] as const;
 type CertificateSpecies = (typeof CERTIFICATE_SPECIES)[number];
-const CERTIFICATE_COLUMN: Record<CertificateSpecies, "certificateFileUrl" | "certificateFileUrlChien"> = {
-  default: "certificateFileUrl",
+const CERTIFICATE_COLUMN: Record<
+  CertificateSpecies,
+  "certificateFileUrlChat" | "certificateFileUrlNac" | "certificateFileUrlChien"
+> = {
+  chat: "certificateFileUrlChat",
+  nac: "certificateFileUrlNac",
   chien: "certificateFileUrlChien",
 };
 
 /**
- * Admin-only: uploads (or replaces) the organization's own engagement
- * certificate PDF — sent as-is, no filling (see sendEngagementCertificate).
- * `species` "default" covers chat/lapin/autre; "chien" is an optional
- * override.
+ * Admin-only: uploads (or replaces) one of the organization's own engagement
+ * certificate PDFs — sent as-is, no filling (see sendEngagementCertificate).
+ * `species` is "chat", "nac" (lapin/autre), or "chien"; each is independent
+ * and optional — an association handling only one type of animal only
+ * needs that one configured.
  */
 export async function updateOrganizationCertificate(formData: FormData) {
   const session = await auth();

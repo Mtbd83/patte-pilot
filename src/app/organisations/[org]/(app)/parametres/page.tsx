@@ -106,14 +106,16 @@ export default async function ParametresPage(
           <CardTitle>Certificat d&apos;engagement</CardTitle>
           <CardDescription>
             Envoyé tel quel (sans remplissage) depuis une fiche candidature — l&apos;adoptant·e le complète et
-            le signe de son côté. Le certificat chien est optionnel : sans lui, le certificat par défaut est
-            utilisé pour tous les animaux.
+            le signe de son côté. Un certificat par type d&apos;animal, choisi automatiquement selon l&apos;espèce
+            de l&apos;animal adopté — aucun n&apos;est obligatoire, configurez seulement ceux dont vous avez
+            besoin.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <OrganizationCertificatesUpload
             organizationId={organization.id}
-            certificateFileUrl={organization.certificateFileUrl}
+            certificateFileUrlChat={organization.certificateFileUrlChat}
+            certificateFileUrlNac={organization.certificateFileUrlNac}
             certificateFileUrlChien={organization.certificateFileUrlChien}
           />
         </CardContent>

@@ -37,6 +37,11 @@
 -- Verified against production before applying: every one of the 31 objects
 -- actually in the "uploads" bucket matches this pattern (checked via a
 -- throwaway pg_temp function against storage.objects first).
+--
+-- "certificat-default" stays accepted (read-only in practice — the app
+-- never writes that path anymore since the chat/NAC/chien split) purely so
+-- existing organizations' already-uploaded certificate files, still
+-- physically stored under that name, don't 404 the moment this reruns.
 
 drop policy if exists "anon insert uploads" on storage.objects;
 drop policy if exists "anon select uploads" on storage.objects;
@@ -48,7 +53,7 @@ create policy "anon insert uploads" on storage.objects
     bucket_id = 'uploads'
     and (
       name ~ '^(logos|animaux)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
-      or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(default|chien)|contrat)\.[a-zA-Z0-9]{1,10}$'
+      or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(chat|nac|chien|default)|contrat)\.[a-zA-Z0-9]{1,10}$'
     )
   );
 
@@ -58,7 +63,7 @@ create policy "anon select uploads" on storage.objects
     bucket_id = 'uploads'
     and (
       name ~ '^(logos|animaux)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
-      or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(default|chien)|contrat)\.[a-zA-Z0-9]{1,10}$'
+      or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(chat|nac|chien|default)|contrat)\.[a-zA-Z0-9]{1,10}$'
     )
   );
 
@@ -68,13 +73,13 @@ create policy "anon update uploads" on storage.objects
     bucket_id = 'uploads'
     and (
       name ~ '^(logos|animaux)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
-      or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(default|chien)|contrat)\.[a-zA-Z0-9]{1,10}$'
+      or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(chat|nac|chien|default)|contrat)\.[a-zA-Z0-9]{1,10}$'
     )
   )
   with check (
     bucket_id = 'uploads'
     and (
       name ~ '^(logos|animaux)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
-      or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(default|chien)|contrat)\.[a-zA-Z0-9]{1,10}$'
+      or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(chat|nac|chien|default)|contrat)\.[a-zA-Z0-9]{1,10}$'
     )
   );

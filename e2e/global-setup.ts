@@ -125,22 +125,29 @@ export default async function globalSetup(config: FullConfig) {
   }
   if (!org) throw new Error("Seed failed: could not create organization.");
 
-  // sendEngagementCertificate now requires the org's own uploaded PDF (no
-  // more bundled fallback file) — seed one so specs exercising it don't
-  // depend on a certificate having been configured by hand beforehand.
-  if (!org.certificateFileUrl) {
+  // sendEngagementCertificate now requires the org's own uploaded PDF, one
+  // per species group, no fallback — seed all three so specs exercising it
+  // (for whichever species) don't depend on it having been configured by
+  // hand beforehand.
+  if (!org.certificateFileUrlChat || !org.certificateFileUrlNac || !org.certificateFileUrlChien) {
     const placeholderPath = path.join(process.cwd(), "public", "documents", "certificat-engagement.pdf");
     const bytes = await readFile(placeholderPath);
-    const file = new File([new Uint8Array(bytes)], "certificat-engagement.pdf", {
-      type: "application/pdf",
-    });
-    const certificateFileUrl = await uploadDocument(file, `documents/${org.id}/certificat-default`);
+    const uploadFor = (species: string) =>
+      uploadDocument(
+        new File([new Uint8Array(bytes)], "certificat-engagement.pdf", { type: "application/pdf" }),
+        `documents/${org!.id}/certificat-${species}`,
+      );
+    const [certificateFileUrlChat, certificateFileUrlNac, certificateFileUrlChien] = await Promise.all([
+      uploadFor("chat"),
+      uploadFor("nac"),
+      uploadFor("chien"),
+    ]);
     [org] = await db
       .update(organizations)
-      .set({ certificateFileUrl })
+      .set({ certificateFileUrlChat, certificateFileUrlNac, certificateFileUrlChien })
       .where(eq(organizations.id, org.id))
       .returning();
-    if (!org) throw new Error("Seed failed: could not set the test org's certificate URL.");
+    if (!org) throw new Error("Seed failed: could not set the test org's certificate URLs.");
   }
 
   // Same idea for the adoption contract — generateAdoptionContractPdf now

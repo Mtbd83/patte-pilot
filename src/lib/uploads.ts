@@ -12,7 +12,7 @@ const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const ALLOWED_PATH_PATTERNS = [
   new RegExp(`^logos/${UUID}$`),
   new RegExp(`^animaux/${UUID}$`),
-  new RegExp(`^documents/${UUID}/certificat-(default|chien)$`),
+  new RegExp(`^documents/${UUID}/certificat-(chat|nac|chien)$`),
   new RegExp(`^documents/${UUID}/contrat$`),
 ];
 

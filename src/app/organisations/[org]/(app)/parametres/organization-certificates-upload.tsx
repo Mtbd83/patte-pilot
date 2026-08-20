@@ -14,7 +14,7 @@ function CertificateUpload({
   fileUrl,
 }: {
   organizationId: string;
-  species: "default" | "chien";
+  species: "chat" | "nac" | "chien";
   label: string;
   fileUrl: string | null;
 }) {
@@ -86,25 +86,33 @@ function CertificateUpload({
 
 export function OrganizationCertificatesUpload({
   organizationId,
-  certificateFileUrl,
+  certificateFileUrlChat,
+  certificateFileUrlNac,
   certificateFileUrlChien,
 }: {
   organizationId: string;
-  certificateFileUrl: string | null;
+  certificateFileUrlChat: string | null;
+  certificateFileUrlNac: string | null;
   certificateFileUrlChien: string | null;
 }) {
   return (
     <div className="flex flex-col gap-4">
       <CertificateUpload
         organizationId={organizationId}
-        species="default"
-        label="Certificat par défaut (chat, lapin, autre)"
-        fileUrl={certificateFileUrl}
+        species="chat"
+        label="Certificat — chat"
+        fileUrl={certificateFileUrlChat}
+      />
+      <CertificateUpload
+        organizationId={organizationId}
+        species="nac"
+        label="Certificat — NAC (lapin, autres)"
+        fileUrl={certificateFileUrlNac}
       />
       <CertificateUpload
         organizationId={organizationId}
         species="chien"
-        label="Certificat — chien (optionnel, sinon le certificat par défaut est utilisé)"
+        label="Certificat — chien"
         fileUrl={certificateFileUrlChien}
       />
     </div>
