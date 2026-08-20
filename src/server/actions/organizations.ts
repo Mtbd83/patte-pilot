@@ -88,23 +88,28 @@ const updateOrganizationEmailSettingsSchema = z.object({
   organizationId: z.string().uuid(),
   smtpUser: z.string().email("Adresse email invalide."),
   smtpAppPassword: z.string().min(1).optional(),
+  // Left unset -> Gmail (see mailer.ts DEFAULT_SMTP_HOST/PORT). Set both to
+  // use a different provider (Outlook, OVH, etc.).
+  smtpHost: z.string().max(255).optional(),
+  smtpPort: z.coerce.number().int().positive().max(65535).optional(),
 });
 
 export type UpdateOrganizationEmailSettingsInput = z.infer<typeof updateOrganizationEmailSettingsSchema>;
 
 /**
- * Admin-only: sets the organization's own outgoing mailbox (an email
- * address + Gmail app password) — every email this app sends on the
- * organization's behalf goes through it, so recipients see the
- * association's own address, not a shared one. The app password is
- * write-only: never returned, and left unchanged if omitted so re-saving
- * the address alone doesn't require re-entering it.
+ * Admin-only: sets the organization's own outgoing mailbox — every email
+ * this app sends on the organization's behalf goes through it, so
+ * recipients see the association's own address, not a shared one. Defaults
+ * to Gmail (an app password is the simplest path for an association with
+ * no existing mailbox); smtpHost/smtpPort opt into any other SMTP provider.
+ * The app password is write-only: never returned, and left unchanged if
+ * omitted so re-saving the address alone doesn't require re-entering it.
  */
 export async function updateOrganizationEmailSettings(input: UpdateOrganizationEmailSettingsInput) {
   const session = await auth();
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
-  const { organizationId, smtpUser, smtpAppPassword } =
+  const { organizationId, smtpUser, smtpAppPassword, smtpHost, smtpPort } =
     updateOrganizationEmailSettingsSchema.parse(input);
   await requireAdmin(session.user.id, organizationId);
 
@@ -113,6 +118,8 @@ export async function updateOrganizationEmailSettings(input: UpdateOrganizationE
     .set({
       smtpUser,
       ...(smtpAppPassword ? { smtpAppPassword: smtpAppPassword.replace(/\s+/g, "") } : {}),
+      smtpHost: smtpHost || null,
+      smtpPort: smtpPort ?? null,
       updatedAt: new Date(),
     })
     .where(eq(organizations.id, organizationId))

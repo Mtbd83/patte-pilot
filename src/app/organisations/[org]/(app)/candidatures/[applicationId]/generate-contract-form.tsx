@@ -329,7 +329,7 @@ export function GenerateContractForm({
       </FieldRow>
 
       <Field
-        label="Lien HelloAsso à utiliser"
+        label="Lien de paiement à utiliser"
         htmlFor="contract-helloasso-link"
         hint="À choisir toi-même selon le cas (âge, statut vaccinal, tarif réduit...) — géré dans Paramètres."
       >

@@ -178,7 +178,7 @@ export function OrganizationHelloAssoLinksForm({
             <Input
               id="new-link-url"
               type="url"
-              placeholder="https://www.helloasso.com/..."
+              placeholder="https://www.helloasso.com/... (ou autre plateforme de paiement)"
               required
               value={url}
               onChange={(e) => setUrl(e.target.value)}

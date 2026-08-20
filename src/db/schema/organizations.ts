@@ -8,6 +8,7 @@ import {
   uniqueIndex,
   boolean,
   jsonb,
+  integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -107,11 +108,16 @@ export const organizations = pgTable("organizations", {
   contractFieldPositions: jsonb("contract_field_positions").$type<ContractFieldPositions>(),
 
   // Outgoing email identity: each organization sends through its own mailbox
-  // (typically Gmail + an app password) so recipients only ever see that
-  // organization's own address, never a shared/platform one. Emails fail
-  // with a clear error if these aren't set — no silent fallback.
+  // so recipients only ever see that organization's own address, never a
+  // shared/platform one. Emails fail with a clear error if these aren't
+  // set — no silent fallback. smtpHost/smtpPort are optional: null falls
+  // back to Gmail's (see src/lib/mailer.ts DEFAULT_SMTP_HOST/PORT), the
+  // simple default for an association with no existing mail provider —
+  // set them to use any other SMTP provider instead.
   smtpUser: varchar("smtp_user", { length: 255 }),
   smtpAppPassword: text("smtp_app_password"),
+  smtpHost: varchar("smtp_host", { length: 255 }),
+  smtpPort: integer("smtp_port"),
 
   // Legal/letterhead details used on generated documents (adoption contract).
   siren: varchar("siren", { length: 20 }),

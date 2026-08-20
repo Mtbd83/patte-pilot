@@ -6,10 +6,11 @@ const DEFAULT_SMTP_PORT = 465;
 
 /**
  * Every organization sends through its own mailbox (an app password on its
- * own Gmail account) — never a shared/platform mailbox — so recipients only
- * ever see that organization's own address. There is deliberately no
- * fallback to a shared account: if this isn't configured, sending fails
- * with a clear error rather than silently using someone else's identity.
+ * own Gmail account, or any other SMTP provider — see host/port below) —
+ * never a shared/platform mailbox — so recipients only ever see that
+ * organization's own address. There is deliberately no fallback to a shared
+ * account: if this isn't configured, sending fails with a clear error
+ * rather than silently using someone else's identity.
  */
 export interface OrganizationSmtpConfig {
   user: string;
@@ -21,15 +22,25 @@ export interface OrganizationSmtpConfig {
    * Note this does not hide the base address, only adds a suffix to it.
    */
   fromAddress?: string;
+  /** Overrides DEFAULT_SMTP_HOST/PORT — set for any provider other than Gmail. */
+  host?: string;
+  port?: number;
 }
 
 /** Builds the SMTP config for `sendEmail` from an organization row, or `null` if unset. */
 export function organizationSmtpConfig(organization: {
   smtpUser: string | null;
   smtpAppPassword: string | null;
+  smtpHost?: string | null;
+  smtpPort?: number | null;
 }): OrganizationSmtpConfig | null {
   if (!organization.smtpUser || !organization.smtpAppPassword) return null;
-  return { user: organization.smtpUser, appPassword: organization.smtpAppPassword };
+  return {
+    user: organization.smtpUser,
+    appPassword: organization.smtpAppPassword,
+    host: organization.smtpHost ?? undefined,
+    port: organization.smtpPort ?? undefined,
+  };
 }
 
 /**
@@ -47,9 +58,9 @@ export function platformSmtpConfig(): OrganizationSmtpConfig | null {
   };
 }
 
-function createTransporterFor({ user, appPassword }: OrganizationSmtpConfig) {
-  const host = process.env.SMTP_HOST ?? DEFAULT_SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT ?? DEFAULT_SMTP_PORT);
+function createTransporterFor({ user, appPassword, host: orgHost, port: orgPort }: OrganizationSmtpConfig) {
+  const host = orgHost ?? process.env.SMTP_HOST ?? DEFAULT_SMTP_HOST;
+  const port = orgPort ?? Number(process.env.SMTP_PORT ?? DEFAULT_SMTP_PORT);
 
   return nodemailer.createTransport({
     host,

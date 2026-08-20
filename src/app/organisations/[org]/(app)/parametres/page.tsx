@@ -63,8 +63,9 @@ export default async function ParametresPage(
           <CardTitle>Adresse email d&apos;envoi</CardTitle>
           <CardDescription>
             Les invitations, certificats et contrats sont envoyés depuis cette adresse — jamais depuis une
-            adresse partagée. Nécessite un compte Gmail dédié à l&apos;association avec la validation en 2 étapes
-            activée.
+            adresse partagée. Un compte Gmail dédié à l&apos;association (avec un mot de passe
+            d&apos;application) est le plus simple si vous n&apos;avez pas déjà de messagerie ; tout autre
+            fournisseur SMTP fonctionne aussi.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -72,6 +73,8 @@ export default async function ParametresPage(
             organizationId={organization.id}
             smtpUser={organization.smtpUser}
             hasAppPassword={Boolean(organization.smtpAppPassword)}
+            smtpHost={organization.smtpHost}
+            smtpPort={organization.smtpPort}
           />
         </CardContent>
       </Card>
@@ -140,10 +143,10 @@ export default async function ParametresPage(
 
       <Card>
         <CardHeader>
-          <CardTitle>Liens HelloAsso</CardTitle>
+          <CardTitle>Liens de paiement</CardTitle>
           <CardDescription>
-            Liens de paiement HelloAsso, nommés librement (ex. par espèce, par âge, tarif réduit...).
-            Choisis manuellement dans le mail de contrat d&apos;adoption au moment de l&apos;envoi.
+            Liens de paiement (HelloAsso, PayPal, ou autre), nommés librement (ex. par espèce, par âge, tarif
+            réduit...). Choisis manuellement dans le mail de contrat d&apos;adoption au moment de l&apos;envoi.
           </CardDescription>
         </CardHeader>
         <CardContent>
