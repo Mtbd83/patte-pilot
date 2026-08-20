@@ -11,12 +11,16 @@ import {
   ArrowRight,
   Syringe,
 } from "lucide-react";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
 import { listAnimalsWithBoosterDue, listAnimals } from "@/server/actions/animals";
 import { listMySupplyRequests } from "@/server/actions/supply-requests";
 import { SupplyRequestWidget } from "./supply-request-widget";
+import { OnboardingTour } from "./onboarding-tour";
 import { boosterDueDate, isBoosterDueWithin, isBoosterOverdue } from "@/lib/animal-care";
 import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
 import { ROLE_LABELS } from "@/lib/role-labels";
@@ -55,12 +59,13 @@ export default async function OrganizationPage(
   // already gets hers (and only hers) in the card above.
   const showOrgWideReminders = isAdmin || isBenevole;
 
-  const [animalsWithBoosterDue, myAnimals, mySupplyRequests] = await Promise.all([
+  const [animalsWithBoosterDue, myAnimals, mySupplyRequests, currentUser] = await Promise.all([
     showOrgWideReminders
       ? listAnimalsWithBoosterDue({ organizationId: organization.id, withinDays: 14 })
       : Promise.resolve([]),
     isFamilleAccueil ? listAnimals({ organizationId: organization.id }) : Promise.resolve([]),
     isFamilleAccueil ? listMySupplyRequests({ organizationId: organization.id }) : Promise.resolve([]),
+    db.query.users.findFirst({ where: eq(users.id, session.user.id) }),
   ]);
 
   const myOwnAnimals = myAnimals.filter(
@@ -69,16 +74,23 @@ export default async function OrganizationPage(
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Tableau de bord</h1>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <p className="text-muted-foreground">Bienvenue sur votre espace de gestion —</p>
-          {roles.map((role) => (
-            <Badge key={role} variant="secondary">
-              {ROLE_LABELS[role]}
-            </Badge>
-          ))}
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold">Tableau de bord</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <p className="text-muted-foreground">Bienvenue sur votre espace de gestion —</p>
+            {roles.map((role) => (
+              <Badge key={role} variant="secondary">
+                {ROLE_LABELS[role]}
+              </Badge>
+            ))}
+          </div>
         </div>
+        <OnboardingTour
+          orgSlug={params.org}
+          isAdmin={isAdmin}
+          initialOpen={!currentUser?.onboardingCompletedAt}
+        />
       </div>
 
       {isFamilleAccueil && (

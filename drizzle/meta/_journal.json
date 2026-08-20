@@ -141,6 +141,13 @@
       "when": 1786480000000,
       "tag": "0019_enable_row_level_security",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787220135747,
+      "tag": "0020_glossy_phantom_reporter",
+      "breakpoints": true
     }
   ]
 }

@@ -125,3 +125,14 @@ export async function leaveOrganization(input: z.infer<typeof leaveOrganizationS
 
   await db.delete(organizationMembers).where(eq(organizationMembers.id, membership.id));
 }
+
+/** Marks the first-login guided tour (OnboardingTour) as seen, whether finished or skipped. */
+export async function completeOnboarding() {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  await db
+    .update(users)
+    .set({ onboardingCompletedAt: new Date() })
+    .where(eq(users.id, session.user.id));
+}

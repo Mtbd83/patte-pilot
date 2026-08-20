@@ -73,6 +73,11 @@ export const users = pgTable("users", {
   // (organizationMemberRoles). No self-service path: set directly in the
   // database for a trusted account. See requirePlatformManager.
   isPlatformManager: boolean("is_platform_manager").default(false).notNull(),
+  // Null until the user finishes (or explicitly skips) the first-login
+  // guided tour of the org dashboard — see OnboardingTour. Not reset when
+  // they later join another organization; the tour explains PattePilot's
+  // tabs in general, not anything organization-specific.
+  onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
