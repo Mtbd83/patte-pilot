@@ -23,11 +23,13 @@ import { auth } from "@/lib/auth";
 import { sendEmail } from "@/lib/mailer";
 import { db } from "@/db";
 import { users, organizations, organizationMembers, organizationMemberRoles } from "@/db/schema";
-import { createAnimal } from "@/server/actions/animals";
+import { createAnimal, updateAnimalHealthChecklist } from "@/server/actions/animals";
+import { createFosterFamily } from "@/server/actions/foster-families";
 import { updateOrganizationProfile } from "@/server/actions/organizations";
 import {
   sendEngagementCertificate,
   generateAndSendAdoptionContract,
+  previewContractEmail,
   listDocuments,
 } from "@/server/actions/documents";
 import { ForbiddenError } from "@/lib/permissions";
@@ -99,6 +101,7 @@ describe("documents server actions", () => {
   let adminUserId: string;
   let outsiderUserId: string;
   let animalId: string;
+  let fosterFamilyId: string;
 
   beforeAll(async () => {
     const suffix = randomUUID().slice(0, 8);
@@ -159,6 +162,14 @@ describe("documents server actions", () => {
       status: "adopte",
     });
     animalId = animal.id;
+
+    const fosterFamily = await createFosterFamily({
+      organizationId,
+      firstName: "Famille",
+      lastName: `Test-${suffix}`,
+      hasCats: true,
+    });
+    fosterFamilyId = fosterFamily.id;
   });
 
   afterAll(async () => {
@@ -386,6 +397,60 @@ describe("documents server actions", () => {
       emailBody: "Bonjour,\n\nVeuillez trouver ci-joint le contrat d'adoption.",
     });
     expect(document.type).toBe("contrat_adoption");
+  });
+
+  it("includes the booster reminder line when the first vaccine is done but the booster isn't", async () => {
+    const dueAnimal = await createAnimal({
+      organizationId,
+      name: "Rappel Attendu",
+      species: "chat",
+      sex: "femelle",
+      intakeDate: "2026-01-01",
+      status: "reserve",
+      fosterFamilyId,
+    });
+    await updateAnimalHealthChecklist({
+      organizationId,
+      animalId: dueAnimal.id,
+      firstVaccineDone: true,
+      firstVaccineDate: "2026-01-01",
+    });
+
+    const { body } = await previewContractEmail({
+      organizationId,
+      animalId: dueAnimal.id,
+      sterilizationDone: false,
+      vetFeesAmount: 180,
+    });
+    expect(body).toContain("N'oubliez pas le rappel de vaccin");
+  });
+
+  it("does not include the booster reminder line once the booster has been marked done", async () => {
+    const doneAnimal = await createAnimal({
+      organizationId,
+      name: "Rappel Fait",
+      species: "chat",
+      sex: "femelle",
+      intakeDate: "2026-01-01",
+      status: "reserve",
+      fosterFamilyId,
+    });
+    await updateAnimalHealthChecklist({
+      organizationId,
+      animalId: doneAnimal.id,
+      firstVaccineDone: true,
+      firstVaccineDate: "2026-01-01",
+      boosterDone: true,
+      boosterDate: "2026-02-01",
+    });
+
+    const { body } = await previewContractEmail({
+      organizationId,
+      animalId: doneAnimal.id,
+      sterilizationDone: false,
+      vetFeesAmount: 180,
+    });
+    expect(body).not.toContain("N'oubliez pas le rappel de vaccin");
   });
 
   it("rejects a non-admin from generating the contract", async () => {

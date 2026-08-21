@@ -258,8 +258,15 @@ export async function previewContractEmail(input: z.infer<typeof previewContract
     loadSenderFirstName(session.user.id),
   ]);
 
+  // isBoosterOwed alone stays true for as long as the animal is on an
+  // active vaccine schedule — including right after this booster was just
+  // marked done, since the annual cycle immediately makes the *next* one
+  // "owed" again. The contract email's "n'oubliez pas le rappel dans un
+  // mois" line is specifically about the still-pending first booster, so
+  // it must also check boosterDone directly — reported as still showing
+  // after the booster had been checked off.
   const rappelVaccin = animal.healthChecklist
-    ? isBoosterOwed(animal.healthChecklist, animal.status)
+    ? isBoosterOwed(animal.healthChecklist, animal.status) && !animal.healthChecklist.boosterDone
     : false;
   const dueDate = rappelVaccin && animal.healthChecklist ? boosterDueDate(animal.healthChecklist) : null;
 
