@@ -173,7 +173,7 @@ export default async function FosterFamilyDetailPage(
                     <TableCell>
                       <Link
                         href={`/organisations/${params.org}/animaux/${placement.animal.id}`}
-                        className="hover:underline"
+                        className="-mx-3 -my-2.5 block px-3 py-2.5 hover:underline"
                       >
                         {placement.animal.name}
                       </Link>

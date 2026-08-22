@@ -99,7 +99,7 @@ export default async function CandidaturesPage(
                       {canEditStatus ? (
                         <Link
                           href={`/organisations/${params.org}/candidatures/${application.id}`}
-                          className="hover:underline"
+                          className="-mx-3 -my-2.5 block px-3 py-2.5 hover:underline"
                         >
                           {application.firstName} {application.lastName}
                         </Link>
@@ -131,7 +131,7 @@ export default async function CandidaturesPage(
                       {application.targetAnimal ? (
                         <Link
                           href={`/organisations/${params.org}/animaux/${application.targetAnimal.id}`}
-                          className="hover:underline"
+                          className="-mx-3 -my-2.5 block px-3 py-2.5 hover:underline"
                         >
                           {application.targetAnimal.name}
                         </Link>

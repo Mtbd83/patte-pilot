@@ -90,7 +90,7 @@ export default async function FamillesAccueilPage(
                       {isAdmin ? (
                         <Link
                           href={`/organisations/${params.org}/familles-accueil/${family.id}`}
-                          className="hover:underline"
+                          className="-mx-3 -my-2.5 block px-3 py-2.5 hover:underline"
                         >
                           {family.firstName} {family.lastName}
                         </Link>

@@ -135,7 +135,7 @@ export default async function AnimauxPage(
                 <TableCell className="font-medium">
                   <Link
                     href={`/organisations/${params.org}/animaux/${animal.id}`}
-                    className="flex items-center gap-3 hover:underline"
+                    className="-mx-3 -my-2.5 flex items-center gap-3 px-3 py-2.5 hover:underline"
                   >
                     {animal.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
