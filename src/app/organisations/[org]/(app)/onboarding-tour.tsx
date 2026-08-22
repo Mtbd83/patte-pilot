@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useImperativeHandle, useState } from "react";
-import { Sparkles, Settings, Users, PawPrint, Home, Wallet, Package, User } from "lucide-react";
+import { Sparkles, Settings, Users, PawPrint, Home, Wallet, Package, User, Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,12 @@ function buildSteps(isAdmin: boolean): Step[] {
       title: "Ajoutez vos familles d'accueil",
       description:
         "Dans l'onglet Familles d'accueil : enregistrez leurs coordonnées et associez-leur les animaux qu'elles hébergent.",
+    },
+    {
+      icon: Stethoscope,
+      title: "Renseignez vos vétérinaires partenaires",
+      description:
+        "Dans l'onglet Vétérinaires : coordonnées, consignes et tarifs par acte, avec une carte automatique. Les tarifs restent visibles aux familles d'accueil selon un réglage que vous contrôlez.",
     },
     {
       icon: isAdmin ? Wallet : Package,
