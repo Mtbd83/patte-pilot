@@ -78,6 +78,7 @@ export function OrgSidebar({
     { href: `${base}/comptabilite`, label: "Comptabilité", adminOnly: true },
     { href: `${base}/stock`, label: "Stock" },
     { href: `${base}/candidatures`, label: "Candidatures" },
+    { href: `${base}/veterinaires`, label: "Vétérinaires" },
     { href: `${base}/membres`, label: "Membres", adminOnly: true },
     { href: `${base}/parametres`, label: "Paramètres", adminOnly: true },
   ];

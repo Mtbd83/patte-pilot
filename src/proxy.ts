@@ -35,7 +35,9 @@ function buildCspHeader(nonce: string) {
     // nonce can't cover those, only 'unsafe-inline' can. Real <style>
     // tags/sheets are still 'self' (Tailwind's compiled CSS).
     `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' ${SUPABASE_ORIGIN}`,
+    // https://*.tile.openstreetmap.org: free OpenStreetMap map tiles for the
+    // partner-vets map (src/app/organisations/[org]/(app)/veterinaires).
+    `img-src 'self' ${SUPABASE_ORIGIN} https://*.tile.openstreetmap.org`,
     `font-src 'self'`,
     // The contract-field-mapper (Paramètres > Contrat) fetches the uploaded
     // PDF template client-side via pdf.js, from Supabase Storage.
@@ -71,11 +73,12 @@ function applySecurityHeaders(response: NextResponse, nonce: string) {
     "max-age=31536000; includeSubDomains; preload",
   );
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  // Nothing in the app uses the camera, microphone or geolocation —
-  // disabled outright rather than left open (the boilerplate default of
-  // geolocation=* would let ANY page loaded here, including embeds, ask
-  // for the visitor's location, which we never want).
-  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  // Camera/microphone: nothing in the app uses them, disabled outright.
+  // Geolocation: used by the partner-vets map (src/app/organisations/[org]/
+  // (app)/veterinaires/vets-map.tsx) to center on the visitor — scoped to
+  // `self` rather than left at the boilerplate default of geolocation=*,
+  // which would let ANY page loaded here, including embeds, ask for it.
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
   // X-XSS-Protection is deliberately omitted: it's deprecated, ignored by
   // every current browser, and enabling it historically opened its own XSS
   // side-channel in older ones. The CSP above is what actually matters now.

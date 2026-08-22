@@ -141,6 +141,13 @@ export const organizations = pgTable("organizations", {
   contractEmailSubject: text("contract_email_subject"),
   contractEmailBody: text("contract_email_body"),
 
+  // Admin-controlled: whether the "famille d'accueil" role can see partner
+  // vets' tariff grids (src/db/schema/veterinarians.ts) — contact details
+  // themselves stay visible to every role regardless of this flag.
+  vetTariffsVisibleToFosterFamilies: boolean("vet_tariffs_visible_to_foster_families")
+    .default(false)
+    .notNull(),
+
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

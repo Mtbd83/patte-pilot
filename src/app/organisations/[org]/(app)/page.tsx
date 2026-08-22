@@ -10,6 +10,7 @@ import {
   Settings,
   ArrowRight,
   Syringe,
+  Stethoscope,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
@@ -29,6 +30,7 @@ const MODULES = [
   { href: "comptabilite", label: "Comptabilité", description: "Entrées, sorties, solde.", icon: Wallet, adminOnly: true },
   { href: "stock", label: "Stock", description: "Articles, quantités, alertes.", icon: Package },
   { href: "candidatures", label: "Candidatures d'adoption", description: "Formulaires reçus, contrats.", icon: HeartHandshake },
+  { href: "veterinaires", label: "Vétérinaires", description: "Vétérinaires partenaires et tarifs.", icon: Stethoscope },
   { href: "membres", label: "Membres", description: "Inviter et gérer les rôles.", icon: Users, adminOnly: true },
   { href: "parametres", label: "Paramètres", description: "Profil légal de l'association.", icon: Settings, adminOnly: true },
 ];

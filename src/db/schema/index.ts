@@ -17,6 +17,7 @@ import { events } from "./events";
 import { documents } from "./documents";
 import { pushSubscriptions } from "./push-subscriptions";
 import { supplyRequests } from "./supply-requests";
+import { veterinarians, veterinarianTariffs } from "./veterinarians";
 
 export * from "./organizations";
 export * from "./animals";
@@ -29,6 +30,7 @@ export * from "./events";
 export * from "./documents";
 export * from "./push-subscriptions";
 export * from "./supply-requests";
+export * from "./veterinarians";
 
 // ---------------------------------------------------------------------------
 // All relations() calls live here, one per table, so a table's relations
@@ -55,6 +57,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   documents: many(documents),
   helloAssoLinks: many(organizationHelloAssoLinks),
   supplyRequests: many(supplyRequests),
+  veterinarians: many(veterinarians),
 }));
 
 export const organizationHelloAssoLinksRelations = relations(
@@ -125,5 +128,20 @@ export const supplyRequestsRelations = relations(supplyRequests, ({ one }) => ({
   fosterFamily: one(fosterFamilies, {
     fields: [supplyRequests.fosterFamilyId],
     references: [fosterFamilies.id],
+  }),
+}));
+
+export const veterinariansRelations = relations(veterinarians, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [veterinarians.organizationId],
+    references: [organizations.id],
+  }),
+  tariffs: many(veterinarianTariffs),
+}));
+
+export const veterinarianTariffsRelations = relations(veterinarianTariffs, ({ one }) => ({
+  veterinarian: one(veterinarians, {
+    fields: [veterinarianTariffs.veterinarianId],
+    references: [veterinarians.id],
   }),
 }));
