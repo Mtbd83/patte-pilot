@@ -131,6 +131,31 @@ describe("veterinarians server actions", () => {
     expect(geocodeAddressMock).toHaveBeenCalledTimes(1);
   });
 
+  it("uses manually-entered coordinates instead of geocoding when both are given", async () => {
+    const vet = await createVeterinarian({
+      organizationId,
+      name: "Clinique Coordonnées Manuelles",
+      address: "adresse dont le géocodage échoue",
+      latitude: 43.5,
+      longitude: 5.5,
+    });
+    expect(vet.latitude).toBe(43.5);
+    expect(vet.longitude).toBe(5.5);
+    expect(vet.geocodeError).toBeNull();
+    expect(geocodeAddressMock).not.toHaveBeenCalled();
+  });
+
+  it("lets an admin fix a vet stuck without coordinates by entering them manually", async () => {
+    geocodeAddressMock.mockResolvedValueOnce({ error: "Nominatim a répondu 403 Forbidden" });
+    const vet = await createVeterinarian({ organizationId, name: "Sans Coordonnées", address: "adresse en échec" });
+    expect(vet.latitude).toBeNull();
+    expect(vet.geocodeError).toBe("Nominatim a répondu 403 Forbidden");
+
+    const fixed = await updateVeterinarian({ veterinarianId: vet.id, organizationId, latitude: 43.6, longitude: 5.6 });
+    expect(fixed.latitude).toBe(43.6);
+    expect(fixed.longitude).toBe(5.6);
+  });
+
   it("deletes a veterinarian", async () => {
     const vet = await createVeterinarian({ organizationId, name: "À supprimer" });
     await deleteVeterinarian({ veterinarianId: vet.id, organizationId });

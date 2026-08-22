@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import "leaflet/dist/leaflet.css";
-import type { Map as LeafletMap, Layer } from "leaflet";
+import type { Map as LeafletMap, Marker } from "leaflet";
 
 export interface VetMapMarker {
   id: string;
@@ -32,12 +32,6 @@ function buildPopupContent(vet: VetMapMarker): HTMLElement {
  * map). Leaflet touches `window` at import time, so it's imported inside
  * useEffect (client-only) rather than at module scope, which would break
  * this Server-rendered-first "use client" component during SSR.
- *
- * Also asks the browser for the visitor's own position (requires
- * Permissions-Policy to allow geolocation for `self`, see src/proxy.ts) to
- * show how they sit relative to the partner vets — silently falls back to
- * the vets-only view if denied or unavailable, since it's a nice-to-have,
- * not something to block or nag about.
  */
 export function VetsMap({ vets }: { vets: VetMapMarker[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,33 +63,12 @@ export function VetsMap({ vets }: { vets: VetMapMarker[] }) {
         maxZoom: 19,
       }).addTo(map);
 
-      const layers: Layer[] = vets.map((vet) =>
+      const markers: Marker[] = vets.map((vet) =>
         L.marker([vet.latitude, vet.longitude], { icon }).addTo(map).bindPopup(buildPopupContent(vet)),
       );
 
-      const fitToLayers = () => {
-        if (layers.length > 1) map.fitBounds(L.featureGroup(layers).getBounds().pad(0.2));
-      };
-      fitToLayers();
-
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            if (cancelled) return;
-            const userMarker = L.circleMarker(
-              [position.coords.latitude, position.coords.longitude],
-              { radius: 8, weight: 2, color: "#2563eb", fillColor: "#3b82f6", fillOpacity: 0.9 },
-            )
-              .addTo(map)
-              .bindPopup("Vous êtes ici");
-            layers.push(userMarker);
-            fitToLayers();
-          },
-          () => {
-            // Denied or unavailable — the vets-only view above already stands.
-          },
-          { timeout: 5000 },
-        );
+      if (markers.length > 1) {
+        map.fitBounds(L.featureGroup(markers).getBounds().pad(0.2));
       }
     });
 
@@ -108,5 +81,10 @@ export function VetsMap({ vets }: { vets: VetMapMarker[] }) {
 
   if (vets.length === 0) return null;
 
-  return <div ref={containerRef} className="h-80 w-full rounded-lg border border-border" />;
+  // `isolate` contains Leaflet's internal panes/controls (z-index up to 1000
+  // in leaflet.css) inside this element's own stacking context — without it
+  // those values compete in the page's global stacking order and render
+  // above anything with a lower z-index, including the Dialog overlay
+  // (z-50) used for "Modifier"/"Tarifs".
+  return <div ref={containerRef} className="isolate h-80 w-full rounded-lg border border-border" />;
 }

@@ -15,32 +15,57 @@ const addressFields = {
   city: z.string().max(120).optional(),
 };
 
+const coordsFields = {
+  // Manual override — set together, takes priority over auto-geocoding.
+  // Nominatim occasionally fails from Vercel's shared IPs even for an
+  // address that geocodes fine elsewhere; this is the fallback so a vet
+  // isn't permanently stuck off the map when that happens.
+  latitude: z.coerce.number().min(-90).max(90).optional(),
+  longitude: z.coerce.number().min(-180).max(180).optional(),
+};
+
 const createVeterinarianSchema = z.object({
   organizationId: z.string().uuid(),
   name: z.string().min(1).max(200),
   ...addressFields,
+  ...coordsFields,
   phone: z.string().max(30).optional(),
   notes: z.string().optional(),
 });
 
 export type CreateVeterinarianInput = z.infer<typeof createVeterinarianSchema>;
 
-/** Admin-only: registers a new partner veterinarian, geocoding its address if given. */
+/**
+ * Admin-only: registers a new partner veterinarian. If `latitude`/
+ * `longitude` are both given, they're used as-is (manual placement); other-
+ * wise the address is geocoded automatically. `geocodeError` on the result
+ * is non-null when auto-geocoding was attempted and failed (the vet is
+ * still created either way) — surfaced by the caller as a toast so a real
+ * failure is visible without server log access.
+ */
 export async function createVeterinarian(input: CreateVeterinarianInput) {
   const session = await auth();
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
-  const data = createVeterinarianSchema.parse(input);
+  const { latitude, longitude, ...data } = createVeterinarianSchema.parse(input);
   await requireAdmin(session.user.id, data.organizationId);
 
-  const coords = await geocodeAddress(data);
+  let coords: { latitude: number; longitude: number } | null = null;
+  let geocodeError: string | null = null;
+  if (latitude != null && longitude != null) {
+    coords = { latitude, longitude };
+  } else {
+    const geocoded = await geocodeAddress(data);
+    geocodeError = geocoded && "error" in geocoded ? geocoded.error : null;
+    coords = geocoded && "latitude" in geocoded ? geocoded : null;
+  }
 
   const [veterinarian] = await db
     .insert(veterinarians)
     .values({ ...data, latitude: coords?.latitude, longitude: coords?.longitude })
     .returning();
   if (!veterinarian) throw new Error("Échec de la création du vétérinaire.");
-  return veterinarian;
+  return { ...veterinarian, geocodeError };
 }
 
 const updateVeterinarianSchema = z.object({
@@ -48,18 +73,25 @@ const updateVeterinarianSchema = z.object({
   organizationId: z.string().uuid(),
   name: z.string().min(1).max(200).optional(),
   ...addressFields,
+  ...coordsFields,
   phone: z.string().max(30).optional(),
   notes: z.string().optional(),
 });
 
 export type UpdateVeterinarianInput = z.infer<typeof updateVeterinarianSchema>;
 
-/** Admin-only: updates a veterinarian's details, re-geocoding when the address changed. */
+/**
+ * Admin-only: updates a veterinarian's details. `latitude`/`longitude`, if
+ * both given, are used as-is and take priority over re-geocoding — the
+ * fallback for fixing a vet stuck without coordinates after an automatic
+ * geocoding failure. Otherwise, changing the address re-geocodes it.
+ */
 export async function updateVeterinarian(input: UpdateVeterinarianInput) {
   const session = await auth();
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
-  const { veterinarianId, organizationId, ...rest } = updateVeterinarianSchema.parse(input);
+  const { veterinarianId, organizationId, latitude, longitude, ...rest } =
+    updateVeterinarianSchema.parse(input);
   await requireAdmin(session.user.id, organizationId);
 
   const veterinarian = await db.query.veterinarians.findFirst({
@@ -67,30 +99,37 @@ export async function updateVeterinarian(input: UpdateVeterinarianInput) {
   });
   if (!veterinarian) throw new Error("Vétérinaire introuvable.");
 
-  const addressChanged =
-    (rest.address !== undefined && rest.address !== veterinarian.address) ||
-    (rest.postalCode !== undefined && rest.postalCode !== veterinarian.postalCode) ||
-    (rest.city !== undefined && rest.city !== veterinarian.city);
+  const manualCoords = latitude != null && longitude != null ? { latitude, longitude } : null;
 
-  const coords = addressChanged
+  const addressChanged =
+    !manualCoords &&
+    ((rest.address !== undefined && rest.address !== veterinarian.address) ||
+      (rest.postalCode !== undefined && rest.postalCode !== veterinarian.postalCode) ||
+      (rest.city !== undefined && rest.city !== veterinarian.city));
+
+  const geocoded = addressChanged
     ? await geocodeAddress({
         address: rest.address ?? veterinarian.address,
         postalCode: rest.postalCode ?? veterinarian.postalCode,
         city: rest.city ?? veterinarian.city,
       })
     : null;
+  const geocodeError = geocoded && "error" in geocoded ? geocoded.error : null;
+  const coords = manualCoords ?? (geocoded && "latitude" in geocoded ? geocoded : null);
 
   const [updated] = await db
     .update(veterinarians)
     .set({
       ...rest,
-      ...(addressChanged ? { latitude: coords?.latitude ?? null, longitude: coords?.longitude ?? null } : {}),
+      ...(manualCoords || addressChanged
+        ? { latitude: coords?.latitude ?? null, longitude: coords?.longitude ?? null }
+        : {}),
       updatedAt: new Date(),
     })
     .where(eq(veterinarians.id, veterinarianId))
     .returning();
   if (!updated) throw new Error("Échec de la mise à jour du vétérinaire.");
-  return updated;
+  return { ...updated, geocodeError };
 }
 
 const deleteVeterinarianSchema = z.object({

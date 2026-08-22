@@ -32,6 +32,8 @@ export function VeterinarianFormDialog({
   const [city, setCity] = useState(veterinarian?.city ?? "");
   const [phone, setPhone] = useState(veterinarian?.phone ?? "");
   const [notes, setNotes] = useState(veterinarian?.notes ?? "");
+  const [latitude, setLatitude] = useState(veterinarian?.latitude != null ? String(veterinarian.latitude) : "");
+  const [longitude, setLongitude] = useState(veterinarian?.longitude != null ? String(veterinarian.longitude) : "");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,13 +48,19 @@ export function VeterinarianFormDialog({
         city: city || undefined,
         phone: phone || undefined,
         notes: notes || undefined,
+        latitude: latitude ? Number(latitude) : undefined,
+        longitude: longitude ? Number(longitude) : undefined,
       };
-      if (isEdit) {
-        await updateVeterinarian({ veterinarianId: veterinarian!.id, ...payload });
-        toast.success("Vétérinaire mis à jour");
+      const result = isEdit
+        ? await updateVeterinarian({ veterinarianId: veterinarian!.id, ...payload })
+        : await createVeterinarian(payload);
+
+      if (result.geocodeError) {
+        toast.warning(
+          `${isEdit ? "Vétérinaire mis à jour" : "Vétérinaire ajouté"}, mais la localisation a échoué : ${result.geocodeError}`,
+        );
       } else {
-        await createVeterinarian(payload);
-        toast.success("Vétérinaire ajouté");
+        toast.success(isEdit ? "Vétérinaire mis à jour" : "Vétérinaire ajouté");
       }
       setOpen(false);
       router.refresh();
@@ -104,6 +112,38 @@ export function VeterinarianFormDialog({
           <Field label="Consignes" htmlFor="vet-notes" hint="Toute information utile à connaître (si jamais).">
             <Textarea id="vet-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </Field>
+
+          <details className="rounded-md border border-border">
+            <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-muted-foreground">
+              Coordonnées GPS (avancé)
+            </summary>
+            <div className="flex flex-col gap-4 border-t border-border p-3">
+              <p className="text-xs text-muted-foreground">
+                Renseignées automatiquement à partir de l&apos;adresse. À remplir vous-même seulement si la
+                localisation automatique a échoué (message affiché après l&apos;enregistrement).
+              </p>
+              <FieldRow>
+                <Field label="Latitude" htmlFor="vet-latitude" className="flex-1">
+                  <Input
+                    id="vet-latitude"
+                    type="number"
+                    step="any"
+                    value={latitude}
+                    onChange={(e) => setLatitude(e.target.value)}
+                  />
+                </Field>
+                <Field label="Longitude" htmlFor="vet-longitude" className="flex-1">
+                  <Input
+                    id="vet-longitude"
+                    type="number"
+                    step="any"
+                    value={longitude}
+                    onChange={(e) => setLongitude(e.target.value)}
+                  />
+                </Field>
+              </FieldRow>
+            </div>
+          </details>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
