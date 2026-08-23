@@ -13,6 +13,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { FosterFamilyEditForm } from "./foster-family-edit-form";
 import { DeactivateFosterFamilyButton } from "./deactivate-foster-family-button";
+import { ReactivateFosterFamilyButton } from "./reactivate-foster-family-button";
 
 export default async function FosterFamilyDetailPage(
   props: {
@@ -114,19 +115,24 @@ export default async function FosterFamilyDetailPage(
         </CardContent>
       </Card>
 
-      {fosterFamily.isActive && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Désactivation</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <Card>
+        <CardHeader>
+          <CardTitle>{fosterFamily.isActive ? "Désactivation" : "Réactivation"}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {fosterFamily.isActive ? (
             <DeactivateFosterFamilyButton
               organizationId={organization.id}
               fosterFamilyId={fosterFamily.id}
             />
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <ReactivateFosterFamilyButton
+              organizationId={organization.id}
+              fosterFamilyId={fosterFamily.id}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

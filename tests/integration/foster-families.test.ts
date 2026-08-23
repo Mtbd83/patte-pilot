@@ -17,6 +17,7 @@ import {
   createFosterFamily,
   updateFosterFamily,
   deactivateFosterFamily,
+  reactivateFosterFamily,
   listFosterFamilies,
 } from "@/server/actions/foster-families";
 import { createAnimal, changeAnimalStatus } from "@/server/actions/animals";
@@ -140,6 +141,47 @@ describe("foster families server actions", () => {
       organizationId,
     });
     expect(deactivated.isActive).toBe(false);
+  });
+
+  it("reactivates a deactivated foster family", async () => {
+    const fosterFamily = await createFosterFamily({
+      organizationId,
+      firstName: "Sophie",
+      lastName: "Bernard",
+      hasCats: true,
+      hasDogs: false,
+      hasRabbits: false,
+    });
+
+    const deactivated = await deactivateFosterFamily({
+      fosterFamilyId: fosterFamily.id,
+      organizationId,
+    });
+    expect(deactivated.isActive).toBe(false);
+
+    const reactivated = await reactivateFosterFamily({
+      fosterFamilyId: fosterFamily.id,
+      organizationId,
+    });
+    expect(reactivated.isActive).toBe(true);
+  });
+
+  it("rejects a non-member from reactivating a foster family", async () => {
+    const fosterFamily = await createFosterFamily({
+      organizationId,
+      firstName: "Interdit",
+      lastName: "Reactivation",
+      hasCats: false,
+      hasDogs: false,
+      hasRabbits: false,
+    });
+    await deactivateFosterFamily({ fosterFamilyId: fosterFamily.id, organizationId });
+
+    authMock.mockResolvedValue({ user: { id: outsiderUserId, email: "outsider@example.com" } });
+
+    await expect(
+      reactivateFosterFamily({ fosterFamilyId: fosterFamily.id, organizationId }),
+    ).rejects.toThrow(ForbiddenError);
   });
 
   it("lists only active foster families by default, and all of them with includeInactive", async () => {

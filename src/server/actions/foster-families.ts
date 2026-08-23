@@ -79,8 +79,9 @@ const deactivateFosterFamilySchema = z.object({
 });
 
 /**
- * Admin-only: deactivates a foster family. Refuses if an animal is
- * currently hosted there — reassign or close that placement first.
+ * Admin, or bénévole with the "gestion_famille_accueil" permission:
+ * deactivates a foster family. Refuses if an animal is currently hosted
+ * there — reassign or close that placement first.
  */
 export async function deactivateFosterFamily(
   input: z.infer<typeof deactivateFosterFamilySchema>,
@@ -111,6 +112,38 @@ export async function deactivateFosterFamily(
     .where(eq(fosterFamilies.id, fosterFamilyId))
     .returning();
   if (!updated) throw new Error("Échec de la désactivation.");
+  return updated;
+}
+
+const reactivateFosterFamilySchema = z.object({
+  fosterFamilyId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+});
+
+/**
+ * Admin, or bénévole with the "gestion_famille_accueil" permission:
+ * reactivates a foster family previously deactivated (e.g. after a pause).
+ */
+export async function reactivateFosterFamily(
+  input: z.infer<typeof reactivateFosterFamilySchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { fosterFamilyId, organizationId } = reactivateFosterFamilySchema.parse(input);
+  await requireAdminOrPermission(session.user.id, organizationId, "gestion_famille_accueil");
+
+  const fosterFamily = await db.query.fosterFamilies.findFirst({
+    where: and(eq(fosterFamilies.id, fosterFamilyId), eq(fosterFamilies.organizationId, organizationId)),
+  });
+  if (!fosterFamily) throw new Error("Famille d'accueil introuvable.");
+
+  const [updated] = await db
+    .update(fosterFamilies)
+    .set({ isActive: true, updatedAt: new Date() })
+    .where(eq(fosterFamilies.id, fosterFamilyId))
+    .returning();
+  if (!updated) throw new Error("Échec de la réactivation.");
   return updated;
 }
 
