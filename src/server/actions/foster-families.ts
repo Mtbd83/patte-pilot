@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { animals, fosterFamilies } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
+import { requireAdminOrPermission, requireRole, ForbiddenError } from "@/lib/permissions";
 
 const createFosterFamilySchema = z.object({
   organizationId: z.string().uuid(),
@@ -28,7 +28,7 @@ export async function createFosterFamily(input: CreateFosterFamilyInput) {
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = createFosterFamilySchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "gestion_famille_accueil");
 
   const [fosterFamily] = await db.insert(fosterFamilies).values(data).returning();
   if (!fosterFamily) throw new Error("Échec de la création de la famille d'accueil.");
@@ -57,7 +57,7 @@ export async function updateFosterFamily(input: UpdateFosterFamilyInput) {
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { fosterFamilyId, organizationId, ...rest } = updateFosterFamilySchema.parse(input);
-  await requireAdmin(session.user.id, organizationId);
+  await requireAdminOrPermission(session.user.id, organizationId, "gestion_famille_accueil");
 
   const fosterFamily = await db.query.fosterFamilies.findFirst({
     where: and(eq(fosterFamilies.id, fosterFamilyId), eq(fosterFamilies.organizationId, organizationId)),
@@ -89,7 +89,7 @@ export async function deactivateFosterFamily(
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { fosterFamilyId, organizationId } = deactivateFosterFamilySchema.parse(input);
-  await requireAdmin(session.user.id, organizationId);
+  await requireAdminOrPermission(session.user.id, organizationId, "gestion_famille_accueil");
 
   const fosterFamily = await db.query.fosterFamilies.findFirst({
     where: and(eq(fosterFamilies.id, fosterFamilyId), eq(fosterFamilies.organizationId, organizationId)),

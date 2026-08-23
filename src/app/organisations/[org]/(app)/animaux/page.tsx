@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
-import { getMemberRoles } from "@/lib/permissions";
+import { getMemberRoles, getMemberPermissions } from "@/lib/permissions";
 import { listAnimalsPage, getAnimalStatusCounts, listAnimalIntakeYears } from "@/server/actions/animals";
 import { listFosterFamilies } from "@/server/actions/foster-families";
 import { getAccountingTotalsByAnimal } from "@/server/actions/accounting";
@@ -33,8 +33,13 @@ export default async function AnimauxPage(
   const organization = await findOrganizationByIdentifier(params.org);
   if (!organization) return null;
 
-  const roles = await getMemberRoles(session.user.id, organization.id);
+  const [roles, permissions] = await Promise.all([
+    getMemberRoles(session.user.id, organization.id),
+    getMemberPermissions(session.user.id, organization.id),
+  ]);
   const isAdmin = roles.includes("admin");
+  const canManageAnimals = isAdmin || permissions.includes("prise_en_charge");
+  const canAccessComptabilite = isAdmin || permissions.includes("comptabilite");
 
   const status =
     searchParams.status && STATUS_VALUES.has(searchParams.status)
@@ -49,7 +54,7 @@ export default async function AnimauxPage(
     isAdmin ? listAnimalIntakeYears({ organizationId: organization.id }) : Promise.resolve([]),
   ]);
 
-  const accountingTotals = isAdmin
+  const accountingTotals = canAccessComptabilite
     ? await getAccountingTotalsByAnimal({
         organizationId: organization.id,
         animalIds: animalsList.map((animal) => animal.id),
@@ -83,7 +88,7 @@ export default async function AnimauxPage(
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        {isAdmin && (
+        {canManageAnimals && (
           <CreateAnimalDialog
             organizationId={organization.id}
             fosterFamilies={fosterFamilies.map((f) => ({
@@ -119,7 +124,7 @@ export default async function AnimauxPage(
             <TableHead>Espèce</TableHead>
             <TableHead>Statut</TableHead>
             <TableHead>Famille d&apos;accueil</TableHead>
-            {isAdmin && <TableHead>Solde comptable</TableHead>}
+            {canAccessComptabilite && <TableHead>Solde comptable</TableHead>}
             <TableHead>Prochaine action</TableHead>
           </TableRow>
         </TableHeader>
@@ -161,7 +166,7 @@ export default async function AnimauxPage(
                     ? `${animal.currentFosterFamily.firstName} ${animal.currentFosterFamily.lastName}`
                     : "—"}
                 </TableCell>
-                {isAdmin && (
+                {canAccessComptabilite && (
                   <TableCell
                     className={
                       accountingTotal === undefined
@@ -190,7 +195,7 @@ export default async function AnimauxPage(
           })}
           {animalsList.length === 0 && (
             <TableRow>
-              <TableCell colSpan={isAdmin ? 6 : 5} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={canAccessComptabilite ? 6 : 5} className="py-8 text-center text-muted-foreground">
                 Aucun animal enregistré pour le moment.
               </TableCell>
             </TableRow>

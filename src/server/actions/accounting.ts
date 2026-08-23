@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { accountingEntries, accountingTypeEnum, accountingCategoryEnum, organizations } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { requireAdmin, ForbiddenError } from "@/lib/permissions";
+import { requireAdminOrPermission, ForbiddenError } from "@/lib/permissions";
 import { dateString } from "@/lib/validation";
 import { ACCOUNTING_CATEGORIES_BY_TYPE, ACCOUNTING_TYPE_LABELS, ACCOUNTING_CATEGORY_LABELS } from "@/lib/accounting-labels";
 import { buildAccountingExportCsv } from "@/lib/accounting-export-csv";
@@ -45,7 +45,7 @@ export async function createAccountingEntry(input: CreateAccountingEntryInput) {
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = createAccountingEntrySchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "comptabilite");
 
   const [entry] = await db
     .insert(accountingEntries)
@@ -85,7 +85,7 @@ export async function updateAccountingEntry(input: UpdateAccountingEntryInput) {
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = updateAccountingEntrySchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "comptabilite");
 
   const existing = await db.query.accountingEntries.findFirst({
     where: and(
@@ -124,7 +124,7 @@ export async function deleteAccountingEntry(
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { entryId, organizationId } = deleteAccountingEntrySchema.parse(input);
-  await requireAdmin(session.user.id, organizationId);
+  await requireAdminOrPermission(session.user.id, organizationId, "comptabilite");
 
   const entry = await db.query.accountingEntries.findFirst({
     where: and(eq(accountingEntries.id, entryId), eq(accountingEntries.organizationId, organizationId)),
@@ -148,7 +148,7 @@ export async function listAccountingEntries(
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { organizationId, type, category } = listAccountingEntriesSchema.parse(input);
-  await requireAdmin(session.user.id, organizationId);
+  await requireAdminOrPermission(session.user.id, organizationId, "comptabilite");
 
   const conditions = [eq(accountingEntries.organizationId, organizationId)];
   if (type) conditions.push(eq(accountingEntries.type, type));
@@ -202,7 +202,7 @@ export async function listAccountingEntriesPage(
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { organizationId, page, ...filters } = listAccountingEntriesPageSchema.parse(input);
-  await requireAdmin(session.user.id, organizationId);
+  await requireAdminOrPermission(session.user.id, organizationId, "comptabilite");
 
   const where = accountingFiltersWhere({ organizationId, ...filters });
 
@@ -233,7 +233,7 @@ export async function listAccountingEntryYears(input: z.infer<typeof entryYearsS
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { organizationId } = entryYearsSchema.parse(input);
-  await requireAdmin(session.user.id, organizationId);
+  await requireAdminOrPermission(session.user.id, organizationId, "comptabilite");
 
   const rows = await db.query.accountingEntries.findMany({
     where: eq(accountingEntries.organizationId, organizationId),
@@ -251,7 +251,7 @@ export async function getAccountingSummary(input: z.infer<typeof accountingFilte
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { organizationId, ...filters } = accountingFiltersSchema.parse(input);
-  await requireAdmin(session.user.id, organizationId);
+  await requireAdminOrPermission(session.user.id, organizationId, "comptabilite");
 
   const entries = await db.query.accountingEntries.findMany({
     where: accountingFiltersWhere({ organizationId, ...filters }),
@@ -285,7 +285,7 @@ export async function getAccountingTotalsByAnimal(
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { organizationId, animalIds } = totalsByAnimalSchema.parse(input);
-  await requireAdmin(session.user.id, organizationId);
+  await requireAdminOrPermission(session.user.id, organizationId, "comptabilite");
 
   if (animalIds.length === 0) return {};
 
@@ -312,7 +312,7 @@ async function fetchFilteredEntriesForExport(input: z.infer<typeof accountingFil
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = accountingFiltersSchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "comptabilite");
 
   return db.query.accountingEntries.findMany({
     where: accountingFiltersWhere(data),

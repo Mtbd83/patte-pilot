@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
-import { getMemberRoles } from "@/lib/permissions";
+import { getMemberRoles, getMemberPermissions } from "@/lib/permissions";
 import { getAdoptionApplication } from "@/server/actions/adoption-applications";
 import { listAnimals } from "@/server/actions/animals";
 import { listDocuments } from "@/server/actions/documents";
@@ -56,9 +56,13 @@ export default async function CandidatureDetailPage(
   const organization = await findOrganizationByIdentifier(params.org);
   if (!organization) notFound();
 
-  const roles = await getMemberRoles(session.user.id, organization.id);
+  const [roles, permissions] = await Promise.all([
+    getMemberRoles(session.user.id, organization.id),
+    getMemberPermissions(session.user.id, organization.id),
+  ]);
   const isAdmin = roles.includes("admin");
-  const canView = isAdmin || roles.includes("benevole");
+  const canView = isAdmin || permissions.includes("candidature");
+  const canSendDocuments = isAdmin || permissions.includes("contrat");
   if (!canView) {
     return (
       <Card className="mx-auto mt-16 max-w-md">
@@ -67,8 +71,8 @@ export default async function CandidatureDetailPage(
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Seul·e·s les administrateur·rice·s et bénévoles peuvent accéder au détail d&apos;une
-            candidature.
+            Seul·e·s les administrateur·rice·s et les bénévoles avec le droit &quot;Candidature&quot;
+            peuvent accéder au détail d&apos;une candidature.
           </p>
         </CardContent>
       </Card>
@@ -83,7 +87,7 @@ export default async function CandidatureDetailPage(
   const [animalsList, documentsList, helloAssoLinksList] = await Promise.all([
     listAnimals({ organizationId: organization.id }),
     listDocuments({ organizationId: organization.id, adoptionApplicationId: application.id }),
-    isAdmin ? listHelloAssoLinks({ organizationId: organization.id }) : Promise.resolve([]),
+    canSendDocuments ? listHelloAssoLinks({ organizationId: organization.id }) : Promise.resolve([]),
   ]);
 
   // Only animals still available to place: one already adopted or archived
@@ -280,7 +284,7 @@ export default async function CandidatureDetailPage(
         </CardContent>
       </Card>
 
-      {isAdmin && (
+      {canSendDocuments && (
         <Card>
           <CardHeader>
             <CardTitle>Certificat d&apos;engagement</CardTitle>
@@ -300,7 +304,7 @@ export default async function CandidatureDetailPage(
         </Card>
       )}
 
-      {isAdmin && (
+      {canSendDocuments && (
         <Card>
           <CardHeader>
             <CardTitle>Contrat d&apos;adoption</CardTitle>

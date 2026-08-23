@@ -38,6 +38,7 @@ interface NavLink {
   href: string;
   label: string;
   adminOnly?: boolean;
+  hidden?: boolean;
 }
 
 export function OrgSidebar({
@@ -45,6 +46,7 @@ export function OrgSidebar({
   orgName,
   logoUrl,
   isAdmin,
+  canAccessComptabilite,
   isPlatformManager,
   showOnboardingTour,
 }: {
@@ -52,6 +54,7 @@ export function OrgSidebar({
   orgName: string;
   logoUrl: string | null;
   isAdmin: boolean;
+  canAccessComptabilite: boolean;
   isPlatformManager: boolean;
   showOnboardingTour: boolean;
 }) {
@@ -75,14 +78,14 @@ export function OrgSidebar({
     { href: base, label: "Tableau de bord" },
     { href: `${base}/animaux`, label: "Animaux" },
     { href: `${base}/familles-accueil`, label: "Familles d'accueil" },
-    { href: `${base}/comptabilite`, label: "Comptabilité", adminOnly: true },
+    { href: `${base}/comptabilite`, label: "Comptabilité", hidden: !canAccessComptabilite },
     { href: `${base}/stock`, label: "Stock" },
     { href: `${base}/candidatures`, label: "Candidatures" },
     { href: `${base}/veterinaires`, label: "Vétérinaires" },
     { href: `${base}/membres`, label: "Membres", adminOnly: true },
     { href: `${base}/parametres`, label: "Paramètres", adminOnly: true },
   ];
-  const links = allLinks.filter((link) => !link.adminOnly || isAdmin);
+  const links = allLinks.filter((link) => (!link.adminOnly || isAdmin) && !link.hidden);
 
   function isActive(href: string) {
     return href === base ? pathname === base : pathname.startsWith(href);

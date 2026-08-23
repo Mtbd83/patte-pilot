@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
-import { getMemberRoles } from "@/lib/permissions";
+import { getMemberRoles, getMemberPermissions } from "@/lib/permissions";
 import { listAnimalsWithBoosterDue, listAnimals } from "@/server/actions/animals";
 import { listMySupplyRequests } from "@/server/actions/supply-requests";
 import { SupplyRequestWidget } from "./supply-request-widget";
@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 const MODULES = [
   { href: "animaux", label: "Animaux", description: "Fiches, statuts, checklist santé.", icon: PawPrint },
   { href: "familles-accueil", label: "Familles d'accueil", description: "Coordonnées et animaux hébergés.", icon: Home },
-  { href: "comptabilite", label: "Comptabilité", description: "Entrées, sorties, solde.", icon: Wallet, adminOnly: true },
+  { href: "comptabilite", label: "Comptabilité", description: "Entrées, sorties, solde.", icon: Wallet, comptabiliteOnly: true },
   { href: "stock", label: "Stock", description: "Articles, quantités, alertes.", icon: Package },
   { href: "candidatures", label: "Candidatures d'adoption", description: "Formulaires reçus, contrats.", icon: HeartHandshake },
   { href: "veterinaires", label: "Vétérinaires", description: "Vétérinaires partenaires et tarifs.", icon: Stethoscope },
@@ -47,11 +47,17 @@ export default async function OrganizationPage(
   const organization = await findOrganizationByIdentifier(params.org);
   if (!organization) return null;
 
-  const roles = await getMemberRoles(session.user.id, organization.id);
+  const [roles, permissions] = await Promise.all([
+    getMemberRoles(session.user.id, organization.id),
+    getMemberPermissions(session.user.id, organization.id),
+  ]);
   const isAdmin = roles.includes("admin");
   const isBenevole = roles.includes("benevole");
   const isFamilleAccueil = roles.includes("famille_accueil");
-  const visibleModules = MODULES.filter((module) => !module.adminOnly || isAdmin);
+  const canAccessComptabilite = isAdmin || permissions.includes("comptabilite");
+  const visibleModules = MODULES.filter(
+    (module) => (!module.adminOnly || isAdmin) && (!module.comptabiliteOnly || canAccessComptabilite),
+  );
   // The org-wide reminders card overlaps with "Mes animaux" for someone who's
   // only a famille d'accueil — admins/bénévoles need the full-org view, she
   // already gets hers (and only hers) in the card above.

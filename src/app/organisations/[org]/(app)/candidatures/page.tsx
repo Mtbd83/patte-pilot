@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
-import { getMemberRoles } from "@/lib/permissions";
+import { getMemberRoles, getMemberPermissions } from "@/lib/permissions";
 import { listAdoptionApplications } from "@/server/actions/adoption-applications";
 import { listAnimals } from "@/server/actions/animals";
 import {
@@ -46,10 +46,11 @@ export default async function CandidaturesPage(
     );
   }
 
+  const permissions = await getMemberPermissions(session.user.id, organization.id);
   const isAdmin = roles.includes("admin");
-  // Bénévoles can also work candidatures (change status, record the
-  // adopted animal) — only famille d'accueil is read-only here.
-  const canEditStatus = isAdmin || roles.includes("benevole");
+  // Bénévoles with the "candidature" permission can also work candidatures
+  // (change status, record the adopted animal) — read-only otherwise.
+  const canEditStatus = isAdmin || permissions.includes("candidature");
 
   const [applications, animalsList] = await Promise.all([
     listAdoptionApplications({ organizationId: organization.id }),

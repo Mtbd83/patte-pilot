@@ -45,6 +45,20 @@ export const orgRoleEnum = pgEnum("org_role", [
   "famille_accueil",
 ]);
 
+/**
+ * A granular sub-right within the "benevole" role — cumulable, same storage
+ * shape as roles (see organizationMemberPermissions below). Meaningless for
+ * admin (who already has everything) or famille_accueil (scoped by
+ * isResponsibleForAnimal instead) — only ever checked alongside "benevole".
+ */
+export const orgPermissionEnum = pgEnum("org_permission", [
+  "prise_en_charge",
+  "comptabilite",
+  "candidature",
+  "contrat",
+  "gestion_famille_accueil",
+]);
+
 export const invitationStatusEnum = pgEnum("invitation_status", [
   "pending",
   "accepted",
@@ -239,6 +253,21 @@ export const organizationMemberRoles = pgTable(
   }),
 );
 
+/** Granular sub-rights held by a member — only meaningful alongside the "benevole" role. */
+export const organizationMemberPermissions = pgTable(
+  "organization_member_permissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => organizationMembers.id, { onDelete: "cascade" }),
+    permission: orgPermissionEnum("permission").notNull(),
+  },
+  (table) => ({
+    uniqMemberPermission: uniqueIndex("uniq_member_permission").on(table.memberId, table.permission),
+  }),
+);
+
 /**
  * A pending or resolved invitation for someone to join an organization with
  * a given set of roles. Sent by an admin via email (Nodemailer).
@@ -250,6 +279,8 @@ export const invitations = pgTable("invitations", {
     .references(() => organizations.id, { onDelete: "cascade" }),
   email: varchar("email", { length: 255 }).notNull(),
   roles: orgRoleEnum("roles").array().notNull(),
+  // Only meaningful when "benevole" is among `roles` — null/empty otherwise.
+  benevolePermissions: orgPermissionEnum("benevole_permissions").array(),
   token: varchar("token", { length: 128 }).notNull().unique(),
   status: invitationStatusEnum("status").default("pending").notNull(),
   // Nullable + set-null on delete: the invite record (who was invited, with
@@ -281,6 +312,7 @@ export const organizationMembersRelations = relations(
       references: [users.id],
     }),
     roles: many(organizationMemberRoles),
+    permissions: many(organizationMemberPermissions),
   }),
 );
 
@@ -289,6 +321,16 @@ export const organizationMemberRolesRelations = relations(
   ({ one }) => ({
     member: one(organizationMembers, {
       fields: [organizationMemberRoles.memberId],
+      references: [organizationMembers.id],
+    }),
+  }),
+);
+
+export const organizationMemberPermissionsRelations = relations(
+  organizationMemberPermissions,
+  ({ one }) => ({
+    member: one(organizationMembers, {
+      fields: [organizationMemberPermissions.memberId],
       references: [organizationMembers.id],
     }),
   }),
@@ -309,7 +351,9 @@ export type User = typeof users.$inferSelect;
 export type Organization = typeof organizations.$inferSelect;
 export type OrganizationMember = typeof organizationMembers.$inferSelect;
 export type OrganizationMemberRole = typeof organizationMemberRoles.$inferSelect;
+export type OrganizationMemberPermission = typeof organizationMemberPermissions.$inferSelect;
 export type Invitation = typeof invitations.$inferSelect;
 export type OrgRole = (typeof orgRoleEnum.enumValues)[number];
+export type OrgPermission = (typeof orgPermissionEnum.enumValues)[number];
 export type OrganizationHelloAssoLink = typeof organizationHelloAssoLinks.$inferSelect;
 export type OrganizationSignupRequest = typeof organizationSignupRequests.$inferSelect;

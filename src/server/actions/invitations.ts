@@ -9,9 +9,11 @@ import {
   invitations,
   organizationMembers,
   organizationMemberRoles,
+  organizationMemberPermissions,
   organizations,
   users,
   orgRoleEnum,
+  orgPermissionEnum,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, ForbiddenError } from "@/lib/permissions";
@@ -20,11 +22,19 @@ import { getRequestOrigin } from "@/lib/request-origin";
 
 const INVITATION_TTL_DAYS = 7;
 
-const createInvitationSchema = z.object({
-  organizationId: z.string().uuid(),
-  email: z.string().email(),
-  roles: z.array(z.enum(orgRoleEnum.enumValues)).min(1),
-});
+const createInvitationSchema = z
+  .object({
+    organizationId: z.string().uuid(),
+    email: z.string().email(),
+    roles: z.array(z.enum(orgRoleEnum.enumValues)).min(1),
+    // Only meaningful when "benevole" is among `roles` — dropped otherwise,
+    // same rule as updateMemberRoles in src/server/actions/members.ts.
+    benevolePermissions: z.array(z.enum(orgPermissionEnum.enumValues)).optional(),
+  })
+  .refine(
+    (data) => !data.benevolePermissions?.includes("contrat") || data.benevolePermissions.includes("candidature"),
+    { message: "Le droit \"Contrat\" nécessite le droit \"Candidature\".", path: ["benevolePermissions"] },
+  );
 
 export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
 
@@ -36,7 +46,7 @@ export async function createInvitation(input: CreateInvitationInput) {
   const session = await auth();
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
-  const { organizationId, email, roles } = createInvitationSchema.parse(input);
+  const { organizationId, email, roles, benevolePermissions } = createInvitationSchema.parse(input);
 
   await requireAdmin(session.user.id, organizationId);
 
@@ -58,6 +68,7 @@ export async function createInvitation(input: CreateInvitationInput) {
       organizationId,
       email: email.toLowerCase().trim(),
       roles,
+      benevolePermissions: roles.includes("benevole") ? benevolePermissions ?? [] : [],
       token,
       invitedByUserId: session.user.id,
       expiresAt,
@@ -148,6 +159,12 @@ export async function acceptInvitation(input: z.infer<typeof acceptInvitationSch
         .values({ memberId: member.id, role })
         .onConflictDoNothing();
     }
+    for (const permission of invitation.benevolePermissions ?? []) {
+      await tx
+        .insert(organizationMemberPermissions)
+        .values({ memberId: member.id, permission })
+        .onConflictDoNothing();
+    }
 
     await tx
       .update(invitations)
@@ -218,6 +235,12 @@ export async function createAccountAndAcceptInvitation(
       await tx
         .insert(organizationMemberRoles)
         .values({ memberId: member.id, role })
+        .onConflictDoNothing();
+    }
+    for (const permission of invitation.benevolePermissions ?? []) {
+      await tx
+        .insert(organizationMemberPermissions)
+        .values({ memberId: member.id, permission })
         .onConflictDoNothing();
     }
 

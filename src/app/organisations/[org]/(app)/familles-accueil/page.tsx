@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { organizationMembers } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
-import { getMemberRoles } from "@/lib/permissions";
+import { getMemberRoles, getMemberPermissions } from "@/lib/permissions";
 import { listFosterFamilies } from "@/server/actions/foster-families";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,15 +27,19 @@ export default async function FamillesAccueilPage(
   const organization = await findOrganizationByIdentifier(params.org);
   if (!organization) notFound();
 
-  const roles = await getMemberRoles(session.user.id, organization.id);
+  const [roles, permissions] = await Promise.all([
+    getMemberRoles(session.user.id, organization.id),
+    getMemberPermissions(session.user.id, organization.id),
+  ]);
   const isAdmin = roles.includes("admin");
+  const canManageFosterFamilies = isAdmin || permissions.includes("gestion_famille_accueil");
 
   const fosterFamilies = await listFosterFamilies({
     organizationId: organization.id,
     includeInactive: true,
   });
 
-  const orgMembers = isAdmin
+  const orgMembers = canManageFosterFamilies
     ? await db.query.organizationMembers.findMany({
         where: eq(organizationMembers.organizationId, organization.id),
         with: { user: true, roles: true },
@@ -63,7 +67,7 @@ export default async function FamillesAccueilPage(
         <h1 className="mt-1 text-2xl font-semibold">Familles d&apos;accueil</h1>
       </div>
 
-      {isAdmin && (
+      {canManageFosterFamilies && (
         <CreateFosterFamilyDialog organizationId={organization.id} linkableUsers={linkableUsers} />
       )}
 
@@ -87,7 +91,7 @@ export default async function FamillesAccueilPage(
                 {fosterFamilies.map((family) => (
                   <TableRow key={family.id}>
                     <TableCell className="font-medium">
-                      {isAdmin ? (
+                      {canManageFosterFamilies ? (
                         <Link
                           href={`/organisations/${params.org}/familles-accueil/${family.id}`}
                           className="-mx-3 -my-2.5 block px-3 py-2.5 hover:underline"

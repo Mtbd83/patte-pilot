@@ -17,7 +17,7 @@ import {
   organizations,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { requireAdmin, requireRole, listOrganizationAdminUserIds, ForbiddenError } from "@/lib/permissions";
+import { requireAdmin, requireAdminOrPermission, requireRole, listOrganizationAdminUserIds, ForbiddenError } from "@/lib/permissions";
 import { sendPushToUsers } from "@/lib/push";
 import { SPECIES_LABELS } from "@/lib/animal-labels";
 
@@ -189,8 +189,8 @@ const getAdoptionApplicationSchema = z.object({
 });
 
 /**
- * Admin or bénévole (not famille d'accueil): fetches a single adoption
- * application (contains the applicant's personal details).
+ * Admin, or bénévole with the "candidature" permission: fetches a single
+ * adoption application (contains the applicant's personal details).
  */
 export async function getAdoptionApplication(
   input: z.infer<typeof getAdoptionApplicationSchema>,
@@ -199,7 +199,7 @@ export async function getAdoptionApplication(
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { applicationId, organizationId } = getAdoptionApplicationSchema.parse(input);
-  await requireRole(session.user.id, organizationId, ["admin", "benevole"]);
+  await requireAdminOrPermission(session.user.id, organizationId, "candidature");
 
   const application = await db.query.adoptionApplications.findFirst({
     where: and(
@@ -221,8 +221,8 @@ const updateStatusSchema = z.object({
 });
 
 /**
- * Admin or bénévole (not famille d'accueil): accepts/refuses/withdraws an
- * adoption application, and records which animal was adopted.
+ * Admin, or bénévole with the "candidature" permission: accepts/refuses/
+ * withdraws an adoption application, and records which animal was adopted.
  */
 export async function updateAdoptionApplicationStatus(
   input: z.infer<typeof updateStatusSchema>,
@@ -232,7 +232,7 @@ export async function updateAdoptionApplicationStatus(
 
   const { applicationId, organizationId, status, reviewNotes, targetAnimalId } =
     updateStatusSchema.parse(input);
-  await requireRole(session.user.id, organizationId, ["admin", "benevole"]);
+  await requireAdminOrPermission(session.user.id, organizationId, "candidature");
 
   const application = await db.query.adoptionApplications.findFirst({
     where: and(

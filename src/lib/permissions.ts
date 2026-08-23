@@ -5,7 +5,9 @@ import {
   organizationMemberRoles,
   users,
   type OrgRole,
+  type OrgPermission,
 } from "@/db/schema";
+import { PERMISSION_LABELS } from "@/lib/permission-labels";
 
 export class ForbiddenError extends Error {
   constructor(message = "Accès refusé") {
@@ -62,6 +64,53 @@ export async function requireRole(
 /** Convenience guard for admin-only actions. */
 export async function requireAdmin(userId: string, organizationId: string) {
   return requireRole(userId, organizationId, ["admin"]);
+}
+
+/**
+ * Returns the granular sub-rights a given user holds inside a given
+ * organization — only meaningful for a "benevole" (see
+ * organizationMemberPermissions), but not restricted to it: an admin's
+ * permission rows, if any exist, are simply irrelevant since requireAdmin-
+ * OrPermission below always passes admins regardless.
+ */
+export async function getMemberPermissions(
+  userId: string,
+  organizationId: string,
+): Promise<OrgPermission[]> {
+  const member = await db.query.organizationMembers.findFirst({
+    where: and(
+      eq(organizationMembers.userId, userId),
+      eq(organizationMembers.organizationId, organizationId),
+      eq(organizationMembers.isActive, true),
+    ),
+    with: { permissions: true },
+  });
+
+  if (!member) return [];
+  return member.permissions.map((p) => p.permission);
+}
+
+/**
+ * Server-side guard: throws ForbiddenError unless the user is an admin, or
+ * holds the specific sub-permission — the admin-or-permission pattern used
+ * throughout for actions that used to be admin-only (and, for the two
+ * candidature actions, actions that used to be open to every bénévole
+ * unconditionally — see organizationMemberPermissions).
+ */
+export async function requireAdminOrPermission(
+  userId: string,
+  organizationId: string,
+  permission: OrgPermission,
+) {
+  const roles = await getMemberRoles(userId, organizationId);
+  if (roles.includes("admin")) return;
+
+  const permissions = await getMemberPermissions(userId, organizationId);
+  if (!permissions.includes(permission)) {
+    throw new ForbiddenError(
+      `Cette action nécessite le droit "${PERMISSION_LABELS[permission]}" (ou d'être administrateur·rice) dans cette organisation.`,
+    );
+  }
 }
 
 /**

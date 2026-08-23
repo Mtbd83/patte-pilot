@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { animals, documents, organizations, adoptionApplications, users, type AnimalSpecies } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { requireAdmin, requireRole, ForbiddenError } from "@/lib/permissions";
+import { requireAdmin, requireAdminOrPermission, requireRole, ForbiddenError } from "@/lib/permissions";
 import { sendEmail, organizationSmtpConfig } from "@/lib/mailer";
 import { dateString } from "@/lib/validation";
 import { generateAdoptionContractPdf, SAMPLE_CONTRACT_DATA } from "@/lib/adoption-contract-pdf";
@@ -67,7 +67,7 @@ export async function previewCertificateEmail(
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = previewCertificateEmailSchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "contrat");
 
   const { animal, organization } = await loadAnimalAndOrganization(
     data.animalId,
@@ -145,7 +145,7 @@ export async function sendEngagementCertificate(
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = sendEngagementCertificateSchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "contrat");
 
   const { animal, organization } = await loadAnimalAndOrganization(data.animalId, data.organizationId);
 
@@ -247,7 +247,7 @@ export async function previewContractEmail(input: z.infer<typeof previewContract
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = previewContractEmailSchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "contrat");
 
   const { animal, organization } = await loadAnimalAndOrganization(
     data.animalId,
@@ -309,7 +309,7 @@ async function buildContractPdfBytes(input: GenerateContractInput) {
     throw new Error(parsed.error.issues[0]?.message ?? "Certains champs du formulaire sont invalides.");
   }
   const data = parsed.data;
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "contrat");
 
   const { animal, organization } = await loadAnimalAndOrganization(
     data.animalId,

@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { fosterFamilies, organizationMembers } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
-import { getMemberRoles } from "@/lib/permissions";
+import { getMemberRoles, getMemberPermissions } from "@/lib/permissions";
 import { SPECIES_LABELS, STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -30,8 +30,12 @@ export default async function FosterFamilyDetailPage(
   const organization = await findOrganizationByIdentifier(params.org);
   if (!organization) notFound();
 
-  const roles = await getMemberRoles(session.user.id, organization.id);
-  if (!roles.includes("admin")) {
+  const [roles, permissions] = await Promise.all([
+    getMemberRoles(session.user.id, organization.id),
+    getMemberPermissions(session.user.id, organization.id),
+  ]);
+  const canManageFosterFamilies = roles.includes("admin") || permissions.includes("gestion_famille_accueil");
+  if (!canManageFosterFamilies) {
     return (
       <Card className="mx-auto mt-16 max-w-md">
         <CardHeader>
@@ -39,7 +43,8 @@ export default async function FosterFamilyDetailPage(
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Seul·e·s les administrateur·rice·s peuvent accéder au détail d&apos;une famille d&apos;accueil.
+            Seul·e·s les administrateur·rice·s ou les bénévoles avec le droit &quot;Gestion famille d&apos;accueil&quot;
+            peuvent accéder au détail d&apos;une famille d&apos;accueil.
           </p>
         </CardContent>
       </Card>

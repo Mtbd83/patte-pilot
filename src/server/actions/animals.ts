@@ -15,7 +15,7 @@ import {
   type AnimalStatus,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { requireAdmin, requireRole, getMemberRoles, ForbiddenError } from "@/lib/permissions";
+import { requireAdmin, requireAdminOrPermission, requireRole, getMemberRoles, ForbiddenError } from "@/lib/permissions";
 import { statusRequiresFosterFamily } from "@/lib/animal-status";
 import { animalStatusRank, boosterDueDate, isBoosterDueWithin } from "@/lib/animal-care";
 import { dateString } from "@/lib/validation";
@@ -87,7 +87,7 @@ export async function createAnimal(input: CreateAnimalInput) {
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = createAnimalSchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "prise_en_charge");
 
   if (statusRequiresFosterFamily(data.status) && !data.fosterFamilyId) {
     throw new Error(
@@ -179,7 +179,7 @@ export async function updateAnimal(input: UpdateAnimalInput) {
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { animalId, organizationId, ...rest } = updateAnimalSchema.parse(input);
-  await requireAdmin(session.user.id, organizationId);
+  await requireAdminOrPermission(session.user.id, organizationId, "prise_en_charge");
 
   const animal = await db.query.animals.findFirst({
     where: and(eq(animals.id, animalId), eq(animals.organizationId, organizationId)),
@@ -271,7 +271,7 @@ export async function changeAnimalStatus(input: ChangeAnimalStatusInput) {
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = changeAnimalStatusSchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "prise_en_charge");
 
   const animal = await db.query.animals.findFirst({
     where: and(eq(animals.id, data.animalId), eq(animals.organizationId, data.organizationId)),
@@ -368,7 +368,7 @@ export async function createAnimalPlacement(input: z.infer<typeof createAnimalPl
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = createAnimalPlacementSchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "gestion_famille_accueil");
 
   if (data.endedAt && data.endedAt < data.startedAt) {
     throw new Error("La date de fin ne peut pas précéder la date de début.");
@@ -437,7 +437,7 @@ export async function updateAnimalPlacement(input: z.infer<typeof updateAnimalPl
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = updateAnimalPlacementSchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "gestion_famille_accueil");
 
   if (data.endedAt && data.endedAt < data.startedAt) {
     throw new Error("La date de fin ne peut pas précéder la date de début.");
@@ -517,7 +517,7 @@ export async function deleteAnimalPlacement(input: z.infer<typeof deleteAnimalPl
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const data = deleteAnimalPlacementSchema.parse(input);
-  await requireAdmin(session.user.id, data.organizationId);
+  await requireAdminOrPermission(session.user.id, data.organizationId, "gestion_famille_accueil");
 
   const placement = await db.query.animalPlacements.findFirst({
     where: and(eq(animalPlacements.id, data.placementId), eq(animalPlacements.animalId, data.animalId)),

@@ -7,6 +7,9 @@ import { organizationMembers } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
+import { ROLE_LABELS, ROLE_DESCRIPTIONS } from "@/lib/role-labels";
+import { PERMISSION_LABELS, PERMISSION_DESCRIPTIONS } from "@/lib/permission-labels";
+import type { OrgRole, OrgPermission } from "@/db/schema";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { InviteMemberDialog } from "./invite-member-dialog";
@@ -42,8 +45,17 @@ export default async function MembresPage(
 
   const members = await db.query.organizationMembers.findMany({
     where: eq(organizationMembers.organizationId, organization.id),
-    with: { user: true, roles: true },
+    with: { user: true, roles: true, permissions: true },
   });
+
+  const roleValues: OrgRole[] = ["admin", "benevole", "famille_accueil"];
+  const permissionValues: OrgPermission[] = [
+    "prise_en_charge",
+    "comptabilite",
+    "candidature",
+    "contrat",
+    "gestion_famille_accueil",
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,6 +70,36 @@ export default async function MembresPage(
       </div>
 
       <InviteMemberDialog organizationId={organization.id} />
+
+      <details className="rounded-md border border-border">
+        <summary className="cursor-pointer select-none px-4 py-2 text-sm font-medium">
+          Explication des rôles et des droits
+        </summary>
+        <div className="flex flex-col gap-4 border-t border-border px-4 py-3">
+          <div>
+            <p className="text-sm font-medium">Rôles</p>
+            <dl className="mt-1 flex flex-col gap-1">
+              {roleValues.map((role) => (
+                <div key={role} className="text-sm">
+                  <dt className="inline font-medium">{ROLE_LABELS[role]} — </dt>
+                  <dd className="inline text-muted-foreground">{ROLE_DESCRIPTIONS[role]}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          <div>
+            <p className="text-sm font-medium">Droits du bénévole (cumulables)</p>
+            <dl className="mt-1 flex flex-col gap-1">
+              {permissionValues.map((permission) => (
+                <div key={permission} className="text-sm">
+                  <dt className="inline font-medium">{PERMISSION_LABELS[permission]} — </dt>
+                  <dd className="inline text-muted-foreground">{PERMISSION_DESCRIPTIONS[permission]}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </details>
 
       <Table>
         <TableHeader>
@@ -75,6 +117,7 @@ export default async function MembresPage(
                   organizationId={organization.id}
                   memberId={member.id}
                   currentRoles={member.roles.map((r) => r.role)}
+                  currentPermissions={member.permissions.map((p) => p.permission)}
                 />
               </TableCell>
             </TableRow>

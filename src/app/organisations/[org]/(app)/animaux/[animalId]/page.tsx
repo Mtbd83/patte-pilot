@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { animals } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
-import { getMemberRoles } from "@/lib/permissions";
+import { getMemberRoles, getMemberPermissions } from "@/lib/permissions";
 import { listFosterFamilies } from "@/server/actions/foster-families";
 import { listAccountingEntriesPage, getAccountingSummary } from "@/server/actions/accounting";
 import { SPECIES_LABELS, SEX_LABELS, STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/animal-labels";
@@ -45,7 +45,10 @@ export default async function AnimalDetailPage(
   const organization = await findOrganizationByIdentifier(params.org);
   if (!organization) return null;
 
-  const roles = await getMemberRoles(session.user.id, organization.id);
+  const [roles, permissions] = await Promise.all([
+    getMemberRoles(session.user.id, organization.id),
+    getMemberPermissions(session.user.id, organization.id),
+  ]);
 
   const animal = await db.query.animals.findFirst({
     where: and(eq(animals.id, params.animalId), eq(animals.organizationId, organization.id)),
@@ -66,17 +69,20 @@ export default async function AnimalDetailPage(
     roles.includes("famille_accueil") &&
     animal.currentFosterFamily?.linkedUserId === session.user.id;
   const canEditHealthChecklist = isAdmin || isResponsibleFosterFamily;
+  const canManageAnimals = isAdmin || permissions.includes("prise_en_charge");
+  const canManageFosterFamilies = isAdmin || permissions.includes("gestion_famille_accueil");
+  const canAccessComptabilite = isAdmin || permissions.includes("comptabilite");
 
-  const fosterFamilies = isAdmin
+  const fosterFamilies = canManageAnimals
     ? await listFosterFamilies({ organizationId: organization.id })
     : [];
   // Includes inactive families too — a historical placement may well have
   // been with a family that's since been deactivated.
-  const allFosterFamilies = isAdmin
+  const allFosterFamilies = canManageFosterFamilies
     ? await listFosterFamilies({ organizationId: organization.id, includeInactive: true })
     : [];
 
-  const [{ entries: accountingEntries, total: accountingTotalCount }, accountingSummary] = isAdmin
+  const [{ entries: accountingEntries, total: accountingTotalCount }, accountingSummary] = canAccessComptabilite
     ? await Promise.all([
         listAccountingEntriesPage({ organizationId: organization.id, animalId: animal.id, page: 1 }),
         getAccountingSummary({ organizationId: organization.id, animalId: animal.id }),
@@ -103,7 +109,7 @@ export default async function AnimalDetailPage(
           <CardTitle>Informations générales</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {isAdmin || (isResponsibleFosterFamily && !animal.photoUrl) ? (
+          {canManageAnimals || (isResponsibleFosterFamily && !animal.photoUrl) ? (
             <AnimalPhotoUpload organizationId={organization.id} animalId={animal.id} photoUrl={animal.photoUrl} />
           ) : (
             animal.photoUrl && (
@@ -115,7 +121,7 @@ export default async function AnimalDetailPage(
               />
             )
           )}
-          {isAdmin ? (
+          {canManageAnimals ? (
             <AnimalEditForm organizationId={organization.id} animal={animal} />
           ) : (
             <>
@@ -158,7 +164,7 @@ export default async function AnimalDetailPage(
           {animal.adoptionDate && (
             <p className="text-sm text-muted-foreground">Adopté le {animal.adoptionDate}</p>
           )}
-          {isAdmin && (
+          {canManageAnimals && (
             <StatusForm
               organizationId={organization.id}
               animalId={animal.id}
@@ -236,7 +242,7 @@ export default async function AnimalDetailPage(
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Historique des placements</CardTitle>
-          {isAdmin && allFosterFamilies.length > 0 && (
+          {canManageFosterFamilies && allFosterFamilies.length > 0 && (
             <PlacementDialog
               organizationId={organization.id}
               animalId={animal.id}
@@ -254,7 +260,7 @@ export default async function AnimalDetailPage(
                   <TableHead>Famille d&apos;accueil</TableHead>
                   <TableHead>Début</TableHead>
                   <TableHead>Fin</TableHead>
-                  {isAdmin && <TableHead />}
+                  {canManageFosterFamilies && <TableHead />}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -269,7 +275,7 @@ export default async function AnimalDetailPage(
                         ? new Date(placement.endedAt).toLocaleDateString("fr-FR")
                         : "En cours"}
                     </TableCell>
-                    {isAdmin && (
+                    {canManageFosterFamilies && (
                       <TableCell>
                         <div className="flex gap-1">
                           <PlacementDialog
@@ -299,7 +305,7 @@ export default async function AnimalDetailPage(
         </CardContent>
       </Card>
 
-      {isAdmin && (
+      {canAccessComptabilite && (
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Comptabilité</CardTitle>

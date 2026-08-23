@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
-import { getMemberRoles } from "@/lib/permissions";
+import { getMemberRoles, getMemberPermissions } from "@/lib/permissions";
 import {
   listAccountingEntriesPage,
   listAccountingEntryYears,
@@ -64,8 +64,12 @@ export default async function ComptabilitePage(
   const organization = await findOrganizationByIdentifier(params.org);
   if (!organization) notFound();
 
-  const roles = await getMemberRoles(session.user.id, organization.id);
-  if (!roles.includes("admin")) {
+  const [roles, permissions] = await Promise.all([
+    getMemberRoles(session.user.id, organization.id),
+    getMemberPermissions(session.user.id, organization.id),
+  ]);
+  const canAccessComptabilite = roles.includes("admin") || permissions.includes("comptabilite");
+  if (!canAccessComptabilite) {
     return (
       <Card className="mx-auto mt-16 max-w-md">
         <CardHeader>
@@ -73,7 +77,8 @@ export default async function ComptabilitePage(
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Seul·e·s les administrateur·rice·s peuvent accéder à la comptabilité.
+            Seul·e·s les administrateur·rice·s ou les bénévoles avec le droit &quot;Comptabilité&quot;
+            peuvent accéder à la comptabilité.
           </p>
         </CardContent>
       </Card>

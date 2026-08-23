@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
-import { getMemberRoles, isPlatformManager } from "@/lib/permissions";
+import { getMemberRoles, getMemberPermissions, isPlatformManager } from "@/lib/permissions";
 import { OrgSidebar } from "./org-sidebar";
 
 /**
@@ -48,7 +48,11 @@ export default async function OrganizationLayout(
   }
 
   const platformManager = await isPlatformManager(session.user.id);
-  const currentUser = await db.query.users.findFirst({ where: eq(users.id, session.user.id) });
+  const [currentUser, permissions] = await Promise.all([
+    db.query.users.findFirst({ where: eq(users.id, session.user.id) }),
+    getMemberPermissions(session.user.id, organization.id),
+  ]);
+  const isAdmin = roles.includes("admin");
 
   return (
     <div className="min-h-dvh bg-background md:flex">
@@ -56,7 +60,8 @@ export default async function OrganizationLayout(
         orgSlug={params.org}
         orgName={organization.name}
         logoUrl={organization.logoUrl}
-        isAdmin={roles.includes("admin")}
+        isAdmin={isAdmin}
+        canAccessComptabilite={isAdmin || permissions.includes("comptabilite")}
         isPlatformManager={platformManager}
         showOnboardingTour={!currentUser?.onboardingCompletedAt}
       />
