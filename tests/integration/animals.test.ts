@@ -42,6 +42,7 @@ import {
   listAnimalsPage,
   getAnimalStatusCounts,
   listAnimalIntakeYears,
+  listPubliclyAdoptableAnimals,
   exportAnimalRegisterCsv,
   exportAnimalRegisterPdf,
 } from "@/server/actions/animals";
@@ -701,6 +702,45 @@ describe("animals server actions", () => {
     const adopted = await listAnimals({ organizationId, status: "adopte" });
     expect(adopted.every((a) => a.status === "adopte")).toBe(true);
     expect(adopted.some((a) => a.name === "Pixel")).toBe(true);
+  });
+
+  it("publicly lists only à-l'adoption and réservé animals, without requiring auth", async () => {
+    const forAdoption = await createAnimal({
+      organizationId,
+      name: "PublicPickMe",
+      species: "chat",
+      intakeDate: "2026-01-01",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    await changeAnimalStatus({
+      animalId: forAdoption.id,
+      organizationId,
+      status: "a_l_adoption",
+      fosterFamilyId: fosterFamilyAId,
+    });
+
+    const reserved = await createAnimal({
+      organizationId,
+      name: "PublicReserved",
+      species: "chien",
+      intakeDate: "2026-01-01",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    await changeAnimalStatus({
+      animalId: reserved.id,
+      organizationId,
+      status: "reserve",
+      fosterFamilyId: fosterFamilyAId,
+    });
+
+    authMock.mockResolvedValue(null);
+    const publicList = await listPubliclyAdoptableAnimals({ organizationId });
+
+    expect(publicList.some((a) => a.id === forAdoption.id && a.status === "a_l_adoption")).toBe(true);
+    expect(publicList.some((a) => a.id === reserved.id && a.status === "reserve")).toBe(true);
+    expect(publicList.every((a) => a.status === "a_l_adoption" || a.status === "reserve")).toBe(true);
   });
 
   it("allows a bénévole to list animals (read access)", async () => {

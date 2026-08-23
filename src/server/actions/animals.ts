@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -671,6 +671,33 @@ export async function listAnimals(input: z.infer<typeof listAnimalsSchema>) {
     orderBy: desc(animals.createdAt),
     with: { healthChecklist: true, currentFosterFamily: true },
   });
+}
+
+const listPubliclyAdoptableAnimalsSchema = z.object({
+  organizationId: z.string().uuid(),
+});
+
+/**
+ * Fully public, no authentication: the animals shown as pickable options on
+ * the public adoption form (`/organisations/[org]/adopter`) — those
+ * currently "à l'adoption" or "réservé". Only ever exposes name/species,
+ * never anything else on the animal record.
+ */
+export async function listPubliclyAdoptableAnimals(
+  input: z.infer<typeof listPubliclyAdoptableAnimalsSchema>,
+) {
+  const { organizationId } = listPubliclyAdoptableAnimalsSchema.parse(input);
+
+  const rows = await db.query.animals.findMany({
+    where: and(
+      eq(animals.organizationId, organizationId),
+      or(eq(animals.status, "a_l_adoption"), eq(animals.status, "reserve")),
+    ),
+    orderBy: animals.name,
+    columns: { id: true, name: true, species: true, status: true },
+  });
+
+  return rows;
 }
 
 const ANIMALS_PAGE_SIZE = 20;

@@ -14,6 +14,7 @@ import {
 import { SPECIES_LABELS } from "@/lib/animal-labels";
 import type {
   AnimalSpecies,
+  AnimalStatus,
   HousingType,
   HousingZone,
   LivingSituation,
@@ -26,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Field, FieldRow } from "@/components/ui/field";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
@@ -118,11 +120,28 @@ const INITIAL_STATE: FormState = {
   additionalComments: "",
 };
 
-export function AdoptionApplicationForm({ organizationId }: { organizationId: string }) {
+interface AdoptableAnimal {
+  id: string;
+  name: string;
+  status: AnimalStatus;
+}
+
+export function AdoptionApplicationForm({
+  organizationId,
+  adoptableAnimals,
+}: {
+  organizationId: string;
+  adoptableAnimals: AdoptableAnimal[];
+}) {
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  // Drives the "pick from the list" select below — separate from
+  // form.specificAnimalName (the actual free-text field submitted) so a
+  // manual edit after picking doesn't leave a stale reserved-animal warning.
+  const [selectedAnimalId, setSelectedAnimalId] = useState("");
+  const selectedAnimal = adoptableAnimals.find((a) => a.id === selectedAnimalId);
   // Honeypot: real visitors never see or focus this field (hidden off-screen
   // below); bots that fill in every input on the page trip it.
   const [honeypot, setHoneypot] = useState("");
@@ -579,11 +598,46 @@ export function AdoptionApplicationForm({ organizationId }: { organizationId: st
               ))}
             </Select>
           </Field>
-          <Field label="Un coup de cœur pour un animal précis ? Précisez son prénom" htmlFor="ad-specific-animal">
+          <Field
+            label="Un coup de cœur pour un animal précis ?"
+            htmlFor="ad-specific-animal-select"
+            hint="Si l'animal qui vous intéresse n'apparaît pas dans cette liste, c'est qu'il a déjà été adopté."
+          >
+            <Select
+              id="ad-specific-animal-select"
+              value={selectedAnimalId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedAnimalId(id);
+                const animal = adoptableAnimals.find((a) => a.id === id);
+                set("specificAnimalName", animal?.name ?? "");
+              }}
+            >
+              <option value="">— Animaux à l&apos;adoption —</option>
+              {adoptableAnimals.map((animal) => (
+                <option key={animal.id} value={animal.id}>
+                  {animal.name}
+                  {animal.status === "reserve" ? " (⚠️ réservé)" : ""}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {selectedAnimal?.status === "reserve" && (
+            <Badge variant="warning" className="self-start">
+              Attention : cet animal est actuellement réservé par une autre famille.
+            </Badge>
+          )}
+          <Field
+            label="Ou précisez librement (nom, race, description...)"
+            htmlFor="ad-specific-animal"
+          >
             <Input
               id="ad-specific-animal"
               value={form.specificAnimalName}
-              onChange={(e) => set("specificAnimalName", e.target.value)}
+              onChange={(e) => {
+                setSelectedAnimalId("");
+                set("specificAnimalName", e.target.value);
+              }}
             />
           </Field>
           <Field label="Si vous souhaitez nous partager quelque chose, c'est le moment !" htmlFor="ad-additional-comments">

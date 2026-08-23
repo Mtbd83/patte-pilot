@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
+import { listPubliclyAdoptableAnimals } from "@/server/actions/animals";
 import { AdoptionApplicationForm } from "./adoption-application-form";
 
 /** Fully public page — no authentication required to submit an adoption application. */
@@ -11,6 +12,8 @@ export default async function AdopterPage(
   const params = await props.params;
   const organization = await findOrganizationByIdentifier(params.org);
   if (!organization) notFound();
+
+  const adoptableAnimals = await listPubliclyAdoptableAnimals({ organizationId: organization.id });
 
   return (
     <div className="min-h-dvh bg-background">
@@ -33,7 +36,7 @@ export default async function AdopterPage(
             vous rapidement.
           </p>
         </div>
-        <AdoptionApplicationForm organizationId={organization.id} />
+        <AdoptionApplicationForm organizationId={organization.id} adoptableAnimals={adoptableAnimals} />
       </main>
     </div>
   );
