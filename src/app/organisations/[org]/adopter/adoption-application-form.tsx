@@ -123,6 +123,7 @@ const INITIAL_STATE: FormState = {
 interface AdoptableAnimal {
   id: string;
   name: string;
+  species: AnimalSpecies;
   status: AnimalStatus;
 }
 
@@ -142,6 +143,9 @@ export function AdoptionApplicationForm({
   // manual edit after picking doesn't leave a stale reserved-animal warning.
   const [selectedAnimalId, setSelectedAnimalId] = useState("");
   const selectedAnimal = adoptableAnimals.find((a) => a.id === selectedAnimalId);
+  const visibleAnimals = form.desiredSpecies
+    ? adoptableAnimals.filter((a) => a.species === form.desiredSpecies)
+    : adoptableAnimals;
   // Honeypot: real visitors never see or focus this field (hidden off-screen
   // below); bots that fill in every input on the page trip it.
   const [honeypot, setHoneypot] = useState("");
@@ -588,7 +592,16 @@ export function AdoptionApplicationForm({
               id="ad-desired-species"
               value={form.desiredSpecies}
               required
-              onChange={(e) => set("desiredSpecies", e.target.value as AnimalSpecies)}
+              onChange={(e) => {
+                const species = e.target.value as AnimalSpecies;
+                set("desiredSpecies", species);
+                // The "coup de cœur" list below is filtered by this species
+                // — clear a pick that no longer matches it.
+                if (selectedAnimal && selectedAnimal.species !== species) {
+                  setSelectedAnimalId("");
+                  set("specificAnimalName", "");
+                }
+              }}
             >
               <option value="">—</option>
               {SPECIES_OPTIONS.map(([value, label]) => (
@@ -601,7 +614,7 @@ export function AdoptionApplicationForm({
           <Field
             label="Un coup de cœur pour un animal précis ?"
             htmlFor="ad-specific-animal-select"
-            hint="Si l'animal qui vous intéresse n'apparaît pas dans cette liste, c'est qu'il a déjà été adopté."
+            hint="Liste filtrée selon le type d'animal choisi ci-dessus. Si l'animal qui vous intéresse n'y apparaît pas, c'est qu'il a déjà été adopté."
           >
             <Select
               id="ad-specific-animal-select"
@@ -614,7 +627,7 @@ export function AdoptionApplicationForm({
               }}
             >
               <option value="">— Animaux à l&apos;adoption —</option>
-              {adoptableAnimals.map((animal) => (
+              {visibleAnimals.map((animal) => (
                 <option key={animal.id} value={animal.id}>
                   {animal.name}
                   {animal.status === "reserve" ? " (⚠️ réservé)" : ""}
