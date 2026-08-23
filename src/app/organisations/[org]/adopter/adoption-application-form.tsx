@@ -299,6 +299,80 @@ export function AdoptionApplicationForm({
 
       <Card>
         <CardHeader>
+          <CardTitle>Quel animal recherchez-vous ?</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Field label="Type d'animal souhaité" htmlFor="ad-desired-species" required>
+            <Select
+              id="ad-desired-species"
+              value={form.desiredSpecies}
+              required
+              onChange={(e) => {
+                const species = e.target.value as AnimalSpecies;
+                set("desiredSpecies", species);
+                // The "coup de cœur" list below is filtered by this species
+                // — clear a pick that no longer matches it.
+                if (selectedAnimal && selectedAnimal.species !== species) {
+                  setSelectedAnimalId("");
+                  set("specificAnimalName", "");
+                }
+              }}
+            >
+              <option value="">—</option>
+              {SPECIES_OPTIONS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field
+            label="Un coup de cœur pour un animal précis ?"
+            htmlFor="ad-specific-animal-select"
+            hint="Liste filtrée selon le type d'animal choisi ci-dessus. Si l'animal qui vous intéresse n'y apparaît pas, c'est qu'il a déjà été adopté."
+          >
+            <Select
+              id="ad-specific-animal-select"
+              value={selectedAnimalId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedAnimalId(id);
+                const animal = adoptableAnimals.find((a) => a.id === id);
+                set("specificAnimalName", animal?.name ?? "");
+              }}
+            >
+              <option value="">— Animaux à l&apos;adoption —</option>
+              {visibleAnimals.map((animal) => (
+                <option key={animal.id} value={animal.id}>
+                  {animal.name}
+                  {animal.status === "reserve" ? " (⚠️ réservé)" : ""}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {selectedAnimal?.status === "reserve" && (
+            <Badge variant="warning" className="self-start">
+              Attention : cet animal est actuellement réservé par une autre famille.
+            </Badge>
+          )}
+          <Field
+            label="Ou précisez librement (nom, race, description...)"
+            htmlFor="ad-specific-animal"
+          >
+            <Input
+              id="ad-specific-animal"
+              value={form.specificAnimalName}
+              onChange={(e) => {
+                setSelectedAnimalId("");
+                set("specificAnimalName", e.target.value);
+              }}
+            />
+          </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Votre logement</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -584,75 +658,9 @@ export function AdoptionApplicationForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Votre souhait d&apos;adoption</CardTitle>
+          <CardTitle>Un dernier mot ?</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Field label="Type d'animal souhaité" htmlFor="ad-desired-species" required>
-            <Select
-              id="ad-desired-species"
-              value={form.desiredSpecies}
-              required
-              onChange={(e) => {
-                const species = e.target.value as AnimalSpecies;
-                set("desiredSpecies", species);
-                // The "coup de cœur" list below is filtered by this species
-                // — clear a pick that no longer matches it.
-                if (selectedAnimal && selectedAnimal.species !== species) {
-                  setSelectedAnimalId("");
-                  set("specificAnimalName", "");
-                }
-              }}
-            >
-              <option value="">—</option>
-              {SPECIES_OPTIONS.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field
-            label="Un coup de cœur pour un animal précis ?"
-            htmlFor="ad-specific-animal-select"
-            hint="Liste filtrée selon le type d'animal choisi ci-dessus. Si l'animal qui vous intéresse n'y apparaît pas, c'est qu'il a déjà été adopté."
-          >
-            <Select
-              id="ad-specific-animal-select"
-              value={selectedAnimalId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setSelectedAnimalId(id);
-                const animal = adoptableAnimals.find((a) => a.id === id);
-                set("specificAnimalName", animal?.name ?? "");
-              }}
-            >
-              <option value="">— Animaux à l&apos;adoption —</option>
-              {visibleAnimals.map((animal) => (
-                <option key={animal.id} value={animal.id}>
-                  {animal.name}
-                  {animal.status === "reserve" ? " (⚠️ réservé)" : ""}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          {selectedAnimal?.status === "reserve" && (
-            <Badge variant="warning" className="self-start">
-              Attention : cet animal est actuellement réservé par une autre famille.
-            </Badge>
-          )}
-          <Field
-            label="Ou précisez librement (nom, race, description...)"
-            htmlFor="ad-specific-animal"
-          >
-            <Input
-              id="ad-specific-animal"
-              value={form.specificAnimalName}
-              onChange={(e) => {
-                setSelectedAnimalId("");
-                set("specificAnimalName", e.target.value);
-              }}
-            />
-          </Field>
           <Field label="Si vous souhaitez nous partager quelque chose, c'est le moment !" htmlFor="ad-additional-comments">
             <Textarea
               id="ad-additional-comments"
