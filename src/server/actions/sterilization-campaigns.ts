@@ -9,11 +9,14 @@ import {
   sterilizationCampaignVolunteers,
   sterilizationPartnerEnum,
   organizationMembers,
+  organizations,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireAdminOrPermission, getMemberRoles, getMemberPermissions, ForbiddenError } from "@/lib/permissions";
 import { dateString } from "@/lib/validation";
 import { uploadImage } from "@/lib/uploads";
+import { STERILIZATION_PARTNER_LABELS, VOUCHER_SEX_LABELS } from "@/lib/sterilization-labels";
+import { generateSterilizationCampaignPdf } from "@/lib/sterilization-campaign-pdf";
 
 /**
  * Admin, or bénévole holding "campagne_sterilisation" AND assigned to this
@@ -458,4 +461,61 @@ export async function unassignCampaignVolunteer(
         eq(sterilizationCampaignVolunteers.memberId, memberId),
       ),
     );
+}
+
+const exportSterilizationCampaignPdfSchema = z.object({
+  campaignId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+});
+
+/**
+ * Admin, or bénévole assigned to this campaign: the campaign's info and
+ * full voucher list as a PDF — a header block, then a table of vouchers.
+ */
+export async function exportSterilizationCampaignPdf(
+  input: z.infer<typeof exportSterilizationCampaignPdfSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { campaignId, organizationId } = exportSterilizationCampaignPdfSchema.parse(input);
+  await requireAdminOrCampaignAccess(session.user.id, organizationId, campaignId);
+
+  const [campaign, organization] = await Promise.all([
+    db.query.sterilizationCampaigns.findFirst({
+      where: and(eq(sterilizationCampaigns.id, campaignId), eq(sterilizationCampaigns.organizationId, organizationId)),
+      with: { vouchers: { orderBy: (vouchers, { desc }) => [desc(vouchers.date)] } },
+    }),
+    db.query.organizations.findFirst({ where: eq(organizations.id, organizationId) }),
+  ]);
+  if (!campaign) throw new Error("Campagne introuvable.");
+  if (!organization) throw new Error("Association introuvable.");
+
+  const usedMale = campaign.vouchers.filter((v) => v.sex === "male").length;
+  const usedFemale = campaign.vouchers.filter((v) => v.sex === "femelle").length;
+
+  const pdfBytes = await generateSterilizationCampaignPdf({
+    info: {
+      organizationName: organization.name,
+      city: campaign.city,
+      partnerLabel: STERILIZATION_PARTNER_LABELS[campaign.partner],
+      vetName: campaign.vetName,
+      vetAddress: campaign.vetAddress,
+      vetPhone: campaign.vetPhone,
+      voucherQuotaTotal: campaign.voucherQuotaTotal,
+      voucherQuotaMale: campaign.voucherQuotaMale,
+      voucherQuotaFemale: campaign.voucherQuotaFemale,
+      usedCount: campaign.vouchers.length,
+      usedMale,
+      usedFemale,
+    },
+    rows: campaign.vouchers.map((voucher) => ({
+      voucherNumber: voucher.voucherNumber,
+      identificationNumber: voucher.identificationNumber,
+      date: new Date(voucher.date).toLocaleDateString("fr-FR"),
+      sex: voucher.sex === "male" || voucher.sex === "femelle" ? VOUCHER_SEX_LABELS[voucher.sex] : "—",
+    })),
+  });
+
+  return { pdfBase64: Buffer.from(pdfBytes).toString("base64") };
 }

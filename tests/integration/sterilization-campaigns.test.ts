@@ -29,6 +29,7 @@ import {
   listCampaignVolunteers,
   assignCampaignVolunteer,
   unassignCampaignVolunteer,
+  exportSterilizationCampaignPdf,
 } from "@/server/actions/sterilization-campaigns";
 import { updateSterilizationCampaignModule } from "@/server/actions/organizations";
 import { updateMemberRoles } from "@/server/actions/members";
@@ -220,6 +221,44 @@ describe("sterilization campaign server actions", () => {
     expect(updated.city).toBe("Digne-les-Bains");
     expect(updated.voucherQuotaTotal).toBe(8);
     expect(updated.partner).toBe("spa");
+  });
+
+  it("exports a campaign as a PDF, header info plus its vouchers", async () => {
+    const campaign = await createSterilizationCampaign({
+      organizationId,
+      city: "Manosque",
+      partner: "autre",
+      vetName: "Dr. PDF Test",
+      voucherQuotaTotal: 2,
+    });
+
+    const voucherFormData = new FormData();
+    voucherFormData.set("campaignId", campaign.id);
+    voucherFormData.set("organizationId", organizationId);
+    voucherFormData.set("voucherNumber", "PDF-01");
+    voucherFormData.set("identificationNumber", "250000000000077");
+    voucherFormData.set("date", "2026-04-01");
+    voucherFormData.set("sex", "male");
+    await createSterilizationVoucher(voucherFormData);
+
+    const { pdfBase64 } = await exportSterilizationCampaignPdf({ campaignId: campaign.id, organizationId });
+    const pdfBytes = Buffer.from(pdfBase64, "base64");
+    expect(pdfBytes.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+  });
+
+  it("rejects a non-assigned bénévole from exporting a campaign", async () => {
+    const campaign = await createSterilizationCampaign({
+      organizationId,
+      city: "Forcalquier",
+      partner: "spa",
+      vetName: "Dr. PDF Test",
+      voucherQuotaTotal: 2,
+    });
+
+    authMock.mockResolvedValue({ user: { id: benevoleUserId, email: "benevole@example.com" } });
+    await expect(
+      exportSterilizationCampaignPdf({ campaignId: campaign.id, organizationId }),
+    ).rejects.toThrow(ForbiddenError);
   });
 
   describe("per-campaign bénévole access (campagne_sterilisation permission)", () => {

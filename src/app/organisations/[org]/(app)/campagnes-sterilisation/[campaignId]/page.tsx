@@ -18,6 +18,7 @@ import { CampaignFormDialog } from "../campaign-form-dialog";
 import { VoucherFormDialog } from "./voucher-form-dialog";
 import { DeleteVoucherButton } from "./delete-voucher-button";
 import { CampaignVolunteersForm } from "./campaign-volunteers-form";
+import { CampaignPdfExportButton } from "./campaign-pdf-export-button";
 
 export default async function CampagneSterilisationDetailPage(
   props: {
@@ -111,13 +112,16 @@ export default async function CampagneSterilisationDetailPage(
               {[campaign.vetName, campaign.vetAddress, campaign.vetPhone].filter(Boolean).join(" · ")}
             </CardDescription>
           </div>
-          {isAdmin && (
-            <CampaignFormDialog
-              organizationId={organization.id}
-              veterinarians={veterinarians.map((v) => ({ id: v.id, name: v.name, address: v.address, phone: v.phone }))}
-              campaign={campaign}
-            />
-          )}
+          <div className="flex flex-wrap gap-2">
+            <CampaignPdfExportButton organizationId={organization.id} campaignId={campaign.id} city={campaign.city} />
+            {isAdmin && (
+              <CampaignFormDialog
+                organizationId={organization.id}
+                veterinarians={veterinarians.map((v) => ({ id: v.id, name: v.name, address: v.address, phone: v.phone }))}
+                campaign={campaign}
+              />
+            )}
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-1">
           <p className="text-sm text-muted-foreground">
