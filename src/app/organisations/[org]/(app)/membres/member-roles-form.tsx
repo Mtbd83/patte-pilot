@@ -17,6 +17,7 @@ const PERMISSION_VALUES: OrgPermission[] = [
   "candidature",
   "contrat",
   "gestion_famille_accueil",
+  "campagne_sterilisation",
 ];
 
 export function MemberRolesForm({

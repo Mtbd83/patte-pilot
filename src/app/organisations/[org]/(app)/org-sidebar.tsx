@@ -47,6 +47,7 @@ export function OrgSidebar({
   logoUrl,
   isAdmin,
   canAccessComptabilite,
+  showSterilizationCampaignsTab,
   isPlatformManager,
   showOnboardingTour,
 }: {
@@ -55,6 +56,7 @@ export function OrgSidebar({
   logoUrl: string | null;
   isAdmin: boolean;
   canAccessComptabilite: boolean;
+  showSterilizationCampaignsTab: boolean;
   isPlatformManager: boolean;
   showOnboardingTour: boolean;
 }) {
@@ -82,6 +84,11 @@ export function OrgSidebar({
     { href: `${base}/stock`, label: "Stock" },
     { href: `${base}/candidatures`, label: "Candidatures" },
     { href: `${base}/veterinaires`, label: "Vétérinaires" },
+    {
+      href: `${base}/campagnes-sterilisation`,
+      label: "Campagne de stérilisation",
+      hidden: !showSterilizationCampaignsTab,
+    },
     { href: `${base}/membres`, label: "Membres", adminOnly: true },
     { href: `${base}/parametres`, label: "Paramètres", adminOnly: true },
   ];
@@ -190,7 +197,12 @@ export function OrgSidebar({
             </div>
           </div>
         )}
-        <OnboardingTour ref={onboardingRef} isAdmin={isAdmin} initialOpen={showOnboardingTour} />
+        <OnboardingTour
+          ref={onboardingRef}
+          isAdmin={isAdmin}
+          showSterilizationCampaignsTab={showSterilizationCampaignsTab}
+          initialOpen={showOnboardingTour}
+        />
       </>
     );
   }
@@ -203,7 +215,12 @@ export function OrgSidebar({
       </Link>
       <NavLinks />
       <SignOutButton />
-      <OnboardingTour ref={onboardingRef} isAdmin={isAdmin} initialOpen={showOnboardingTour} />
+      <OnboardingTour
+          ref={onboardingRef}
+          isAdmin={isAdmin}
+          showSterilizationCampaignsTab={showSterilizationCampaignsTab}
+          initialOpen={showOnboardingTour}
+        />
     </aside>
   );
 }

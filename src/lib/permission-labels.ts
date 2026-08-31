@@ -6,6 +6,7 @@ export const PERMISSION_LABELS: Record<OrgPermission, string> = {
   candidature: "Candidature",
   contrat: "Contrat",
   gestion_famille_accueil: "Gestion famille d'accueil",
+  campagne_sterilisation: "Campagne stérilisation",
 };
 
 export const PERMISSION_DESCRIPTIONS: Record<OrgPermission, string> = {
@@ -19,4 +20,6 @@ export const PERMISSION_DESCRIPTIONS: Record<OrgPermission, string> = {
     "En plus de Candidature : envoi du certificat d'engagement et du contrat d'adoption. Nécessite le droit Candidature.",
   gestion_famille_accueil:
     "Ajouter, modifier ou supprimer une famille d'accueil, et gérer l'historique de ses placements.",
+  campagne_sterilisation:
+    "Accès à l'onglet Campagne de stérilisation, limité aux campagnes auxquelles un·e admin l'a assigné·e.",
 };

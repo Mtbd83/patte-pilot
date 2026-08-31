@@ -55,6 +55,7 @@ export default async function MembresPage(
     "candidature",
     "contrat",
     "gestion_famille_accueil",
+    "campagne_sterilisation",
   ];
 
   return (

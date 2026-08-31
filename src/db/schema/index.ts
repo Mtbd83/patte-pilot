@@ -18,6 +18,11 @@ import { documents } from "./documents";
 import { pushSubscriptions } from "./push-subscriptions";
 import { supplyRequests } from "./supply-requests";
 import { veterinarians, veterinarianTariffs } from "./veterinarians";
+import {
+  sterilizationCampaigns,
+  sterilizationVouchers,
+  sterilizationCampaignVolunteers,
+} from "./sterilization-campaigns";
 
 export * from "./organizations";
 export * from "./animals";
@@ -31,6 +36,7 @@ export * from "./documents";
 export * from "./push-subscriptions";
 export * from "./supply-requests";
 export * from "./veterinarians";
+export * from "./sterilization-campaigns";
 
 // ---------------------------------------------------------------------------
 // All relations() calls live here, one per table, so a table's relations
@@ -58,6 +64,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   helloAssoLinks: many(organizationHelloAssoLinks),
   supplyRequests: many(supplyRequests),
   veterinarians: many(veterinarians),
+  sterilizationCampaigns: many(sterilizationCampaigns),
 }));
 
 export const organizationHelloAssoLinksRelations = relations(
@@ -145,3 +152,33 @@ export const veterinarianTariffsRelations = relations(veterinarianTariffs, ({ on
     references: [veterinarians.id],
   }),
 }));
+
+export const sterilizationCampaignsRelations = relations(sterilizationCampaigns, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [sterilizationCampaigns.organizationId],
+    references: [organizations.id],
+  }),
+  vouchers: many(sterilizationVouchers),
+  volunteers: many(sterilizationCampaignVolunteers),
+}));
+
+export const sterilizationVouchersRelations = relations(sterilizationVouchers, ({ one }) => ({
+  campaign: one(sterilizationCampaigns, {
+    fields: [sterilizationVouchers.campaignId],
+    references: [sterilizationCampaigns.id],
+  }),
+}));
+
+export const sterilizationCampaignVolunteersRelations = relations(
+  sterilizationCampaignVolunteers,
+  ({ one }) => ({
+    campaign: one(sterilizationCampaigns, {
+      fields: [sterilizationCampaignVolunteers.campaignId],
+      references: [sterilizationCampaigns.id],
+    }),
+    member: one(organizationMembers, {
+      fields: [sterilizationCampaignVolunteers.memberId],
+      references: [organizationMembers.id],
+    }),
+  }),
+);

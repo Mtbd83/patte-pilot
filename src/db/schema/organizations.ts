@@ -57,6 +57,7 @@ export const orgPermissionEnum = pgEnum("org_permission", [
   "candidature",
   "contrat",
   "gestion_famille_accueil",
+  "campagne_sterilisation",
 ]);
 
 export const invitationStatusEnum = pgEnum("invitation_status", [
@@ -159,6 +160,13 @@ export const organizations = pgTable("organizations", {
   // vets' tariff grids (src/db/schema/veterinarians.ts) — contact details
   // themselves stay visible to every role regardless of this flag.
   vetTariffsVisibleToFosterFamilies: boolean("vet_tariffs_visible_to_foster_families")
+    .default(false)
+    .notNull(),
+
+  // Opt-in module, off by default — toggled from Paramètres. Only when true
+  // does the "Campagne de stérilisation" tab appear (see
+  // src/db/schema/sterilization-campaigns.ts).
+  sterilizationCampaignModuleEnabled: boolean("sterilization_campaign_module_enabled")
     .default(false)
     .notNull(),
 

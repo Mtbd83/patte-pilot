@@ -298,3 +298,27 @@ export async function updateOrganizationContractFieldPositions(
   if (!updated) throw new Error("Échec de l'enregistrement du mappage du contrat.");
   return updated;
 }
+
+const updateSterilizationCampaignModuleSchema = z.object({
+  organizationId: z.string().uuid(),
+  enabled: z.boolean(),
+});
+
+/** Admin-only: toggles the opt-in "Campagne de stérilisation" module and its sidebar tab. */
+export async function updateSterilizationCampaignModule(
+  input: z.infer<typeof updateSterilizationCampaignModuleSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId, enabled } = updateSterilizationCampaignModuleSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  const [updated] = await db
+    .update(organizations)
+    .set({ sterilizationCampaignModuleEnabled: enabled, updatedAt: new Date() })
+    .where(eq(organizations.id, organizationId))
+    .returning({ id: organizations.id });
+  if (!updated) throw new Error("Échec de la mise à jour du module.");
+  return updated;
+}

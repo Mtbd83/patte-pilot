@@ -13,6 +13,7 @@ import { OrganizationEmailSettingsForm } from "./organization-email-settings-for
 import { OrganizationHelloAssoLinksForm } from "./organization-helloasso-links-form";
 import { OrganizationEmailTemplatesForm } from "./organization-email-templates-form";
 import { OrganizationCertificatesUpload } from "./organization-certificates-upload";
+import { SterilizationModuleToggle } from "./sterilization-module-toggle";
 
 export default async function ParametresPage(
   props: {
@@ -151,6 +152,22 @@ export default async function ParametresPage(
         </CardHeader>
         <CardContent>
           <OrganizationHelloAssoLinksForm organizationId={organization.id} links={helloAssoLinks} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Modules</CardTitle>
+          <CardDescription>
+            Fonctionnalités optionnelles, désactivées par défaut — activez celles dont votre association a
+            besoin.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SterilizationModuleToggle
+            organizationId={organization.id}
+            enabled={organization.sterilizationCampaignModuleEnabled}
+          />
         </CardContent>
       </Card>
 

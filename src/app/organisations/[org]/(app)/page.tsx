@@ -31,6 +31,13 @@ const MODULES = [
   { href: "stock", label: "Stock", description: "Articles, quantités, alertes.", icon: Package },
   { href: "candidatures", label: "Candidatures d'adoption", description: "Formulaires reçus, contrats.", icon: HeartHandshake },
   { href: "veterinaires", label: "Vétérinaires", description: "Vétérinaires partenaires et tarifs.", icon: Stethoscope },
+  {
+    href: "campagnes-sterilisation",
+    label: "Campagne de stérilisation",
+    description: "Bons de stérilisation par campagne.",
+    icon: Syringe,
+    sterilizationCampaignsOnly: true,
+  },
   { href: "membres", label: "Membres", description: "Inviter et gérer les rôles.", icon: Users, adminOnly: true },
   { href: "parametres", label: "Paramètres", description: "Profil légal de l'association.", icon: Settings, adminOnly: true },
 ];
@@ -55,8 +62,14 @@ export default async function OrganizationPage(
   const isBenevole = roles.includes("benevole");
   const isFamilleAccueil = roles.includes("famille_accueil");
   const canAccessComptabilite = isAdmin || permissions.includes("comptabilite");
+  const canAccessSterilizationCampaigns =
+    organization.sterilizationCampaignModuleEnabled &&
+    (isAdmin || permissions.includes("campagne_sterilisation"));
   const visibleModules = MODULES.filter(
-    (module) => (!module.adminOnly || isAdmin) && (!module.comptabiliteOnly || canAccessComptabilite),
+    (module) =>
+      (!module.adminOnly || isAdmin) &&
+      (!module.comptabiliteOnly || canAccessComptabilite) &&
+      (!module.sterilizationCampaignsOnly || canAccessSterilizationCampaigns),
   );
   // The org-wide reminders card overlaps with "Mes animaux" for someone who's
   // only a famille d'accueil — admins/bénévoles need the full-org view, she

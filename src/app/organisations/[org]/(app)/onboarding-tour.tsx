@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useImperativeHandle, useState } from "react";
-import { Sparkles, Settings, Users, PawPrint, Home, Wallet, Package, User, Stethoscope } from "lucide-react";
+import { Sparkles, Settings, Users, PawPrint, Home, Wallet, Package, User, Stethoscope, Syringe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ type Step = {
 // Purely explanatory — deliberately no "go to this tab" links. A step that
 // navigates away unmounts this dialog entirely, and the tour is lost with
 // no way back to where you were (reported after a first version had them).
-function buildSteps(isAdmin: boolean): Step[] {
+function buildSteps(isAdmin: boolean, showSterilizationCampaignsTab: boolean): Step[] {
   const steps: Step[] = [
     {
       icon: Sparkles,
@@ -62,6 +62,18 @@ function buildSteps(isAdmin: boolean): Step[] {
       description:
         "Dans l'onglet Vétérinaires : coordonnées, consignes et tarifs par acte, avec une carte automatique. Les tarifs restent visibles aux familles d'accueil selon un réglage que vous contrôlez.",
     },
+  );
+
+  if (showSterilizationCampaignsTab) {
+    steps.push({
+      icon: Syringe,
+      title: "Suivez vos campagnes de stérilisation",
+      description:
+        "Dans l'onglet Campagne de stérilisation : ville, partenaire (SPA, Fondation Brigitte Bardot, 30 Millions d'Amis), vétérinaire et quota de bons par campagne, puis chaque bon rempli au fur et à mesure des stérilisations.",
+    });
+  }
+
+  steps.push(
     {
       icon: isAdmin ? Wallet : Package,
       title: isAdmin ? "Gérez comptabilité et stock" : "Gérez le stock",
@@ -89,11 +101,14 @@ export type OnboardingTourHandle = { open: () => void };
  * tutoriel" entry opens it via this ref, since that's the one spot reachable
  * identically from the mobile drawer and the desktop sidebar.
  */
-export const OnboardingTour = forwardRef<OnboardingTourHandle, { isAdmin: boolean; initialOpen: boolean }>(
-  function OnboardingTour({ isAdmin, initialOpen }, ref) {
+export const OnboardingTour = forwardRef<
+  OnboardingTourHandle,
+  { isAdmin: boolean; showSterilizationCampaignsTab: boolean; initialOpen: boolean }
+>(
+  function OnboardingTour({ isAdmin, showSterilizationCampaignsTab, initialOpen }, ref) {
     const [open, setOpen] = useState(initialOpen);
     const [stepIndex, setStepIndex] = useState(0);
-    const steps = buildSteps(isAdmin);
+    const steps = buildSteps(isAdmin, showSterilizationCampaignsTab);
     // stepIndex is only ever moved within [0, steps.length) by this
     // component's own handlers below.
     const step = steps[stepIndex]!;
