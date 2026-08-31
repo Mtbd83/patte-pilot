@@ -5,11 +5,14 @@ import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles, getMemberPermissions } from "@/lib/permissions";
 import { listSterilizationCampaigns } from "@/server/actions/sterilization-campaigns";
+import { listReportingMaps } from "@/server/actions/sterilization-reports";
 import { listVeterinarians } from "@/server/actions/veterinarians";
 import { STERILIZATION_PARTNER_LABELS } from "@/lib/sterilization-labels";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { CampaignFormDialog } from "./campaign-form-dialog";
+import { ReportingMapFormDialog } from "./reporting-map-form-dialog";
+import { DeleteReportingMapButton } from "./delete-reporting-map-button";
 
 export default async function CampagnesSterilisationPage(
   props: {
@@ -63,9 +66,10 @@ export default async function CampagnesSterilisationPage(
     );
   }
 
-  const [campaigns, veterinarians] = await Promise.all([
+  const [campaigns, veterinarians, reportingMaps] = await Promise.all([
     listSterilizationCampaigns({ organizationId: organization.id }),
     isAdmin ? listVeterinarians({ organizationId: organization.id }) : Promise.resolve([]),
+    listReportingMaps({ organizationId: organization.id }),
   ]);
 
   return (
@@ -124,6 +128,53 @@ export default async function CampagnesSterilisationPage(
                         ? ` (${campaign.voucherQuotaMale} M / ${campaign.voucherQuotaFemale} F)`
                         : ""}
                     </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <div>
+        <h2 className="text-xl font-semibold">Cartes de signalement</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Une carte publique par ville, indépendante des campagnes, pour que les gens signalent un chat errant.
+        </p>
+      </div>
+
+      {isAdmin && <ReportingMapFormDialog organizationId={organization.id} />}
+
+      <Card>
+        <CardContent>
+          {reportingMaps.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucune carte de signalement créée pour le moment.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ville</TableHead>
+                  <TableHead>Signalements</TableHead>
+                  {isAdmin && <TableHead />}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reportingMaps.map((map) => (
+                  <TableRow key={map.id}>
+                    <TableCell className="font-medium">
+                      <Link
+                        href={`/organisations/${params.org}/campagnes-sterilisation/cartes-signalement/${map.id}`}
+                        className="-mx-3 -my-2.5 block px-3 py-2.5 hover:underline"
+                      >
+                        {map.city}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{map.reports.length}</TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <DeleteReportingMapButton organizationId={organization.id} mapId={map.id} city={map.city} />
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

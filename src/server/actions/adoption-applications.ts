@@ -1,7 +1,6 @@
 "use server";
 
 import { and, desc, eq, gte } from "drizzle-orm";
-import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -20,6 +19,7 @@ import { auth } from "@/lib/auth";
 import { requireAdmin, requireAdminOrPermission, requireRole, listOrganizationAdminUserIds, ForbiddenError } from "@/lib/permissions";
 import { sendPushToUsers } from "@/lib/push";
 import { SPECIES_LABELS } from "@/lib/animal-labels";
+import { getClientIp } from "@/lib/request-ip";
 
 const submitAdoptionApplicationSchema = z.object({
   organizationId: z.string().uuid(),
@@ -80,18 +80,6 @@ const submitAdoptionApplicationSchema = z.object({
 export type SubmitAdoptionApplicationInput = z.input<typeof submitAdoptionApplicationSchema>;
 
 const RATE_LIMIT_MAX_PER_HOUR = 5;
-
-async function getClientIp() {
-  try {
-    const requestHeaders = await headers();
-    const forwardedFor = requestHeaders.get("x-forwarded-for");
-    return forwardedFor?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip") || null;
-  } catch {
-    // Outside a real request scope (e.g. this action called directly from a
-    // test) — rate-limiting is simply skipped rather than failing the call.
-    return null;
-  }
-}
 
 /**
  * Public: anyone can submit an adoption application for an organization —

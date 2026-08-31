@@ -69,7 +69,7 @@ function buildSteps(isAdmin: boolean, showSterilizationCampaignsTab: boolean): S
       icon: Syringe,
       title: "Suivez vos campagnes de stérilisation",
       description:
-        "Dans l'onglet Campagne de stérilisation : ville, partenaire (SPA, Fondation Brigitte Bardot, 30 Millions d'Amis), vétérinaire et quota de bons par campagne, puis chaque bon rempli au fur et à mesure des stérilisations.",
+        "Dans l'onglet Campagne de stérilisation : ville, partenaire (SPA, Fondation Brigitte Bardot, 30 Millions d'Amis), vétérinaire et quota de bons par campagne, puis chaque bon rempli au fur et à mesure des stérilisations. Vous pouvez aussi y créer une carte de signalement par ville, avec un lien public à partager pour que chacun signale un chat errant.",
     });
   }
 

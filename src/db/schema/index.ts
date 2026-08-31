@@ -23,6 +23,11 @@ import {
   sterilizationVouchers,
   sterilizationCampaignVolunteers,
 } from "./sterilization-campaigns";
+import {
+  sterilizationReportingMaps,
+  sterilizationReports,
+  sterilizationReportComments,
+} from "./sterilization-reports";
 
 export * from "./organizations";
 export * from "./animals";
@@ -37,6 +42,7 @@ export * from "./push-subscriptions";
 export * from "./supply-requests";
 export * from "./veterinarians";
 export * from "./sterilization-campaigns";
+export * from "./sterilization-reports";
 
 // ---------------------------------------------------------------------------
 // All relations() calls live here, one per table, so a table's relations
@@ -65,6 +71,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   supplyRequests: many(supplyRequests),
   veterinarians: many(veterinarians),
   sterilizationCampaigns: many(sterilizationCampaigns),
+  sterilizationReportingMaps: many(sterilizationReportingMaps),
 }));
 
 export const organizationHelloAssoLinksRelations = relations(
@@ -179,6 +186,35 @@ export const sterilizationCampaignVolunteersRelations = relations(
     member: one(organizationMembers, {
       fields: [sterilizationCampaignVolunteers.memberId],
       references: [organizationMembers.id],
+    }),
+  }),
+);
+
+export const sterilizationReportingMapsRelations = relations(
+  sterilizationReportingMaps,
+  ({ one, many }) => ({
+    organization: one(organizations, {
+      fields: [sterilizationReportingMaps.organizationId],
+      references: [organizations.id],
+    }),
+    reports: many(sterilizationReports),
+  }),
+);
+
+export const sterilizationReportsRelations = relations(sterilizationReports, ({ one, many }) => ({
+  map: one(sterilizationReportingMaps, {
+    fields: [sterilizationReports.mapId],
+    references: [sterilizationReportingMaps.id],
+  }),
+  comments: many(sterilizationReportComments),
+}));
+
+export const sterilizationReportCommentsRelations = relations(
+  sterilizationReportComments,
+  ({ one }) => ({
+    report: one(sterilizationReports, {
+      fields: [sterilizationReportComments.reportId],
+      references: [sterilizationReports.id],
     }),
   }),
 );

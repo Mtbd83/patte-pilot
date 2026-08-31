@@ -1,0 +1,1 @@
+ALTER TYPE "report_management_status" ADD VALUE 'pris_en_compte';

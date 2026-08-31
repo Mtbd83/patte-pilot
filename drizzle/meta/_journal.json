@@ -204,6 +204,34 @@
       "when": 1788171885447,
       "tag": "0028_lush_madame_web",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1788175995360,
+      "tag": "0029_wooden_rhino",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1788178838981,
+      "tag": "0030_furry_quasar",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788188698985,
+      "tag": "0031_far_shiva",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788191996877,
+      "tag": "0032_large_wraith",
+      "breakpoints": true
     }
   ]
 }

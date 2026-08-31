@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
@@ -235,9 +236,12 @@ export async function createSterilizationVoucher(formData: FormData) {
   if (!campaign) throw new Error("Campagne introuvable.");
 
   const file = formData.get("file");
+  // A random path per upload — not campaignId/voucherId, which would collide
+  // across every voucher of the same campaign and silently overwrite each
+  // other's photo (upload uses upsert:true on an exact path).
   const photoUrl =
     file instanceof File && file.size > 0
-      ? await uploadImage(file, `campagnes-sterilisation/${data.campaignId}`)
+      ? await uploadImage(file, `campagnes-sterilisation/${randomUUID()}`)
       : null;
 
   const [voucher] = await db
@@ -294,7 +298,7 @@ export async function updateSterilizationVoucher(formData: FormData) {
   const file = formData.get("file");
   const photoUrl =
     file instanceof File && file.size > 0
-      ? await uploadImage(file, `campagnes-sterilisation/${voucher.campaignId}`)
+      ? await uploadImage(file, `campagnes-sterilisation/${randomUUID()}`)
       : voucher.photoUrl;
 
   const [updated] = await db

@@ -42,6 +42,14 @@
 -- never writes that path anymore since the chat/NAC/chien split) purely so
 -- existing organizations' already-uploaded certificate files, still
 -- physically stored under that name, don't 404 the moment this reruns.
+--
+-- Storage is a single shared Supabase project used by every environment
+-- (local dev included — only the Postgres app DB is local Docker, see
+-- src/lib/supabase.ts), so this policy is live even during local testing:
+-- a path shape added to ALLOWED_PATH_PATTERNS in src/lib/uploads.ts (like
+-- campagnes-sterilisation/<uuid> or signalements/<uuid>) must be mirrored
+-- here too, or every upload to it fails with "new row violates row-level
+-- security policy" even though the app-level check passed.
 
 drop policy if exists "anon insert uploads" on storage.objects;
 drop policy if exists "anon select uploads" on storage.objects;
@@ -52,7 +60,7 @@ create policy "anon insert uploads" on storage.objects
   with check (
     bucket_id = 'uploads'
     and (
-      name ~ '^(logos|animaux)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
+      name ~ '^(logos|animaux|campagnes-sterilisation|signalements)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
       or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(chat|nac|chien|default)|contrat)\.[a-zA-Z0-9]{1,10}$'
     )
   );
@@ -62,7 +70,7 @@ create policy "anon select uploads" on storage.objects
   using (
     bucket_id = 'uploads'
     and (
-      name ~ '^(logos|animaux)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
+      name ~ '^(logos|animaux|campagnes-sterilisation|signalements)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
       or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(chat|nac|chien|default)|contrat)\.[a-zA-Z0-9]{1,10}$'
     )
   );
@@ -72,14 +80,14 @@ create policy "anon update uploads" on storage.objects
   using (
     bucket_id = 'uploads'
     and (
-      name ~ '^(logos|animaux)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
+      name ~ '^(logos|animaux|campagnes-sterilisation|signalements)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
       or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(chat|nac|chien|default)|contrat)\.[a-zA-Z0-9]{1,10}$'
     )
   )
   with check (
     bucket_id = 'uploads'
     and (
-      name ~ '^(logos|animaux)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
+      name ~ '^(logos|animaux|campagnes-sterilisation|signalements)/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]{1,10}$'
       or name ~ '^documents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(certificat-(chat|nac|chien|default)|contrat)\.[a-zA-Z0-9]{1,10}$'
     )
   );
