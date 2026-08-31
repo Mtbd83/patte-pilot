@@ -88,6 +88,9 @@ export default async function CampagneSterilisationDetailPage(
       : Promise.resolve([]),
   ]);
 
+  const usedMale = campaign.vouchers.filter((v) => v.sex === "male").length;
+  const usedFemale = campaign.vouchers.filter((v) => v.sex === "femelle").length;
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -116,13 +119,17 @@ export default async function CampagneSterilisationDetailPage(
             />
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-1">
           <p className="text-sm text-muted-foreground">
             {campaign.vouchers.length} / {campaign.voucherQuotaTotal} bons utilisés
-            {campaign.voucherQuotaMale != null && campaign.voucherQuotaFemale != null
-              ? ` (dont ${campaign.voucherQuotaMale} mâles, ${campaign.voucherQuotaFemale} femelles prévus)`
-              : ""}
+            {" — "}
+            {usedMale} mâle{usedMale > 1 ? "s" : ""}, {usedFemale} femelle{usedFemale > 1 ? "s" : ""}
           </p>
+          {campaign.voucherQuotaMale != null && campaign.voucherQuotaFemale != null && (
+            <p className="text-sm text-muted-foreground">
+              Quota prévu : {campaign.voucherQuotaMale} mâles, {campaign.voucherQuotaFemale} femelles
+            </p>
+          )}
         </CardContent>
       </Card>
 
