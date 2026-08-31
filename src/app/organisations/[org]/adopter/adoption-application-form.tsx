@@ -345,7 +345,8 @@ export function AdoptionApplicationForm({
               {visibleAnimals.map((animal) => (
                 <option key={animal.id} value={animal.id}>
                   {animal.name}
-                  {animal.status === "reserve" ? " (⚠️ réservé)" : ""}
+                  {animal.status === "reserve" && " (⚠️ réservé)"}
+                  {animal.status === "visite_en_cours" && " (⚠️ visite en cours)"}
                 </option>
               ))}
             </Select>
@@ -353,6 +354,11 @@ export function AdoptionApplicationForm({
           {selectedAnimal?.status === "reserve" && (
             <Badge variant="warning" className="self-start">
               Attention : cet animal est actuellement réservé par une autre famille.
+            </Badge>
+          )}
+          {selectedAnimal?.status === "visite_en_cours" && (
+            <Badge variant="warning" className="self-start">
+              Attention : une visite est en cours pour cet animal avec une autre famille.
             </Badge>
           )}
           <Field

@@ -704,7 +704,7 @@ describe("animals server actions", () => {
     expect(adopted.some((a) => a.name === "Pixel")).toBe(true);
   });
 
-  it("publicly lists only à-l'adoption and réservé animals, without requiring auth", async () => {
+  it("publicly lists à-l'adoption, réservé and visite-en-cours animals, without requiring auth", async () => {
     const forAdoption = await createAnimal({
       organizationId,
       name: "PublicPickMe",
@@ -735,12 +735,32 @@ describe("animals server actions", () => {
       fosterFamilyId: fosterFamilyAId,
     });
 
+    const visitInProgress = await createAnimal({
+      organizationId,
+      name: "PublicVisitInProgress",
+      species: "lapin",
+      intakeDate: "2026-01-01",
+      status: "quarantaine",
+      fosterFamilyId: fosterFamilyAId,
+    });
+    await changeAnimalStatus({
+      animalId: visitInProgress.id,
+      organizationId,
+      status: "visite_en_cours",
+      fosterFamilyId: fosterFamilyAId,
+    });
+
     authMock.mockResolvedValue(null);
     const publicList = await listPubliclyAdoptableAnimals({ organizationId });
 
     expect(publicList.some((a) => a.id === forAdoption.id && a.status === "a_l_adoption")).toBe(true);
     expect(publicList.some((a) => a.id === reserved.id && a.status === "reserve")).toBe(true);
-    expect(publicList.every((a) => a.status === "a_l_adoption" || a.status === "reserve")).toBe(true);
+    expect(publicList.some((a) => a.id === visitInProgress.id && a.status === "visite_en_cours")).toBe(true);
+    expect(
+      publicList.every((a) =>
+        ["a_l_adoption", "reserve", "visite_en_cours"].includes(a.status),
+      ),
+    ).toBe(true);
   });
 
   it("allows a bénévole to list animals (read access)", async () => {

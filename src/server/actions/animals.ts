@@ -680,8 +680,8 @@ const listPubliclyAdoptableAnimalsSchema = z.object({
 /**
  * Fully public, no authentication: the animals shown as pickable options on
  * the public adoption form (`/organisations/[org]/adopter`) — those
- * currently "à l'adoption" or "réservé". Only ever exposes name/species,
- * never anything else on the animal record.
+ * currently "à l'adoption", "réservé" or "visite en cours". Only ever
+ * exposes name/species/status, never anything else on the animal record.
  */
 export async function listPubliclyAdoptableAnimals(
   input: z.infer<typeof listPubliclyAdoptableAnimalsSchema>,
@@ -691,7 +691,11 @@ export async function listPubliclyAdoptableAnimals(
   const rows = await db.query.animals.findMany({
     where: and(
       eq(animals.organizationId, organizationId),
-      or(eq(animals.status, "a_l_adoption"), eq(animals.status, "reserve")),
+      or(
+        eq(animals.status, "a_l_adoption"),
+        eq(animals.status, "reserve"),
+        eq(animals.status, "visite_en_cours"),
+      ),
     ),
     orderBy: animals.name,
     columns: { id: true, name: true, species: true, status: true },
