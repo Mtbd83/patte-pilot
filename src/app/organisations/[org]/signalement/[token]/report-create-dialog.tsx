@@ -75,9 +75,16 @@ export function ReportCreateDialog({
   return (
     <Dialog open onClose={onClose} title="Signaler un chat">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* Honeypot — "website"-style names get auto-filled by some browsers'
+            own form-fill heuristics (not just password managers) even with
+            autoComplete="off" and off-screen positioning, which silently
+            drops a genuine visitor's submission (createReport no-ops on any
+            filled honeypot). A name matching no known autofill category
+            avoids that false positive while staying just as effective
+            against bots, which fill every field regardless of its name. */}
         <input
           type="text"
-          name="website"
+          name="champ_reference_interne"
           value={honeypot}
           onChange={(e) => setHoneypot(e.target.value)}
           tabIndex={-1}

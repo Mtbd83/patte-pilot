@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/ui/field";
 import { Dialog } from "@/components/ui/dialog";
+import { LinkifiedText } from "@/components/linkified-text";
 import type { PublicReport } from "./public-reporting-map-view";
 
 export function ReportDetailDialog({
@@ -70,7 +71,11 @@ export function ReportDetailDialog({
           </Badge>
         </div>
 
-        {report.description && <p className="text-sm text-muted-foreground">{report.description}</p>}
+        {report.description && (
+          <p className="text-sm text-muted-foreground">
+            <LinkifiedText text={report.description} />
+          </p>
+        )}
 
         <p className="text-xs text-muted-foreground">
           Signalé le {new Date(report.createdAt).toLocaleDateString("fr-FR")}
@@ -86,7 +91,8 @@ export function ReportDetailDialog({
             <ul className="flex flex-col gap-2">
               {report.comments.map((comment) => (
                 <li key={comment.id} className="rounded-md bg-muted px-3 py-2 text-sm">
-                  <span className="font-medium">{comment.authorName}</span> — {comment.text}
+                  <span className="font-medium">{comment.authorName}</span> —{" "}
+                  <LinkifiedText text={comment.text} />
                 </li>
               ))}
             </ul>
@@ -94,9 +100,13 @@ export function ReportDetailDialog({
         </div>
 
         <form onSubmit={handleSubmitComment} className="flex flex-col gap-3 border-t border-border pt-4">
+          {/* Honeypot — "website"-style names get auto-filled by some browsers'
+              own form-fill heuristics even with autoComplete="off", silently
+              dropping a genuine comment (createReportComment no-ops on any
+              filled honeypot); this name matches no known autofill category. */}
           <input
             type="text"
-            name="website"
+            name="champ_reference_interne"
             value={honeypot}
             onChange={(e) => setHoneypot(e.target.value)}
             tabIndex={-1}

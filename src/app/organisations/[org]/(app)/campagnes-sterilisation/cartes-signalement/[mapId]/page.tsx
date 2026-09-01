@@ -13,6 +13,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { ReportingMapView } from "@/components/reporting-map-view";
 import { ReportStatusSelect } from "./report-status-select";
 import { ReportPhotoThumbnail } from "./report-photo-thumbnail";
+import { LinkifiedText } from "@/components/linkified-text";
 import { DeleteReportButton } from "./delete-report-button";
 import { DeleteCommentButton } from "./delete-comment-button";
 import { CopyPublicLinkButton } from "./copy-public-link-button";
@@ -108,6 +109,7 @@ export default async function CarteSignalementDetailPage(
                   <TableHead>Genre</TableHead>
                   <TableHead>Stérilisation</TableHead>
                   <TableHead>Statut (déclarant)</TableHead>
+                  <TableHead>Commentaire du déclarant</TableHead>
                   <TableHead>Statut (association)</TableHead>
                   <TableHead>Commentaires</TableHead>
                   <TableHead />
@@ -123,6 +125,13 @@ export default async function CarteSignalementDetailPage(
                     <TableCell>{STERILIZATION_NEED_LABELS[report.needsSterilization]}</TableCell>
                     <TableCell>
                       <Badge>{REPORT_FINDER_STATUS_LABELS[report.finderStatus]}</Badge>
+                    </TableCell>
+                    <TableCell className="max-w-64">
+                      {report.description ? (
+                        <LinkifiedText text={report.description} />
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <ReportStatusSelect
@@ -143,7 +152,8 @@ export default async function CarteSignalementDetailPage(
                             {report.comments.map((comment) => (
                               <li key={comment.id} className="flex items-start justify-between gap-2 text-sm">
                                 <div>
-                                  <span className="font-medium">{comment.authorName}</span> — {comment.text}
+                                  <span className="font-medium">{comment.authorName}</span> —{" "}
+                                  <LinkifiedText text={comment.text} />
                                 </div>
                                 <DeleteCommentButton organizationId={organization.id} commentId={comment.id} />
                               </li>
