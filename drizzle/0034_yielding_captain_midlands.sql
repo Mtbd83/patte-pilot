@@ -1,0 +1,1 @@
+ALTER TABLE "sterilization_vouchers" ADD COLUMN "comment" text;

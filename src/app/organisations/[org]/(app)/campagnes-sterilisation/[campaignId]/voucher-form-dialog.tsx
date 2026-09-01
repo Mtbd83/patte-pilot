@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Field, FieldRow } from "@/components/ui/field";
 import { Dialog } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 type VoucherSex = keyof typeof VOUCHER_SEX_LABELS;
 const SEX_OPTIONS = Object.entries(VOUCHER_SEX_LABELS) as [VoucherSex, string][];
@@ -37,6 +38,7 @@ export function VoucherFormDialog({
   const [identificationNumber, setIdentificationNumber] = useState(voucher?.identificationNumber ?? "");
   const [date, setDate] = useState(voucher?.date ?? new Date().toISOString().slice(0, 10));
   const [sex, setSex] = useState<VoucherSex | "">((voucher?.sex as VoucherSex) ?? "");
+  const [comment, setComment] = useState(voucher?.comment ?? "");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,6 +51,7 @@ export function VoucherFormDialog({
       formData.set("identificationNumber", identificationNumber);
       formData.set("date", date);
       formData.set("sex", sex);
+      formData.set("comment", comment);
       const file = fileInputRef.current?.files?.[0];
       if (file) formData.set("file", file);
 
@@ -139,9 +142,13 @@ export function VoucherFormDialog({
                 type="file"
                 id="voucher-photo"
                 accept="image/jpeg,image/png,image/webp,image/gif"
-                className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium"
+                className="text-sm text-muted-foreground file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-accent"
               />
             </div>
+          </Field>
+
+          <Field label="Commentaire" htmlFor="voucher-comment" hint="Facultatif.">
+            <Textarea id="voucher-comment" value={comment} onChange={(e) => setComment(e.target.value)} />
           </Field>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

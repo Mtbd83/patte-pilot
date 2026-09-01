@@ -206,6 +206,7 @@ const createSterilizationVoucherFieldsSchema = z.object({
   identificationNumber: z.string().min(1).max(60),
   date: dateString,
   sex: voucherSexSchema,
+  comment: z.string().max(2000).optional(),
 });
 
 /**
@@ -224,6 +225,7 @@ export async function createSterilizationVoucher(formData: FormData) {
     identificationNumber: formData.get("identificationNumber"),
     date: formData.get("date"),
     sex: formData.get("sex"),
+    comment: formData.get("comment") || undefined,
   });
   await requireAdminOrCampaignAccess(session.user.id, data.organizationId, data.campaignId);
 
@@ -253,6 +255,7 @@ export async function createSterilizationVoucher(formData: FormData) {
       date: data.date,
       sex: data.sex,
       photoUrl,
+      comment: data.comment ?? null,
     })
     .returning();
   if (!voucher) throw new Error("Échec de l'ajout du bon.");
@@ -266,6 +269,7 @@ const updateSterilizationVoucherFieldsSchema = z.object({
   identificationNumber: z.string().min(1).max(60),
   date: dateString,
   sex: voucherSexSchema,
+  comment: z.string().max(2000).optional(),
 });
 
 /**
@@ -284,6 +288,7 @@ export async function updateSterilizationVoucher(formData: FormData) {
     identificationNumber: formData.get("identificationNumber"),
     date: formData.get("date"),
     sex: formData.get("sex"),
+    comment: formData.get("comment") || undefined,
   });
 
   const voucher = await db.query.sterilizationVouchers.findFirst({
@@ -309,6 +314,7 @@ export async function updateSterilizationVoucher(formData: FormData) {
       date: data.date,
       sex: data.sex,
       photoUrl,
+      comment: data.comment ?? null,
       updatedAt: new Date(),
     })
     .where(eq(sterilizationVouchers.id, data.voucherId))

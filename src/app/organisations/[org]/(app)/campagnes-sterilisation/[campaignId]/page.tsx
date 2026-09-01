@@ -14,6 +14,8 @@ import { STERILIZATION_PARTNER_LABELS, VOUCHER_SEX_LABELS } from "@/lib/steriliz
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { LinkifiedText } from "@/components/linkified-text";
+import { PhotoThumbnail } from "@/components/photo-thumbnail";
 import { CampaignFormDialog } from "../campaign-form-dialog";
 import { VoucherFormDialog } from "./voucher-form-dialog";
 import { DeleteVoucherButton } from "./delete-voucher-button";
@@ -172,6 +174,7 @@ export default async function CampagneSterilisationDetailPage(
                   <TableHead>N° d&apos;identification</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Genre</TableHead>
+                  <TableHead>Commentaire</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -180,10 +183,7 @@ export default async function CampagneSterilisationDetailPage(
                   <TableRow key={voucher.id}>
                     <TableCell>
                       {voucher.photoUrl ? (
-                        <div className="size-10 overflow-hidden rounded-md border border-border bg-muted">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={voucher.photoUrl} alt="" className="size-full object-cover" />
-                        </div>
+                        <PhotoThumbnail photoUrl={voucher.photoUrl} alt="Photo du bon" className="size-10" />
                       ) : (
                         <span className="size-10 block rounded-md border border-dashed border-border" />
                       )}
@@ -197,6 +197,13 @@ export default async function CampagneSterilisationDetailPage(
                           ? VOUCHER_SEX_LABELS[voucher.sex]
                           : "—"}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-64">
+                      {voucher.comment ? (
+                        <LinkifiedText text={voucher.comment} />
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">

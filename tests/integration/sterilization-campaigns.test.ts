@@ -171,11 +171,13 @@ describe("sterilization campaign server actions", () => {
     voucherFormData.set("identificationNumber", "250000000000001");
     voucherFormData.set("date", "2026-02-01");
     voucherFormData.set("sex", "femelle");
+    voucherFormData.set("comment", "Chat très craintif, à manipuler avec précaution.");
     voucherFormData.set("file", new File(["fake"], "chat.jpg", { type: "image/jpeg" }));
 
     const voucher = await createSterilizationVoucher(voucherFormData);
     expect(voucher.voucherNumber).toBe("001");
     expect(voucher.photoUrl).toBe("https://storage.example.com/fake-voucher-photo.jpg");
+    expect(voucher.comment).toBe("Chat très craintif, à manipuler avec précaution.");
 
     const list = await listSterilizationCampaigns({ organizationId });
     const listed = list.find((c) => c.id === campaign.id);
@@ -197,6 +199,9 @@ describe("sterilization campaign server actions", () => {
     expect(updatedVoucher.sex).toBe("male");
     // No new file provided — the existing photo is kept, not cleared.
     expect(updatedVoucher.photoUrl).toBe("https://storage.example.com/fake-voucher-photo.jpg");
+    // Unlike the photo, the comment is a plain form field — omitting it means
+    // "clear it", not "keep the previous one".
+    expect(updatedVoucher.comment).toBeNull();
 
     await deleteSterilizationVoucher({ voucherId: voucher.id, organizationId });
     const afterDelete = await getSterilizationCampaign({ campaignId: campaign.id, organizationId });

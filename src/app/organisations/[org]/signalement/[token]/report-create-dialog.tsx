@@ -100,7 +100,7 @@ export function ReportCreateDialog({
             id="report-photo"
             required
             accept="image/jpeg,image/png,image/webp,image/gif"
-            className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium"
+            className="text-sm text-muted-foreground file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-accent"
           />
         </Field>
 

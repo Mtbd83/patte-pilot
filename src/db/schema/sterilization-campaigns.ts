@@ -69,6 +69,7 @@ export const sterilizationVouchers = pgTable(
     date: date("date").notNull(),
     sex: animalSexEnum("sex").notNull(),
     photoUrl: text("photo_url"),
+    comment: text("comment"),
 
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

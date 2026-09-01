@@ -111,24 +111,19 @@ export function ReportingMapView({
     if (!L || !map || !layer) return;
 
     layer.clearLayers();
-    const markers = reports.map((report) => {
+    // Numbered pins (not plain colored dots) so a report on the map can be
+    // matched to its row in the table below — with more than one or two
+    // reports there's otherwise no way to tell which pin is which.
+    const markers = reports.map((report, index) => {
       const color = REPORT_MANAGEMENT_STATUS_MAP_COLORS[report.managementStatus];
-      const marker = L.circleMarker([report.latitude, report.longitude], {
-        radius: 9,
-        color,
-        weight: 2,
-        fillColor: color,
-        fillOpacity: 0.85,
-      }).addTo(layer);
-      marker.on("click", (e) => {
-        // circleMarker (unlike a plain icon Marker) bubbles clicks to the
-        // map by default — without stopping it, this click would also fire
-        // the map's own "click" handler (onPickLocation) right after,
-        // immediately clearing the selection and reopening the create-report
-        // dialog instead of the one for this existing report.
-        L.DomEvent.stopPropagation(e);
-        onSelectReport?.(report.id);
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:9999px;background:${color};color:#fff;font:600 12px system-ui,sans-serif;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);">${index + 1}</div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
       });
+      const marker = L.marker([report.latitude, report.longitude], { icon }).addTo(layer);
+      marker.on("click", () => onSelectReport?.(report.id));
       return marker;
     });
 

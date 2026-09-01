@@ -17,7 +17,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { ReportingMapView } from "@/components/reporting-map-view";
 import { ReportStatusSelect } from "./report-status-select";
-import { ReportPhotoThumbnail } from "./report-photo-thumbnail";
+import { PhotoThumbnail } from "@/components/photo-thumbnail";
 import { LinkifiedText } from "@/components/linkified-text";
 import { DeleteReportButton } from "./delete-report-button";
 import { DeleteCommentButton } from "./delete-comment-button";
@@ -164,7 +164,7 @@ export default async function CarteSignalementDetailPage(
                 <CardContent className="flex flex-col gap-3">
                   <div className="flex items-start gap-3">
                     <ReportNumberBadge index={index} status={report.managementStatus} />
-                    <ReportPhotoThumbnail photoUrl={report.photoUrl} />
+                    <PhotoThumbnail photoUrl={report.photoUrl} alt="Photo du signalement" />
                     <div className="flex flex-1 flex-wrap gap-1.5">
                       <Badge>{SEX_LABELS[report.sex]}</Badge>
                       <Badge>{STERILIZATION_NEED_LABELS[report.needsSterilization]}</Badge>
@@ -221,7 +221,7 @@ export default async function CarteSignalementDetailPage(
                         <ReportNumberBadge index={index} status={report.managementStatus} />
                       </TableCell>
                       <TableCell>
-                        <ReportPhotoThumbnail photoUrl={report.photoUrl} />
+                        <PhotoThumbnail photoUrl={report.photoUrl} alt="Photo du signalement" />
                       </TableCell>
                       <TableCell>{SEX_LABELS[report.sex]}</TableCell>
                       <TableCell>{STERILIZATION_NEED_LABELS[report.needsSterilization]}</TableCell>
