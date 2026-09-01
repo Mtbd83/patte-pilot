@@ -19,6 +19,39 @@ import { DeleteCommentButton } from "./delete-comment-button";
 import { CopyPublicLinkButton } from "./copy-public-link-button";
 import { DeleteReportingMapButton } from "../../delete-reporting-map-button";
 
+type ReportWithComments = Awaited<ReturnType<typeof getReportingMapDetail>>["reports"][number];
+
+/** Shared between the mobile card and the desktop table cell, so the two views can't drift apart. */
+function ReportComments({
+  report,
+  organizationId,
+}: {
+  report: ReportWithComments;
+  organizationId: string;
+}) {
+  if (report.comments.length === 0) {
+    return <span className="text-muted-foreground">Aucun commentaire</span>;
+  }
+  return (
+    <details>
+      <summary className="cursor-pointer text-sm">
+        {report.comments.length} commentaire{report.comments.length > 1 ? "s" : ""}
+      </summary>
+      <ul className="mt-2 flex flex-col gap-2">
+        {report.comments.map((comment) => (
+          <li key={comment.id} className="flex items-start justify-between gap-2 text-sm">
+            <div>
+              <span className="font-medium">{comment.authorName}</span> —{" "}
+              <LinkifiedText text={comment.text} />
+            </div>
+            <DeleteCommentButton organizationId={organizationId} commentId={comment.id} />
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 export default async function CarteSignalementDetailPage(
   props: {
     params: Promise<{ org: string; mapId: string }>;
@@ -97,81 +130,110 @@ export default async function CarteSignalementDetailPage(
         boundary={map.boundary}
       />
 
-      <Card>
-        <CardContent>
-          {map.reports.length === 0 ? (
+      {map.reports.length === 0 ? (
+        <Card>
+          <CardContent>
             <p className="text-sm text-muted-foreground">Aucun signalement pour cette carte pour le moment.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Photo</TableHead>
-                  <TableHead>Genre</TableHead>
-                  <TableHead>Stérilisation</TableHead>
-                  <TableHead>Statut (déclarant)</TableHead>
-                  <TableHead>Commentaire du déclarant</TableHead>
-                  <TableHead>Statut (association)</TableHead>
-                  <TableHead>Commentaires</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {map.reports.map((report) => (
-                  <TableRow key={report.id}>
-                    <TableCell>
-                      <ReportPhotoThumbnail photoUrl={report.photoUrl} />
-                    </TableCell>
-                    <TableCell>{SEX_LABELS[report.sex]}</TableCell>
-                    <TableCell>{STERILIZATION_NEED_LABELS[report.needsSterilization]}</TableCell>
-                    <TableCell>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Mobile: one card per report, everything stacked and visible at once —
+              the table below would otherwise force a tiny screen down to just
+              photo + genre, with the rest only reachable by horizontal scroll. */}
+          <div className="flex flex-col gap-4 sm:hidden">
+            {map.reports.map((report) => (
+              <Card key={report.id}>
+                <CardContent className="flex flex-col gap-3">
+                  <div className="flex items-start gap-3">
+                    <ReportPhotoThumbnail photoUrl={report.photoUrl} />
+                    <div className="flex flex-1 flex-wrap gap-1.5">
+                      <Badge>{SEX_LABELS[report.sex]}</Badge>
+                      <Badge>{STERILIZATION_NEED_LABELS[report.needsSterilization]}</Badge>
                       <Badge>{REPORT_FINDER_STATUS_LABELS[report.finderStatus]}</Badge>
-                    </TableCell>
-                    <TableCell className="max-w-64">
-                      {report.description ? (
-                        <LinkifiedText text={report.description} />
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <ReportStatusSelect
-                        organizationId={organization.id}
-                        reportId={report.id}
-                        currentStatus={report.managementStatus}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {report.comments.length === 0 ? (
-                        <span className="text-muted-foreground">Aucun</span>
-                      ) : (
-                        <details>
-                          <summary className="cursor-pointer text-sm">
-                            {report.comments.length} commentaire{report.comments.length > 1 ? "s" : ""}
-                          </summary>
-                          <ul className="mt-2 flex flex-col gap-2">
-                            {report.comments.map((comment) => (
-                              <li key={comment.id} className="flex items-start justify-between gap-2 text-sm">
-                                <div>
-                                  <span className="font-medium">{comment.authorName}</span> —{" "}
-                                  <LinkifiedText text={comment.text} />
-                                </div>
-                                <DeleteCommentButton organizationId={organization.id} commentId={comment.id} />
-                              </li>
-                            ))}
-                          </ul>
-                        </details>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DeleteReportButton organizationId={organization.id} reportId={report.id} />
-                    </TableCell>
+                    </div>
+                  </div>
+
+                  {report.description && (
+                    <p className="text-sm text-muted-foreground">
+                      <LinkifiedText text={report.description} />
+                    </p>
+                  )}
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-muted-foreground">Statut (association)</span>
+                    <ReportStatusSelect
+                      organizationId={organization.id}
+                      reportId={report.id}
+                      currentStatus={report.managementStatus}
+                    />
+                  </div>
+
+                  <ReportComments report={report} organizationId={organization.id} />
+
+                  <div className="flex justify-end border-t border-border pt-2">
+                    <DeleteReportButton organizationId={organization.id} reportId={report.id} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop: the same data as a table. */}
+          <Card className="hidden sm:block">
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Photo</TableHead>
+                    <TableHead>Genre</TableHead>
+                    <TableHead>Stérilisation</TableHead>
+                    <TableHead>Statut (déclarant)</TableHead>
+                    <TableHead>Commentaire du déclarant</TableHead>
+                    <TableHead>Statut (association)</TableHead>
+                    <TableHead>Commentaires</TableHead>
+                    <TableHead />
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {map.reports.map((report) => (
+                    <TableRow key={report.id}>
+                      <TableCell>
+                        <ReportPhotoThumbnail photoUrl={report.photoUrl} />
+                      </TableCell>
+                      <TableCell>{SEX_LABELS[report.sex]}</TableCell>
+                      <TableCell>{STERILIZATION_NEED_LABELS[report.needsSterilization]}</TableCell>
+                      <TableCell>
+                        <Badge>{REPORT_FINDER_STATUS_LABELS[report.finderStatus]}</Badge>
+                      </TableCell>
+                      <TableCell className="max-w-64">
+                        {report.description ? (
+                          <LinkifiedText text={report.description} />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <ReportStatusSelect
+                          organizationId={organization.id}
+                          reportId={report.id}
+                          currentStatus={report.managementStatus}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <ReportComments report={report} organizationId={organization.id} />
+                      </TableCell>
+                      <TableCell>
+                        <DeleteReportButton organizationId={organization.id} reportId={report.id} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
