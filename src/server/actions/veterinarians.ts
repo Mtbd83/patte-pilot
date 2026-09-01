@@ -158,7 +158,8 @@ const listVeterinariansSchema = z.object({
 });
 
 /**
- * Any member (admin, bénévole or famille d'accueil): lists an organization's
+ * Admin or famille d'accueil only (not bénévole — this tab is reserved for
+ * the people who actually deal with vets): lists an organization's
  * veterinarians with their tariffs. A famille d'accueil only receives the
  * tariffs when the organization has opted into showing them — stripped out
  * here, server-side, not just hidden in the UI.
@@ -168,11 +169,7 @@ export async function listVeterinarians(input: z.infer<typeof listVeterinariansS
   if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
 
   const { organizationId } = listVeterinariansSchema.parse(input);
-  const roles = await requireRole(session.user.id, organizationId, [
-    "admin",
-    "benevole",
-    "famille_accueil",
-  ]);
+  const roles = await requireRole(session.user.id, organizationId, ["admin", "famille_accueil"]);
 
   const list = await db.query.veterinarians.findMany({
     where: eq(veterinarians.organizationId, organizationId),
@@ -180,7 +177,7 @@ export async function listVeterinarians(input: z.infer<typeof listVeterinariansS
     orderBy: (veterinarians, { asc }) => [asc(veterinarians.name)],
   });
 
-  const isOnlyFosterFamily = roles.includes("famille_accueil") && !roles.includes("admin") && !roles.includes("benevole");
+  const isOnlyFosterFamily = roles.includes("famille_accueil") && !roles.includes("admin");
   if (!isOnlyFosterFamily) return list;
 
   const organization = await db.query.organizations.findFirst({

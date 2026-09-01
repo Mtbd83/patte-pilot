@@ -47,6 +47,7 @@ export function OrgSidebar({
   logoUrl,
   isAdmin,
   canAccessComptabilite,
+  canAccessVeterinaires,
   showSterilizationCampaignsTab,
   isPlatformManager,
   showOnboardingTour,
@@ -56,6 +57,7 @@ export function OrgSidebar({
   logoUrl: string | null;
   isAdmin: boolean;
   canAccessComptabilite: boolean;
+  canAccessVeterinaires: boolean;
   showSterilizationCampaignsTab: boolean;
   isPlatformManager: boolean;
   showOnboardingTour: boolean;
@@ -83,7 +85,7 @@ export function OrgSidebar({
     { href: `${base}/comptabilite`, label: "Comptabilité", hidden: !canAccessComptabilite },
     { href: `${base}/stock`, label: "Stock" },
     { href: `${base}/candidatures`, label: "Candidatures" },
-    { href: `${base}/veterinaires`, label: "Vétérinaires" },
+    { href: `${base}/veterinaires`, label: "Vétérinaires", hidden: !canAccessVeterinaires },
     {
       href: `${base}/campagnes-sterilisation`,
       label: "Campagne de stérilisation",
@@ -200,6 +202,7 @@ export function OrgSidebar({
         <OnboardingTour
           ref={onboardingRef}
           isAdmin={isAdmin}
+          canAccessVeterinaires={canAccessVeterinaires}
           showSterilizationCampaignsTab={showSterilizationCampaignsTab}
           initialOpen={showOnboardingTour}
         />
@@ -218,6 +221,7 @@ export function OrgSidebar({
       <OnboardingTour
           ref={onboardingRef}
           isAdmin={isAdmin}
+          canAccessVeterinaires={canAccessVeterinaires}
           showSterilizationCampaignsTab={showSterilizationCampaignsTab}
           initialOpen={showOnboardingTour}
         />

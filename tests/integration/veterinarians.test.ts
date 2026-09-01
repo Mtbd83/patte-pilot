@@ -179,7 +179,7 @@ describe("veterinarians server actions", () => {
       });
     });
 
-    it("admin and bénévole always see tariffs, regardless of the setting", async () => {
+    it("admin always sees tariffs regardless of the setting; a bénévole is rejected entirely (admin/famille d'accueil only tab)", async () => {
       await updateVetTariffsVisibility({ organizationId, visible: false });
 
       authMock.mockResolvedValue({ user: { id: adminUserId } });
@@ -187,8 +187,7 @@ describe("veterinarians server actions", () => {
       expect(asAdmin.find((v) => v.id === vetId)?.tariffs.length).toBeGreaterThan(0);
 
       authMock.mockResolvedValue({ user: { id: benevoleUserId } });
-      const asBenevole = await listVeterinarians({ organizationId });
-      expect(asBenevole.find((v) => v.id === vetId)?.tariffs.length).toBeGreaterThan(0);
+      await expect(listVeterinarians({ organizationId })).rejects.toThrow(ForbiddenError);
     });
 
     it("hides tariffs from famille d'accueil when the org setting is off", async () => {

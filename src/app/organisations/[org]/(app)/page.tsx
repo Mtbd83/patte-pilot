@@ -30,7 +30,13 @@ const MODULES = [
   { href: "comptabilite", label: "Comptabilité", description: "Entrées, sorties, solde.", icon: Wallet, comptabiliteOnly: true },
   { href: "stock", label: "Stock", description: "Articles, quantités, alertes.", icon: Package },
   { href: "candidatures", label: "Candidatures d'adoption", description: "Formulaires reçus, contrats.", icon: HeartHandshake },
-  { href: "veterinaires", label: "Vétérinaires", description: "Vétérinaires partenaires et tarifs.", icon: Stethoscope },
+  {
+    href: "veterinaires",
+    label: "Vétérinaires",
+    description: "Vétérinaires partenaires et tarifs.",
+    icon: Stethoscope,
+    veterinairesOnly: true,
+  },
   {
     href: "campagnes-sterilisation",
     label: "Campagne de stérilisation",
@@ -65,11 +71,13 @@ export default async function OrganizationPage(
   const canAccessSterilizationCampaigns =
     organization.sterilizationCampaignModuleEnabled &&
     (isAdmin || permissions.includes("campagne_sterilisation"));
+  const canAccessVeterinaires = isAdmin || isFamilleAccueil;
   const visibleModules = MODULES.filter(
     (module) =>
       (!module.adminOnly || isAdmin) &&
       (!module.comptabiliteOnly || canAccessComptabilite) &&
-      (!module.sterilizationCampaignsOnly || canAccessSterilizationCampaigns),
+      (!module.sterilizationCampaignsOnly || canAccessSterilizationCampaigns) &&
+      (!module.veterinairesOnly || canAccessVeterinaires),
   );
   // The org-wide reminders card overlaps with "Mes animaux" for someone who's
   // only a famille d'accueil — admins/bénévoles need the full-org view, she

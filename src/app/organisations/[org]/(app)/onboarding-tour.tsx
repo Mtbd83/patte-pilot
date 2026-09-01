@@ -16,7 +16,7 @@ type Step = {
 // Purely explanatory — deliberately no "go to this tab" links. A step that
 // navigates away unmounts this dialog entirely, and the tour is lost with
 // no way back to where you were (reported after a first version had them).
-function buildSteps(isAdmin: boolean, showSterilizationCampaignsTab: boolean): Step[] {
+function buildSteps(isAdmin: boolean, canAccessVeterinaires: boolean, showSterilizationCampaignsTab: boolean): Step[] {
   const steps: Step[] = [
     {
       icon: Sparkles,
@@ -56,13 +56,16 @@ function buildSteps(isAdmin: boolean, showSterilizationCampaignsTab: boolean): S
       description:
         "Dans l'onglet Familles d'accueil : enregistrez leurs coordonnées et associez-leur les animaux qu'elles hébergent.",
     },
-    {
+  );
+
+  if (canAccessVeterinaires) {
+    steps.push({
       icon: Stethoscope,
       title: "Renseignez vos vétérinaires partenaires",
       description:
         "Dans l'onglet Vétérinaires : coordonnées, consignes et tarifs par acte, avec une carte automatique. Les tarifs restent visibles aux familles d'accueil selon un réglage que vous contrôlez.",
-    },
-  );
+    });
+  }
 
   if (showSterilizationCampaignsTab) {
     steps.push({
@@ -103,12 +106,17 @@ export type OnboardingTourHandle = { open: () => void };
  */
 export const OnboardingTour = forwardRef<
   OnboardingTourHandle,
-  { isAdmin: boolean; showSterilizationCampaignsTab: boolean; initialOpen: boolean }
+  {
+    isAdmin: boolean;
+    canAccessVeterinaires: boolean;
+    showSterilizationCampaignsTab: boolean;
+    initialOpen: boolean;
+  }
 >(
-  function OnboardingTour({ isAdmin, showSterilizationCampaignsTab, initialOpen }, ref) {
+  function OnboardingTour({ isAdmin, canAccessVeterinaires, showSterilizationCampaignsTab, initialOpen }, ref) {
     const [open, setOpen] = useState(initialOpen);
     const [stepIndex, setStepIndex] = useState(0);
-    const steps = buildSteps(isAdmin, showSterilizationCampaignsTab);
+    const steps = buildSteps(isAdmin, canAccessVeterinaires, showSterilizationCampaignsTab);
     // stepIndex is only ever moved within [0, steps.length) by this
     // component's own handlers below.
     const step = steps[stepIndex]!;

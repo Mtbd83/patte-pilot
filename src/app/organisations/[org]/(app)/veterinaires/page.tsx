@@ -30,6 +30,22 @@ export default async function VeterinairesPage(
 
   const roles = await getMemberRoles(session.user.id, organization.id);
   const isAdmin = roles.includes("admin");
+  const canAccess = isAdmin || roles.includes("famille_accueil");
+  if (!canAccess) {
+    return (
+      <Card className="mx-auto mt-16 max-w-md">
+        <CardHeader>
+          <CardTitle>Accès refusé</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Seul·e·s les administrateur·rice·s et les familles d&apos;accueil peuvent accéder aux vétérinaires
+            partenaires.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const veterinarians = await listVeterinarians({ organizationId: organization.id });
 

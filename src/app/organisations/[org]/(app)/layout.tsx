@@ -56,6 +56,7 @@ export default async function OrganizationLayout(
   const showSterilizationCampaignsTab =
     organization.sterilizationCampaignModuleEnabled &&
     (isAdmin || permissions.includes("campagne_sterilisation"));
+  const canAccessVeterinaires = isAdmin || roles.includes("famille_accueil");
 
   return (
     <div className="min-h-dvh bg-background md:flex">
@@ -65,6 +66,7 @@ export default async function OrganizationLayout(
         logoUrl={organization.logoUrl}
         isAdmin={isAdmin}
         canAccessComptabilite={isAdmin || permissions.includes("comptabilite")}
+        canAccessVeterinaires={canAccessVeterinaires}
         showSterilizationCampaignsTab={showSterilizationCampaignsTab}
         isPlatformManager={platformManager}
         showOnboardingTour={!currentUser?.onboardingCompletedAt}
