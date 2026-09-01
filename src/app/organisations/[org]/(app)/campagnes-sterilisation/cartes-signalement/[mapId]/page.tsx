@@ -6,7 +6,12 @@ import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles, getMemberPermissions } from "@/lib/permissions";
 import { getReportingMapDetail } from "@/server/actions/sterilization-reports";
 import { SEX_LABELS } from "@/lib/animal-labels";
-import { STERILIZATION_NEED_LABELS, REPORT_FINDER_STATUS_LABELS } from "@/lib/report-labels";
+import {
+  STERILIZATION_NEED_LABELS,
+  REPORT_FINDER_STATUS_LABELS,
+  REPORT_MANAGEMENT_STATUS_MAP_COLORS,
+} from "@/lib/report-labels";
+import type { ReportManagementStatus } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -20,6 +25,18 @@ import { CopyPublicLinkButton } from "./copy-public-link-button";
 import { DeleteReportingMapButton } from "../../delete-reporting-map-button";
 
 type ReportWithComments = Awaited<ReturnType<typeof getReportingMapDetail>>["reports"][number];
+
+/** Same colored-circle-with-number look as the map's own pins, so a report can be matched between the two at a glance. */
+function ReportNumberBadge({ index, status }: { index: number; status: ReportManagementStatus }) {
+  return (
+    <span
+      className="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+      style={{ backgroundColor: REPORT_MANAGEMENT_STATUS_MAP_COLORS[status] }}
+    >
+      {index + 1}
+    </span>
+  );
+}
 
 /** Shared between the mobile card and the desktop table cell, so the two views can't drift apart. */
 function ReportComments({
@@ -142,10 +159,11 @@ export default async function CarteSignalementDetailPage(
               the table below would otherwise force a tiny screen down to just
               photo + genre, with the rest only reachable by horizontal scroll. */}
           <div className="flex flex-col gap-4 sm:hidden">
-            {map.reports.map((report) => (
+            {map.reports.map((report, index) => (
               <Card key={report.id}>
                 <CardContent className="flex flex-col gap-3">
                   <div className="flex items-start gap-3">
+                    <ReportNumberBadge index={index} status={report.managementStatus} />
                     <ReportPhotoThumbnail photoUrl={report.photoUrl} />
                     <div className="flex flex-1 flex-wrap gap-1.5">
                       <Badge>{SEX_LABELS[report.sex]}</Badge>
@@ -185,6 +203,7 @@ export default async function CarteSignalementDetailPage(
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>#</TableHead>
                     <TableHead>Photo</TableHead>
                     <TableHead>Genre</TableHead>
                     <TableHead>Stérilisation</TableHead>
@@ -196,8 +215,11 @@ export default async function CarteSignalementDetailPage(
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {map.reports.map((report) => (
+                  {map.reports.map((report, index) => (
                     <TableRow key={report.id}>
+                      <TableCell>
+                        <ReportNumberBadge index={index} status={report.managementStatus} />
+                      </TableCell>
                       <TableCell>
                         <ReportPhotoThumbnail photoUrl={report.photoUrl} />
                       </TableCell>
