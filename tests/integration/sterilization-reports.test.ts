@@ -78,6 +78,7 @@ function makeReportFormData(overrides: Partial<Record<string, string>> = {}) {
   formData.set("needsSterilization", overrides.needsSterilization ?? "oui");
   formData.set("finderStatus", overrides.finderStatus ?? "errant");
   if (overrides.description) formData.set("description", overrides.description);
+  if (overrides.contact) formData.set("contact", overrides.contact);
   if (overrides.honeypot) formData.set("honeypot", overrides.honeypot);
   if (overrides.noPhoto !== "true") {
     formData.set("file", new File(["fake"], "chat.jpg", { type: "image/jpeg" }));
@@ -240,7 +241,11 @@ describe("sterilization report server actions", () => {
     expect(publicView.reports).toHaveLength(0);
 
     const created = await createReport(
-      makeReportFormData({ mapToken: map.publicToken, description: "Chat noir et blanc, timide" }),
+      makeReportFormData({
+        mapToken: map.publicToken,
+        description: "Chat noir et blanc, timide",
+        contact: "06 12 34 56 78",
+      }),
     );
     expect(created).not.toBeNull();
 
@@ -263,6 +268,8 @@ describe("sterilization report server actions", () => {
     expect(report.photoUrl).toBe("https://storage.example.com/fake-report-photo.jpg");
     expect(report.managementStatus).toBe("en_cours");
     expect((report as Record<string, unknown>).reporterIp).toBeUndefined();
+    // The optional contact is for the association only — never on the public map.
+    expect((report as Record<string, unknown>).contact).toBeUndefined();
 
     const comment = await createReportComment({
       mapToken: map.publicToken,
@@ -280,6 +287,8 @@ describe("sterilization report server actions", () => {
     const detail = await getReportingMapDetail({ mapId: map.id, organizationId });
     expect(detail.reports).toHaveLength(1);
     expect(detail.reports[0]!.comments).toHaveLength(1);
+    // Same contact, but visible to the association's own detail view.
+    expect(detail.reports[0]!.contact).toBe("06 12 34 56 78");
   });
 
   it("requires a photo to submit a report", async () => {

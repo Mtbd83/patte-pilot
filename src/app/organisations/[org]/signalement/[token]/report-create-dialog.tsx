@@ -8,6 +8,7 @@ import { SEX_LABELS } from "@/lib/animal-labels";
 import { STERILIZATION_NEED_LABELS, REPORT_FINDER_STATUS_LABELS } from "@/lib/report-labels";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/ui/field";
 import { Dialog } from "@/components/ui/dialog";
@@ -36,6 +37,7 @@ export function ReportCreateDialog({
   const [needsSterilization, setNeedsSterilization] = useState<SterilizationNeed | "">("");
   const [finderStatus, setFinderStatus] = useState<ReportFinderStatus | "">("");
   const [description, setDescription] = useState("");
+  const [contact, setContact] = useState("");
   // Honeypot — invisible and unreachable by keyboard for real visitors.
   const [honeypot, setHoneypot] = useState("");
 
@@ -59,6 +61,7 @@ export function ReportCreateDialog({
       formData.set("needsSterilization", needsSterilization);
       formData.set("finderStatus", finderStatus);
       if (description) formData.set("description", description);
+      if (contact) formData.set("contact", contact);
       formData.set("honeypot", honeypot);
       formData.set("file", file);
 
@@ -149,6 +152,14 @@ export function ReportCreateDialog({
 
         <Field label="Un commentaire à ajouter ?" htmlFor="report-description">
           <Textarea id="report-description" value={description} onChange={(e) => setDescription(e.target.value)} />
+        </Field>
+
+        <Field
+          label="Un contact à laisser à l'association ?"
+          htmlFor="report-contact"
+          hint="Facultatif — téléphone ou email, visible uniquement par l'association, jamais publié sur cette carte."
+        >
+          <Input id="report-contact" value={contact} onChange={(e) => setContact(e.target.value)} />
         </Field>
 
         {error && <p className="text-sm text-destructive">{error}</p>}

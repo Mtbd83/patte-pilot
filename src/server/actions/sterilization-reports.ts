@@ -306,6 +306,7 @@ const createReportSchema = z.object({
   needsSterilization: z.enum(sterilizationNeedEnum.enumValues),
   finderStatus: z.enum(reportFinderStatusEnum.enumValues),
   description: z.string().optional(),
+  contact: z.string().max(200).optional(),
   honeypot: z.string().optional(),
 });
 
@@ -324,6 +325,7 @@ export async function createReport(formData: FormData) {
     needsSterilization: formData.get("needsSterilization"),
     finderStatus: formData.get("finderStatus"),
     description: formData.get("description") || undefined,
+    contact: formData.get("contact") || undefined,
     honeypot: formData.get("honeypot") || undefined,
   });
 
@@ -375,6 +377,7 @@ export async function createReport(formData: FormData) {
       needsSterilization: data.needsSterilization,
       finderStatus: data.finderStatus,
       description: data.description,
+      contact: data.contact,
       reporterIp: ipAddress,
     })
     .returning({ id: sterilizationReports.id });

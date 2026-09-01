@@ -62,7 +62,10 @@ export const sterilizationReportingMaps = pgTable(
  * once at creation; `managementStatus` is the association's independent
  * workflow status, defaulting to "en_cours" and changed only from the
  * authenticated side. `reporterIp` is for rate-limiting only — never
- * returned to any caller, public or authenticated.
+ * returned to any caller, public or authenticated. `contact` is an optional
+ * way for the reporter to leave a phone/email — shown to the association
+ * only (excluded from the public query, same as reporterIp), so the
+ * reporter's own contact isn't broadcast on the public map.
  */
 export const sterilizationReports = pgTable(
   "sterilization_reports",
@@ -80,6 +83,7 @@ export const sterilizationReports = pgTable(
     finderStatus: reportFinderStatusEnum("finder_status").notNull(),
     managementStatus: reportManagementStatusEnum("management_status").default("en_cours").notNull(),
     description: text("description"),
+    contact: varchar("contact", { length: 200 }),
     reporterIp: varchar("reporter_ip", { length: 64 }),
 
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

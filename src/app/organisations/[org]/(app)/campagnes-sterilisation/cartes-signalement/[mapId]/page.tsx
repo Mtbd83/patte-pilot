@@ -178,6 +178,13 @@ export default async function CarteSignalementDetailPage(
                     </p>
                   )}
 
+                  {report.contact && (
+                    <p className="text-sm">
+                      <span className="text-xs font-medium text-muted-foreground">Contact : </span>
+                      {report.contact}
+                    </p>
+                  )}
+
                   <div className="flex flex-col gap-1">
                     <span className="text-xs font-medium text-muted-foreground">Statut (association)</span>
                     <ReportStatusSelect
@@ -209,6 +216,7 @@ export default async function CarteSignalementDetailPage(
                     <TableHead>Stérilisation</TableHead>
                     <TableHead>Statut (déclarant)</TableHead>
                     <TableHead>Commentaire du déclarant</TableHead>
+                    <TableHead>Contact</TableHead>
                     <TableHead>Statut (association)</TableHead>
                     <TableHead>Commentaires</TableHead>
                     <TableHead />
@@ -234,6 +242,9 @@ export default async function CarteSignalementDetailPage(
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        {report.contact ? report.contact : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell>
                         <ReportStatusSelect

@@ -1,0 +1,1 @@
+ALTER TABLE "sterilization_reports" ADD COLUMN "contact" varchar(200);
