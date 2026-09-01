@@ -144,3 +144,25 @@ export async function listOrganizationAdminUserIds(organizationId: string): Prom
     .filter((member) => member.roles.some((r) => r.role === "admin"))
     .map((member) => member.userId);
 }
+
+/** User IDs of every active admin, plus every bénévole holding the given permission — e.g. to notify them of a new stray-cat report. */
+export async function listOrganizationAdminOrPermissionUserIds(
+  organizationId: string,
+  permission: OrgPermission,
+): Promise<string[]> {
+  const members = await db.query.organizationMembers.findMany({
+    where: and(
+      eq(organizationMembers.organizationId, organizationId),
+      eq(organizationMembers.isActive, true),
+    ),
+    with: { roles: true, permissions: true },
+  });
+
+  return members
+    .filter(
+      (member) =>
+        member.roles.some((r) => r.role === "admin") ||
+        member.permissions.some((p) => p.permission === permission),
+    )
+    .map((member) => member.userId);
+}

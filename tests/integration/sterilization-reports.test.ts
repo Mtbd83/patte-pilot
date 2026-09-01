@@ -14,6 +14,9 @@ jest.mock("@/lib/uploads", () => ({
 jest.mock("@/lib/request-ip", () => ({
   getClientIp: jest.fn().mockResolvedValue("203.0.113.42"),
 }));
+jest.mock("@/lib/push", () => ({
+  sendPushToUsers: jest.fn().mockResolvedValue(undefined),
+}));
 // Only fetchCityBoundary (a pure convenience for pre-filling the admin's
 // boundary-drawing map) still calls this — map creation/validation no
 // longer touches geocoding at all, see makeSquareBoundary below.
@@ -28,6 +31,7 @@ import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { getClientIp } from "@/lib/request-ip";
+import { sendPushToUsers } from "@/lib/push";
 import { geocodeCityBoundary } from "@/lib/geocoding";
 import { db } from "@/db";
 import { users, organizations, organizationMembers, organizationMemberRoles } from "@/db/schema";
@@ -50,6 +54,7 @@ import { ForbiddenError } from "@/lib/permissions";
 const authMock = auth as unknown as jest.Mock;
 const getClientIpMock = getClientIp as unknown as jest.Mock;
 const geocodeCityBoundaryMock = geocodeCityBoundary as unknown as jest.Mock;
+const sendPushToUsersMock = sendPushToUsers as unknown as jest.Mock;
 
 // A ~5.5km square around a fixed center — comfortably contains the default
 // report location below and other "close by" test points, while a distant
@@ -82,6 +87,7 @@ function makeReportFormData(overrides: Partial<Record<string, string>> = {}) {
 
 describe("sterilization report server actions", () => {
   let organizationId: string;
+  let organizationSlug: string;
   let adminUserId: string;
   let benevoleUserId: string;
   let benevoleMemberId: string;
@@ -104,6 +110,7 @@ describe("sterilization report server actions", () => {
       .returning();
     if (!org) throw new Error("Seed setup failed: organization not created.");
     organizationId = org.id;
+    organizationSlug = org.slug;
 
     const [adminMember] = await db
       .insert(organizationMembers)
@@ -135,6 +142,7 @@ describe("sterilization report server actions", () => {
       center: { latitude: 43.5297, longitude: 5.4474 },
       boundary: null,
     });
+    sendPushToUsersMock.mockClear();
   });
 
   it("rejects a bénévole without the permission from creating a map, admin succeeds", async () => {
@@ -235,6 +243,19 @@ describe("sterilization report server actions", () => {
       makeReportFormData({ mapToken: map.publicToken, description: "Chat noir et blanc, timide" }),
     );
     expect(created).not.toBeNull();
+
+    // Notifies the admin and any bénévole holding "campagne_sterilisation"
+    // (the bénévole granted it in the earlier test) — never an outsider.
+    expect(sendPushToUsersMock).toHaveBeenCalledWith(
+      expect.arrayContaining([adminUserId, benevoleUserId]),
+      expect.objectContaining({
+        title: "Nouveau signalement",
+        body: 'Nouveau signalement sur la carte de "Manosque"',
+        url: `/organisations/${organizationSlug}/campagnes-sterilisation/cartes-signalement/${map.id}`,
+      }),
+    );
+    const [notifiedUserIds] = sendPushToUsersMock.mock.calls[sendPushToUsersMock.mock.calls.length - 1]!;
+    expect(notifiedUserIds).not.toContain(outsiderUserId);
 
     const afterReport = await getPublicReportingMap({ token: map.publicToken });
     expect(afterReport.reports).toHaveLength(1);

@@ -15,11 +15,17 @@ import {
   organizations,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { requireAdmin, requireAdminOrPermission, ForbiddenError } from "@/lib/permissions";
+import {
+  requireAdmin,
+  requireAdminOrPermission,
+  listOrganizationAdminOrPermissionUserIds,
+  ForbiddenError,
+} from "@/lib/permissions";
 import { uploadImage } from "@/lib/uploads";
 import { getClientIp } from "@/lib/request-ip";
 import { geocodeCityBoundary } from "@/lib/geocoding";
 import { isPointInPolygon } from "@/lib/geo";
+import { sendPushToUsers } from "@/lib/push";
 
 const REPORT_RATE_LIMIT_MAX_PER_HOUR = 5;
 const COMMENT_RATE_LIMIT_MAX_PER_HOUR = 5;
@@ -373,6 +379,27 @@ export async function createReport(formData: FormData) {
     })
     .returning({ id: sterilizationReports.id });
   if (!report) throw new Error("Échec de l'envoi du signalement.");
+
+  // Best-effort: never let a notification failure break the public submission.
+  try {
+    const organization = await db.query.organizations.findFirst({
+      where: eq(organizations.id, map.organizationId),
+    });
+    if (organization) {
+      const userIds = await listOrganizationAdminOrPermissionUserIds(
+        map.organizationId,
+        "campagne_sterilisation",
+      );
+      await sendPushToUsers(userIds, {
+        title: "Nouveau signalement",
+        body: `Nouveau signalement sur la carte de "${map.city}"`,
+        url: `/organisations/${organization.slug}/campagnes-sterilisation/cartes-signalement/${map.id}`,
+      });
+    }
+  } catch (err) {
+    console.error("Échec d'envoi de la notification de nouveau signalement:", err);
+  }
+
   return report;
 }
 
