@@ -16,7 +16,17 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { sendEmail } from "@/lib/mailer";
 import { db } from "@/db";
-import { users, organizations, invitations } from "@/db/schema";
+import {
+  users,
+  organizations,
+  invitations,
+  organizationMembers,
+  organizationMemberRoles,
+  organizationMemberPermissions,
+  animals,
+  adoptionApplications,
+  sterilizationCampaigns,
+} from "@/db/schema";
 import {
   submitOrganizationSignupRequest,
   listOrganizationSignupRequests,
@@ -26,6 +36,8 @@ import {
   createOrganizationAsPlatformManager,
   updateOrganizationIdentity,
   deleteOrganizationAsPlatformManager,
+  getOrganizationDetailForPlatformManager,
+  resendInvitation,
 } from "@/server/actions/platform";
 import { ForbiddenError } from "@/lib/permissions";
 
@@ -240,5 +252,111 @@ describe("platform manager server actions", () => {
       where: eq(organizations.id, organization.id),
     });
     expect(gone).toBeUndefined();
+  });
+
+  describe("organization detail view", () => {
+    let organizationId: string;
+    let memberUserId: string;
+    let invitationId: string;
+
+    beforeAll(async () => {
+      const suffix = randomUUID().slice(0, 8);
+      const [organization] = await db
+        .insert(organizations)
+        .values({ name: `Détail Test ${suffix}`, slug: `detail-test-${suffix}` })
+        .returning();
+      if (!organization) throw new Error("Seed failed.");
+      organizationId = organization.id;
+
+      const [memberUser] = await db
+        .insert(users)
+        .values({ email: `detail-member-${suffix}@example.com` })
+        .returning();
+      if (!memberUser) throw new Error("Seed failed.");
+      memberUserId = memberUser.id;
+
+      const [member] = await db
+        .insert(organizationMembers)
+        .values({ organizationId, userId: memberUserId })
+        .returning();
+      if (!member) throw new Error("Seed failed.");
+      await db.insert(organizationMemberRoles).values({ memberId: member.id, role: "benevole" });
+      await db.insert(organizationMemberPermissions).values({ memberId: member.id, permission: "comptabilite" });
+
+      const [invitation] = await db
+        .insert(invitations)
+        .values({
+          organizationId,
+          email: `invited-${suffix}@example.com`,
+          roles: ["benevole"],
+          token: randomUUID(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          invitedByUserId: managerId,
+        })
+        .returning();
+      if (!invitation) throw new Error("Seed failed.");
+      invitationId = invitation.id;
+
+      await db.insert(animals).values({ organizationId, name: "Félix", intakeDate: "2026-01-01" });
+      await db.insert(adoptionApplications).values({
+        organizationId,
+        lastName: "Dupont",
+        firstName: "Jeanne",
+        city: "Toulon",
+        phone: "0600000000",
+        email: "jeanne@example.com",
+        rgpdConsentAt: new Date(),
+      });
+      await db.insert(sterilizationCampaigns).values({
+        organizationId,
+        city: "Toulon",
+        partner: "spa",
+        vetName: "Dr. Test",
+        voucherQuotaTotal: 10,
+      });
+    });
+
+    afterAll(async () => {
+      await db.delete(organizations).where(eq(organizations.id, organizationId));
+      await db.delete(users).where(eq(users.id, memberUserId));
+    });
+
+    it("shows members with roles/permissions, pending invitations, and headline stats, admin-only", async () => {
+      authMock.mockResolvedValue({ user: { id: managerId } });
+      const detail = await getOrganizationDetailForPlatformManager({ organizationId });
+
+      expect(detail.members).toHaveLength(1);
+      expect(detail.members[0]!.roles.map((r) => r.role)).toEqual(["benevole"]);
+      expect(detail.members[0]!.permissions.map((p) => p.permission)).toEqual(["comptabilite"]);
+
+      expect(detail.pendingInvitations).toHaveLength(1);
+      expect(detail.pendingInvitations[0]!.id).toBe(invitationId);
+
+      expect(detail.stats).toEqual({ animalsCount: 1, applicationsCount: 1, campaignsCount: 1 });
+
+      authMock.mockResolvedValue({ user: { id: outsiderId } });
+      await expect(getOrganizationDetailForPlatformManager({ organizationId })).rejects.toThrow(ForbiddenError);
+    });
+
+    it("resends a pending invitation, extending its expiry, but rejects a non-manager", async () => {
+      const before = await db.query.invitations.findFirst({ where: eq(invitations.id, invitationId) });
+
+      authMock.mockResolvedValue({ user: { id: outsiderId } });
+      await expect(resendInvitation({ invitationId })).rejects.toThrow(ForbiddenError);
+
+      authMock.mockResolvedValue({ user: { id: managerId } });
+      const updated = await resendInvitation({ invitationId });
+
+      expect(updated.expiresAt.getTime()).toBeGreaterThan(before!.expiresAt.getTime());
+      expect(sendEmailMock).toHaveBeenCalledTimes(1);
+      expect(sendEmailMock.mock.calls[0][0].to).toBe(before!.email);
+    });
+
+    it("refuses to resend an invitation that's no longer pending", async () => {
+      await db.update(invitations).set({ status: "accepted" }).where(eq(invitations.id, invitationId));
+
+      authMock.mockResolvedValue({ user: { id: managerId } });
+      await expect(resendInvitation({ invitationId })).rejects.toThrow("plus en attente");
+    });
   });
 });

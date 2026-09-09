@@ -5,10 +5,25 @@ import { and, desc, eq, gte } from "drizzle-orm";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/db";
-import { organizations, organizationSignupRequests, invitations, users } from "@/db/schema";
+import {
+  organizations,
+  organizationSignupRequests,
+  invitations,
+  organizationMembers,
+  users,
+  animals,
+  adoptionApplications,
+  sterilizationCampaigns,
+} from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requirePlatformManager, ForbiddenError } from "@/lib/permissions";
-import { sendEmail, platformSmtpConfig, platformAdminInvitationEmailHtml } from "@/lib/mailer";
+import {
+  sendEmail,
+  platformSmtpConfig,
+  platformAdminInvitationEmailHtml,
+  invitationEmailHtml,
+  organizationSmtpConfig,
+} from "@/lib/mailer";
 import { getRequestOrigin } from "@/lib/request-origin";
 
 const INVITATION_TTL_DAYS = 7;
@@ -336,4 +351,111 @@ export async function checkIsPlatformManager() {
   if (!session?.user?.id) return false;
   const user = await db.query.users.findFirst({ where: eq(users.id, session.user.id) });
   return user?.isPlatformManager ?? false;
+}
+
+const getOrganizationDetailSchema = z.object({
+  organizationId: z.string().uuid(),
+});
+
+/**
+ * Platform manager only: one organization's members (with roles/
+ * permissions), its still-pending invitations, and a few headline counts —
+ * everything editable stays the organization's own responsibility in its
+ * own Membres/Paramètres pages; this view is read-only except for
+ * resending an invitation (see resendInvitation below).
+ */
+export async function getOrganizationDetailForPlatformManager(
+  input: z.infer<typeof getOrganizationDetailSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+  await requirePlatformManager(session.user.id);
+
+  const { organizationId } = getOrganizationDetailSchema.parse(input);
+
+  const organization = await db.query.organizations.findFirst({
+    where: eq(organizations.id, organizationId),
+  });
+  if (!organization) throw new Error("Organisation introuvable.");
+
+  const [members, pendingInvitations, animalsList, applicationsList, campaignsList] = await Promise.all([
+    db.query.organizationMembers.findMany({
+      where: and(eq(organizationMembers.organizationId, organizationId), eq(organizationMembers.isActive, true)),
+      with: { user: true, roles: true, permissions: true },
+    }),
+    db.query.invitations.findMany({
+      where: and(eq(invitations.organizationId, organizationId), eq(invitations.status, "pending")),
+      orderBy: desc(invitations.createdAt),
+    }),
+    db.query.animals.findMany({ where: eq(animals.organizationId, organizationId), columns: { id: true } }),
+    db.query.adoptionApplications.findMany({
+      where: eq(adoptionApplications.organizationId, organizationId),
+      columns: { id: true },
+    }),
+    db.query.sterilizationCampaigns.findMany({
+      where: eq(sterilizationCampaigns.organizationId, organizationId),
+      columns: { id: true },
+    }),
+  ]);
+
+  return {
+    organization,
+    members,
+    pendingInvitations,
+    stats: {
+      animalsCount: animalsList.length,
+      applicationsCount: applicationsList.length,
+      campaignsCount: campaignsList.length,
+    },
+  };
+}
+
+const resendInvitationSchema = z.object({
+  invitationId: z.string().uuid(),
+});
+
+/**
+ * Platform manager only: re-sends a pending invitation's email and extends
+ * its expiry by another INVITATION_TTL_DAYS — the token itself doesn't
+ * change, so any copy of the original email keeps working too.
+ */
+export async function resendInvitation(input: z.infer<typeof resendInvitationSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+  await requirePlatformManager(session.user.id);
+
+  const { invitationId } = resendInvitationSchema.parse(input);
+
+  const invitation = await db.query.invitations.findFirst({
+    where: eq(invitations.id, invitationId),
+    with: { organization: true, invitedBy: true },
+  });
+  if (!invitation) throw new Error("Invitation introuvable.");
+  if (invitation.status !== "pending") throw new Error("Cette invitation n'est plus en attente.");
+
+  const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const [updated] = await db
+    .update(invitations)
+    .set({ expiresAt })
+    .where(eq(invitations.id, invitationId))
+    .returning();
+  if (!updated) throw new Error("Échec de la relance de l'invitation.");
+
+  const acceptUrl = `${await getRequestOrigin()}/invite/${invitation.token}`;
+
+  await sendEmail({
+    to: invitation.email,
+    subject: `Invitation à rejoindre ${invitation.organization.name}`,
+    html: invitationEmailHtml({
+      organizationName: invitation.organization.name,
+      inviterName: invitation.invitedBy?.firstName ?? invitation.invitedBy?.email ?? "Un administrateur",
+      acceptUrl,
+      roles: invitation.roles,
+    }),
+    fromName: invitation.organization.name,
+    replyTo: invitation.organization.contactEmail ?? undefined,
+    organizationSmtp: organizationSmtpConfig(invitation.organization),
+  });
+
+  return updated;
 }

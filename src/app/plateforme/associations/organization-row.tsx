@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   updateOrganizationIdentity,
@@ -128,7 +129,11 @@ export function OrganizationRow({ organization }: { organization: Organization }
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{organization.name}</TableCell>
+      <TableCell className="font-medium">
+        <Link href={`/plateforme/associations/${organization.id}`} className="hover:underline">
+          {organization.name}
+        </Link>
+      </TableCell>
       <TableCell className="text-muted-foreground">/{organization.slug}</TableCell>
       <TableCell className="text-muted-foreground">
         {new Date(organization.createdAt).toLocaleDateString("fr-FR")}
