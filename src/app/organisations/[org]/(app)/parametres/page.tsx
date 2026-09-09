@@ -59,7 +59,7 @@ export default async function ParametresPage(
         <h1 className="mt-1 text-2xl font-semibold">Paramètres de l&apos;association</h1>
       </div>
 
-      <Card>
+      <Card id="email-envoi">
         <CardHeader>
           <CardTitle>Adresse email d&apos;envoi</CardTitle>
           <CardDescription>

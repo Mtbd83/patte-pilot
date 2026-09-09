@@ -75,6 +75,24 @@ export async function createInvitation(input: CreateInvitationInput) {
 
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const acceptUrl = `${await getRequestOrigin()}/invite/${token}`;
+
+  // Sent before the row is inserted — a failed send (e.g. the organization
+  // hasn't configured its own SMTP yet) must never leave behind an
+  // invitation that looks "pending" but was never actually delivered.
+  await sendEmail({
+    to: normalizedEmail,
+    subject: `Invitation à rejoindre ${organization.name}`,
+    html: invitationEmailHtml({
+      organizationName: organization.name,
+      inviterName: inviter?.firstName ?? inviter?.email ?? "Un administrateur",
+      acceptUrl,
+      roles,
+    }),
+    fromName: organization.name,
+    replyTo: organization.contactEmail ?? undefined,
+    organizationSmtp: organizationSmtpConfig(organization),
+  });
 
   const [invitation] = await db
     .insert(invitations)
@@ -89,22 +107,6 @@ export async function createInvitation(input: CreateInvitationInput) {
     })
     .returning();
   if (!invitation) throw new Error("Échec de la création de l'invitation.");
-
-  const acceptUrl = `${await getRequestOrigin()}/invite/${token}`;
-
-  await sendEmail({
-    to: invitation.email,
-    subject: `Invitation à rejoindre ${organization.name}`,
-    html: invitationEmailHtml({
-      organizationName: organization.name,
-      inviterName: inviter?.firstName ?? inviter?.email ?? "Un administrateur",
-      acceptUrl,
-      roles,
-    }),
-    fromName: organization.name,
-    replyTo: organization.contactEmail ?? undefined,
-    organizationSmtp: organizationSmtpConfig(organization),
-  });
 
   return invitation;
 }
@@ -317,16 +319,10 @@ export async function resendInvitation(input: z.infer<typeof resendInvitationSch
     ? await db.query.users.findFirst({ where: eq(users.id, invitation.invitedByUserId) })
     : null;
 
-  const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
-  const [updated] = await db
-    .update(invitations)
-    .set({ expiresAt })
-    .where(eq(invitations.id, invitationId))
-    .returning();
-  if (!updated) throw new Error("Échec de la relance de l'invitation.");
-
   const acceptUrl = `${await getRequestOrigin()}/invite/${invitation.token}`;
 
+  // Sent before the expiry is extended — a failed send must never leave the
+  // invitation looking freshly relaunched when no email actually went out.
   await sendEmail({
     to: invitation.email,
     subject: `Invitation à rejoindre ${organization.name}`,
@@ -340,6 +336,14 @@ export async function resendInvitation(input: z.infer<typeof resendInvitationSch
     replyTo: organization.contactEmail ?? undefined,
     organizationSmtp: organizationSmtpConfig(organization),
   });
+
+  const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const [updated] = await db
+    .update(invitations)
+    .set({ expiresAt })
+    .where(eq(invitations.id, invitationId))
+    .returning();
+  if (!updated) throw new Error("Échec de la relance de l'invitation.");
 
   return updated;
 }

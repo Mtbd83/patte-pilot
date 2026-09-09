@@ -351,6 +351,31 @@ describe("platform manager server actions", () => {
       expect(updated.expiresAt.getTime()).toBeGreaterThan(before!.expiresAt.getTime());
       expect(sendEmailMock).toHaveBeenCalledTimes(1);
       expect(sendEmailMock.mock.calls[0][0].to).toBe(before!.email);
+      // This test's organization has no SMTP of its own configured — the
+      // platform's shared mailbox must be used as the fallback, not throw.
+      expect(sendEmailMock.mock.calls[0][0].organizationSmtp?.user).toBe(process.env.PLATFORM_SMTP_USER);
+    });
+
+    it("unlike the platform tool's own resend, the organization's own invitation flow passes no fallback when it has no SMTP of its own", async () => {
+      // sendEmail itself is mocked to always resolve in this test file (no
+      // real email is ever sent here) — so what actually proves the two
+      // code paths differ is what `organizationSmtp` each one hands it, not
+      // whether the call throws.
+      const { createInvitation } = await import("@/server/actions/invitations");
+
+      // This organization has no SMTP of its own — give the platform
+      // manager an admin membership here just to call the org-level action.
+      const [adminMember] = await db
+        .insert(organizationMembers)
+        .values({ organizationId, userId: managerId })
+        .returning();
+      await db.insert(organizationMemberRoles).values({ memberId: adminMember!.id, role: "admin" });
+
+      sendEmailMock.mockClear();
+      authMock.mockResolvedValue({ user: { id: managerId } });
+      await createInvitation({ organizationId, email: `strict-${randomUUID().slice(0, 8)}@example.com`, roles: ["benevole"] });
+
+      expect(sendEmailMock.mock.calls[0]![0].organizationSmtp).toBeNull();
     });
 
     it("refuses to resend an invitation that's no longer pending", async () => {

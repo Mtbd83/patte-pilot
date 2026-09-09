@@ -44,10 +44,17 @@ export function organizationSmtpConfig(organization: {
 }
 
 /**
- * The platform's own mailbox — used only for the handful of emails sent
- * before an organization has configured its own (e.g. inviting the first
- * admin of a newly approved association). Never used for anything
- * candidate/member-facing on an organization's behalf.
+ * The platform's own mailbox — used only for (a) the handful of emails sent
+ * before an organization even exists yet (inviting the first admin of a
+ * newly approved association), and (b) as a manual fallback in the platform
+ * admin tool's own "relancer" action on a pending invitation (see
+ * resendInvitation in src/server/actions/platform.ts). Deliberately NOT a
+ * general fallback for every organization email: an organization without
+ * its own SMTP configured is meant to hit a clear error and go set one up
+ * in Paramètres, not silently ride on the platform's personal mailbox for
+ * its regular traffic (invitations it sends itself, certificates,
+ * contracts...) — keeping volume through that mailbox to genuine,
+ * deliberate platform-manager actions only.
  */
 export function platformSmtpConfig(): OrganizationSmtpConfig | null {
   if (!process.env.PLATFORM_SMTP_USER || !process.env.PLATFORM_SMTP_APP_PASSWORD) return null;

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { resendInvitation } from "@/server/actions/invitations";
 import { Button } from "@/components/ui/button";
+import { EmailNotConfiguredDialog, isEmailNotConfiguredError } from "@/components/email-not-configured-dialog";
 
 export function ResendInvitationButton({
   organizationId,
@@ -15,6 +16,7 @@ export function ResendInvitationButton({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [showEmailNotConfigured, setShowEmailNotConfigured] = useState(false);
 
   async function handleClick() {
     setPending(true);
@@ -23,15 +25,23 @@ export function ResendInvitationButton({
       toast.success("Invitation relancée");
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Une erreur est survenue.");
+      const message = err instanceof Error ? err.message : "Une erreur est survenue.";
+      if (isEmailNotConfiguredError(message)) {
+        setShowEmailNotConfigured(true);
+      } else {
+        toast.error(message);
+      }
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={handleClick} disabled={pending}>
-      Relancer
-    </Button>
+    <>
+      <Button variant="outline" size="sm" onClick={handleClick} disabled={pending}>
+        Relancer
+      </Button>
+      <EmailNotConfiguredDialog open={showEmailNotConfigured} onClose={() => setShowEmailNotConfigured(false)} />
+    </>
   );
 }

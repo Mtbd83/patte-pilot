@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { EmailNotConfiguredDialog, isEmailNotConfiguredError } from "@/components/email-not-configured-dialog";
 
 const ROLE_VALUES: OrgRole[] = ["benevole", "famille_accueil", "admin"];
 const PERMISSION_VALUES: OrgPermission[] = [
@@ -87,6 +88,7 @@ export function InviteMemberDialog({ organizationId }: { organizationId: string 
   }
 
   return (
+    <>
     <Card role="dialog" aria-label="Inviter un membre" className="max-w-sm">
       <CardHeader>
         <CardTitle>Inviter un membre</CardTitle>
@@ -138,7 +140,7 @@ export function InviteMemberDialog({ organizationId }: { organizationId: string 
               })}
             </fieldset>
           )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && !isEmailNotConfiguredError(error) && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
         <CardFooter className="mt-4">
           <Button type="submit" disabled={pending}>
@@ -157,5 +159,7 @@ export function InviteMemberDialog({ organizationId }: { organizationId: string 
         </CardFooter>
       </form>
     </Card>
+    <EmailNotConfiguredDialog open={isEmailNotConfiguredError(error)} onClose={() => setError(null)} />
+    </>
   );
 }

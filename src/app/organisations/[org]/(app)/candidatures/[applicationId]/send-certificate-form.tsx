@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/ui/field";
+import { EmailNotConfiguredDialog, isEmailNotConfiguredError } from "@/components/email-not-configured-dialog";
 
 interface AnimalOption {
   id: string;
@@ -110,12 +111,13 @@ export function SendCertificateForm({
         </>
       )}
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && !isEmailNotConfiguredError(error) && <p className="text-sm text-destructive">{error}</p>}
       <div>
         <Button type="submit" disabled={pending || !animalId || !subject || !body}>
           Envoyer le certificat d&apos;engagement
         </Button>
       </div>
+      <EmailNotConfiguredDialog open={isEmailNotConfiguredError(error)} onClose={() => setError(null)} />
     </form>
   );
 }

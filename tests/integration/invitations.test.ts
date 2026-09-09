@@ -9,7 +9,7 @@
 jest.mock("@/lib/mailer", () => ({
   sendEmail: jest.fn().mockResolvedValue(undefined),
   invitationEmailHtml: jest.fn().mockReturnValue("<p>mock</p>"),
-  organizationSmtpConfig: jest.fn().mockReturnValue(null),
+  organizationSmtpConfig: jest.fn().mockReturnValue({ user: "mock@example.com", appPassword: "mock" }),
 }));
 
 jest.mock("@/lib/auth", () => ({
@@ -147,6 +147,18 @@ describe("invitation management", () => {
     authMock.mockResolvedValue({ user: { id: adminUserId } });
   });
 
+  it("never creates an invitation row when the email fails to send", async () => {
+    const email = `send-fails-${randomUUID().slice(0, 8)}@example.com`;
+    sendEmailMock.mockRejectedValueOnce(new Error("Configurez une adresse email d'envoi avant d'envoyer des emails."));
+
+    await expect(createInvitation({ organizationId, email, roles: ["benevole"] })).rejects.toThrow(
+      /adresse email d'envoi/,
+    );
+
+    const row = await db.query.invitations.findFirst({ where: eq(invitations.email, email) });
+    expect(row).toBeUndefined();
+  });
+
   it("rejects inviting an email that already has a pending invitation for this organization", async () => {
     const email = `duplicate-${randomUUID().slice(0, 8)}@example.com`;
     await createInvitation({ organizationId, email, roles: ["benevole"] });
@@ -172,6 +184,19 @@ describe("invitation management", () => {
     expect(updated.expiresAt.getTime()).toBeGreaterThan(invitation.expiresAt.getTime());
     expect(sendEmailMock).toHaveBeenCalledTimes(1);
     expect(sendEmailMock.mock.calls[0][0].to).toBe(email);
+  });
+
+  it("never extends the expiry when the resend email fails to send", async () => {
+    const email = `resend-fails-${randomUUID().slice(0, 8)}@example.com`;
+    const invitation = await createInvitation({ organizationId, email, roles: ["benevole"] });
+    sendEmailMock.mockRejectedValueOnce(new Error("Panne SMTP"));
+
+    await expect(resendInvitation({ organizationId, invitationId: invitation.id })).rejects.toThrow(
+      "Panne SMTP",
+    );
+
+    const row = await db.query.invitations.findFirst({ where: eq(invitations.id, invitation.id) });
+    expect(row!.expiresAt.getTime()).toBe(invitation.expiresAt.getTime());
   });
 
   it("deletes a pending invitation, but rejects a non-admin", async () => {

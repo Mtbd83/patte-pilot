@@ -433,16 +433,10 @@ export async function resendInvitation(input: z.infer<typeof resendInvitationSch
   if (!invitation) throw new Error("Invitation introuvable.");
   if (invitation.status !== "pending") throw new Error("Cette invitation n'est plus en attente.");
 
-  const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
-  const [updated] = await db
-    .update(invitations)
-    .set({ expiresAt })
-    .where(eq(invitations.id, invitationId))
-    .returning();
-  if (!updated) throw new Error("Échec de la relance de l'invitation.");
-
   const acceptUrl = `${await getRequestOrigin()}/invite/${invitation.token}`;
 
+  // Sent before the expiry is extended — a failed send must never leave the
+  // invitation looking freshly relaunched when no email actually went out.
   await sendEmail({
     to: invitation.email,
     subject: `Invitation à rejoindre ${invitation.organization.name}`,
@@ -454,8 +448,23 @@ export async function resendInvitation(input: z.infer<typeof resendInvitationSch
     }),
     fromName: invitation.organization.name,
     replyTo: invitation.organization.contactEmail ?? undefined,
-    organizationSmtp: organizationSmtpConfig(invitation.organization),
+    // Falls back to the platform's own mailbox when the organization hasn't
+    // configured its own — deliberately only here, in the platform admin's
+    // own manual "relancer" action, not in the organization's regular
+    // invitation flow (createInvitation/resendInvitation in
+    // src/server/actions/invitations.ts), which stays strict so an
+    // organization is pushed to set up its own SMTP rather than quietly
+    // riding on this one.
+    organizationSmtp: organizationSmtpConfig(invitation.organization) ?? platformSmtpConfig(),
   });
+
+  const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const [updated] = await db
+    .update(invitations)
+    .set({ expiresAt })
+    .where(eq(invitations.id, invitationId))
+    .returning();
+  if (!updated) throw new Error("Échec de la relance de l'invitation.");
 
   return updated;
 }

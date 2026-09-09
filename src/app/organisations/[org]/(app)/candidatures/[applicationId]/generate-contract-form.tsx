@@ -14,6 +14,7 @@ import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldRow } from "@/components/ui/field";
+import { EmailNotConfiguredDialog, isEmailNotConfiguredError } from "@/components/email-not-configured-dialog";
 
 interface AnimalOption {
   id: string;
@@ -347,7 +348,7 @@ export function GenerateContractForm({
         </Select>
       </Field>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && !isEmailNotConfiguredError(error) && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={handlePreview} disabled={previewPending || !animalId}>
@@ -398,6 +399,7 @@ export function GenerateContractForm({
           Générer et envoyer le contrat
         </Button>
       </div>
+      <EmailNotConfiguredDialog open={isEmailNotConfiguredError(error)} onClose={() => setError(null)} />
     </form>
   );
 }
