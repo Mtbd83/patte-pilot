@@ -24,7 +24,7 @@ import {
   invitationEmailHtml,
   organizationSmtpConfig,
 } from "@/lib/mailer";
-import { getRequestOrigin } from "@/lib/request-origin";
+import { getRequestOrigin, getEmailLogoUrl } from "@/lib/request-origin";
 
 const INVITATION_TTL_DAYS = 7;
 const RATE_LIMIT_MAX_PER_HOUR = 5;
@@ -87,7 +87,7 @@ async function sendPlatformAdminInvite({
   await sendEmail({
     to: invitation.email,
     subject: `Bienvenue sur PattePilot — ${organizationName}`,
-    html: platformAdminInvitationEmailHtml({ organizationName, acceptUrl }),
+    html: platformAdminInvitationEmailHtml({ organizationName, acceptUrl, logoUrl: await getEmailLogoUrl() }),
     fromName: "PattePilot",
     organizationSmtp: platformSmtpConfig(),
   });
@@ -445,6 +445,7 @@ export async function resendInvitation(input: z.infer<typeof resendInvitationSch
       inviterName: invitation.invitedBy?.firstName ?? invitation.invitedBy?.email ?? "Un administrateur",
       acceptUrl,
       roles: invitation.roles,
+      logoUrl: await getEmailLogoUrl(),
     }),
     fromName: invitation.organization.name,
     replyTo: invitation.organization.contactEmail ?? undefined,

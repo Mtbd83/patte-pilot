@@ -18,7 +18,7 @@ import {
 import { auth } from "@/lib/auth";
 import { requireAdmin, ForbiddenError } from "@/lib/permissions";
 import { sendEmail, invitationEmailHtml, organizationSmtpConfig } from "@/lib/mailer";
-import { getRequestOrigin } from "@/lib/request-origin";
+import { getRequestOrigin, getEmailLogoUrl } from "@/lib/request-origin";
 
 const INVITATION_TTL_DAYS = 7;
 
@@ -88,6 +88,7 @@ export async function createInvitation(input: CreateInvitationInput) {
       inviterName: inviter?.firstName ?? inviter?.email ?? "Un administrateur",
       acceptUrl,
       roles,
+      logoUrl: await getEmailLogoUrl(),
     }),
     fromName: organization.name,
     replyTo: organization.contactEmail ?? undefined,
@@ -331,6 +332,7 @@ export async function resendInvitation(input: z.infer<typeof resendInvitationSch
       inviterName: inviter?.firstName ?? inviter?.email ?? "Un administrateur",
       acceptUrl,
       roles: invitation.roles,
+      logoUrl: await getEmailLogoUrl(),
     }),
     fromName: organization.name,
     replyTo: organization.contactEmail ?? undefined,

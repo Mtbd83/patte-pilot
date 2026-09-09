@@ -22,3 +22,14 @@ export async function getRequestOrigin(): Promise<string> {
   }
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
+
+/**
+ * Absolute URL of PattePilot's own paw-mark logo (public/icon_192_192.png —
+ * a PNG, not the SVG, since Outlook and other major email clients don't
+ * render inline SVG) — for the branded header of PattePilot-authored
+ * transactional emails (invitations). A relative src wouldn't resolve
+ * inside an email client at all.
+ */
+export async function getEmailLogoUrl(): Promise<string> {
+  return `${await getRequestOrigin()}/icon_192_192.png`;
+}

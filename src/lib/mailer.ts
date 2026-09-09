@@ -120,11 +120,46 @@ export async function sendEmail({
   });
 }
 
+/** PattePilot's own green (the paw mark in public/pattepilot-logo.svg) — used for every PattePilot-authored email, not an organization's own branding. */
+const BRAND_GREEN = "#009966";
+
+/** Common header (logo) + button + footer shell shared by every PattePilot-authored email — organizations' own certificate/contract emails (free text, see email-templates.ts) are untouched by this. */
+function brandedEmailHtml({
+  logoUrl,
+  heading,
+  bodyHtml,
+  buttonLabel,
+  buttonUrl,
+}: {
+  logoUrl: string;
+  heading: string;
+  bodyHtml: string;
+  buttonLabel: string;
+  buttonUrl: string;
+}) {
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: auto; padding: 32px 24px; background:#ffffff;">
+      <div style="text-align:center; margin-bottom: 24px;">
+        <img src="${logoUrl}" alt="PattePilot" width="56" height="56" style="display:inline-block;" />
+      </div>
+      <h2 style="color:#0f172a; font-size:20px; margin:0 0 16px; text-align:center;">${heading}</h2>
+      <div style="color:#334155; font-size:15px; line-height:1.6;">${bodyHtml}</div>
+      <p style="margin: 28px 0; text-align:center;">
+        <a href="${buttonUrl}" style="background:${BRAND_GREEN};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">
+          ${buttonLabel}
+        </a>
+      </p>
+      <p style="color:#94a3b8;font-size:12px;text-align:center;">Ce lien expire dans 7 jours. Si vous ne vous attendiez pas à cet email, ignorez-le simplement.</p>
+    </div>
+  `;
+}
+
 export function invitationEmailHtml(params: {
   organizationName: string;
   inviterName: string;
   acceptUrl: string;
   roles: string[];
+  logoUrl: string;
 }) {
   const roleLabels: Record<string, string> = {
     admin: "Administrateur·rice",
@@ -133,35 +168,26 @@ export function invitationEmailHtml(params: {
   };
   const rolesText = params.roles.map((r) => roleLabels[r] ?? r).join(", ");
 
-  return `
-    <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
-      <h2>Vous êtes invité·e à rejoindre ${params.organizationName} 🐾</h2>
-      <p>${params.inviterName} vous invite à rejoindre l'association <strong>${params.organizationName}</strong> avec le rôle : <strong>${rolesText}</strong>.</p>
-      <p>
-        <a href="${params.acceptUrl}" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">
-          Accepter l'invitation
-        </a>
-      </p>
-      <p style="color:#666;font-size:12px;">Ce lien expire dans 7 jours. Si vous ne vous attendiez pas à cet email, ignorez-le simplement.</p>
-    </div>
-  `;
+  return brandedEmailHtml({
+    logoUrl: params.logoUrl,
+    heading: `Vous êtes invité·e à rejoindre ${params.organizationName} 🐾`,
+    bodyHtml: `<p>${params.inviterName} vous invite à rejoindre l'association <strong>${params.organizationName}</strong> avec le rôle : <strong>${rolesText}</strong>.</p>`,
+    buttonLabel: "Accepter l'invitation",
+    buttonUrl: params.acceptUrl,
+  });
 }
 
 /** Sent when a platform manager creates/approves a brand-new organization — the recipient becomes its first admin by accepting. */
 export function platformAdminInvitationEmailHtml(params: {
   organizationName: string;
   acceptUrl: string;
+  logoUrl: string;
 }) {
-  return `
-    <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
-      <h2>Votre association a été validée sur PattePilot 🐾</h2>
-      <p><strong>${params.organizationName}</strong> est prête — acceptez l'invitation ci-dessous pour créer votre compte et devenir administrateur·rice de votre association.</p>
-      <p>
-        <a href="${params.acceptUrl}" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">
-          Accepter l'invitation
-        </a>
-      </p>
-      <p style="color:#666;font-size:12px;">Ce lien expire dans 7 jours. Si vous ne vous attendiez pas à cet email, ignorez-le simplement.</p>
-    </div>
-  `;
+  return brandedEmailHtml({
+    logoUrl: params.logoUrl,
+    heading: "Votre association a été validée sur PattePilot 🐾",
+    bodyHtml: `<p><strong>${params.organizationName}</strong> est prête — acceptez l'invitation ci-dessous pour créer votre compte et devenir administrateur·rice de votre association.</p>`,
+    buttonLabel: "Accepter l'invitation",
+    buttonUrl: params.acceptUrl,
+  });
 }
