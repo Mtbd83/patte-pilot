@@ -1,7 +1,7 @@
 "use server";
 
 import { randomBytes } from "crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/db";
@@ -12,6 +12,7 @@ import {
   organizationMemberPermissions,
   organizations,
   users,
+  fosterFamilies,
   orgRoleEnum,
   orgPermissionEnum,
 } from "@/db/schema";
@@ -183,6 +184,22 @@ export async function acceptInvitation(input: z.infer<typeof acceptInvitationSch
         .onConflictDoNothing();
     }
 
+    // A famille_accueil invitation that matches an existing (not yet
+    // linked) foster-family record by email connects automatically — no
+    // separate manual "link this account" step needed.
+    if (invitation.roles.includes("famille_accueil")) {
+      await tx
+        .update(fosterFamilies)
+        .set({ linkedUserId: userId, updatedAt: new Date() })
+        .where(
+          and(
+            eq(fosterFamilies.organizationId, invitation.organizationId),
+            sql`lower(${fosterFamilies.email}) = ${invitation.email}`,
+            isNull(fosterFamilies.linkedUserId),
+          ),
+        );
+    }
+
     await tx
       .update(invitations)
       .set({ status: "accepted", acceptedAt: new Date() })
@@ -259,6 +276,22 @@ export async function createAccountAndAcceptInvitation(
         .insert(organizationMemberPermissions)
         .values({ memberId: member.id, permission })
         .onConflictDoNothing();
+    }
+
+    // A famille_accueil invitation that matches an existing (not yet
+    // linked) foster-family record by email connects automatically — no
+    // separate manual "link this account" step needed.
+    if (invitation.roles.includes("famille_accueil")) {
+      await tx
+        .update(fosterFamilies)
+        .set({ linkedUserId: user.id, updatedAt: new Date() })
+        .where(
+          and(
+            eq(fosterFamilies.organizationId, invitation.organizationId),
+            sql`lower(${fosterFamilies.email}) = ${invitation.email}`,
+            isNull(fosterFamilies.linkedUserId),
+          ),
+        );
     }
 
     await tx

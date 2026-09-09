@@ -21,7 +21,7 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { sendEmail } from "@/lib/mailer";
 import { db } from "@/db";
-import { users, organizations, organizationMembers, organizationMemberRoles, invitations } from "@/db/schema";
+import { users, organizations, organizationMembers, organizationMemberRoles, invitations, fosterFamilies } from "@/db/schema";
 import { createInvitation, acceptInvitation, resendInvitation, deleteInvitation } from "@/server/actions/invitations";
 import { getMemberRoles } from "@/lib/permissions";
 import { ForbiddenError } from "@/lib/permissions";
@@ -213,5 +213,60 @@ describe("invitation management", () => {
 
     const gone = await db.query.invitations.findFirst({ where: eq(invitations.id, invitation.id) });
     expect(gone).toBeUndefined();
+  });
+
+  it("auto-links a matching foster-family record when a famille_accueil invitation is accepted", async () => {
+    const suffix = randomUUID().slice(0, 8);
+    // Stored with different casing on purpose — the match must be case-insensitive.
+    const email = `FosterMatch-${suffix}@Example.com`;
+
+    const [fosterFamily] = await db
+      .insert(fosterFamilies)
+      .values({ organizationId, lastName: "Dupont", firstName: "Marie", email })
+      .returning();
+    if (!fosterFamily) throw new Error("Seed setup failed.");
+
+    const invitation = await createInvitation({
+      organizationId,
+      email: email.toLowerCase(),
+      roles: ["famille_accueil"],
+    });
+
+    const [invitee] = await db.insert(users).values({ email: email.toLowerCase() }).returning();
+    if (!invitee) throw new Error("Seed setup failed.");
+
+    authMock.mockResolvedValue({ user: { id: invitee.id, email: email.toLowerCase() } });
+    await acceptInvitation({ token: invitation.token });
+
+    const updated = await db.query.fosterFamilies.findFirst({ where: eq(fosterFamilies.id, fosterFamily.id) });
+    expect(updated!.linkedUserId).toBe(invitee.id);
+
+    await db.delete(users).where(eq(users.id, invitee.id));
+  });
+
+  it("never overwrites a foster-family record already linked to someone else", async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const email = `already-linked-${suffix}@example.com`;
+
+    const [someoneElse] = await db.insert(users).values({ email: `other-${suffix}@example.com` }).returning();
+    if (!someoneElse) throw new Error("Seed setup failed.");
+    const [fosterFamily] = await db
+      .insert(fosterFamilies)
+      .values({ organizationId, lastName: "Martin", firstName: "Paul", email, linkedUserId: someoneElse.id })
+      .returning();
+    if (!fosterFamily) throw new Error("Seed setup failed.");
+
+    const invitation = await createInvitation({ organizationId, email, roles: ["famille_accueil"] });
+    const [invitee] = await db.insert(users).values({ email }).returning();
+    if (!invitee) throw new Error("Seed setup failed.");
+
+    authMock.mockResolvedValue({ user: { id: invitee.id, email } });
+    await acceptInvitation({ token: invitation.token });
+
+    const updated = await db.query.fosterFamilies.findFirst({ where: eq(fosterFamilies.id, fosterFamily.id) });
+    expect(updated!.linkedUserId).toBe(someoneElse.id);
+
+    await db.delete(users).where(eq(users.id, invitee.id));
+    await db.delete(users).where(eq(users.id, someoneElse.id));
   });
 });
