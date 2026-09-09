@@ -8,16 +8,12 @@ import { getAdoptionApplication } from "@/server/actions/adoption-applications";
 import { listAnimals } from "@/server/actions/animals";
 import { listDocuments } from "@/server/actions/documents";
 import { listHelloAssoLinks } from "@/server/actions/helloasso-links";
+import { ADOPTION_STATUS_LABELS, ADOPTION_STATUS_BADGE_VARIANT } from "@/lib/adoption-labels";
 import {
-  ADOPTION_STATUS_LABELS,
-  ADOPTION_STATUS_BADGE_VARIANT,
-  HOUSING_ZONE_LABELS,
-  HOUSING_TYPE_LABELS,
-  RESIDENCY_STATUS_LABELS,
-  LIVING_SITUATION_LABELS,
-  ACTIVITY_LEVEL_LABELS,
-  ALONE_TIME_LABELS,
-} from "@/lib/adoption-labels";
+  ADOPTION_QUESTION_BANK,
+  ADOPTION_QUESTION_CATEGORY_LABELS,
+  type AdoptionQuestion,
+} from "@/lib/adoption-question-bank";
 import { SPECIES_LABELS } from "@/lib/animal-labels";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -38,6 +34,22 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
       <dd className="text-right font-medium">{value}</dd>
     </div>
   );
+}
+
+/**
+ * Resolves a bank answer's stored value (a raw option key, or an array of
+ * them for choix_multiple) back to its human-readable label(s) — the value
+ * on its own (e.g. "urbaine") means nothing to someone reading the
+ * candidature.
+ */
+function formatAnswerValue(question: AdoptionQuestion, value: string | string[]): string {
+  if (question.type === "choix_unique" && typeof value === "string") {
+    return question.options?.find((option) => option.value === value)?.label ?? value;
+  }
+  if (question.type === "choix_multiple" && Array.isArray(value)) {
+    return value.map((v) => question.options?.find((option) => option.value === v)?.label ?? v).join(", ");
+  }
+  return Array.isArray(value) ? value.join(", ") : value;
 }
 
 export default async function CandidatureDetailPage(
@@ -83,6 +95,21 @@ export default async function CandidatureDetailPage(
     applicationId: params.applicationId,
     organizationId: organization.id,
   });
+
+  // Grouped by the bank's own category — driven by which keys are actually
+  // present in *this* application's answers, not the organization's current
+  // question selection, so a historical candidature stays fully readable
+  // even after the organization later changes what it asks for.
+  const answeredQuestionsByCategory = new Map<AdoptionQuestion["category"], AdoptionQuestion[]>();
+  for (const question of ADOPTION_QUESTION_BANK) {
+    if (application.answers[question.key] === undefined) continue;
+    const list = answeredQuestionsByCategory.get(question.category) ?? [];
+    list.push(question);
+    answeredQuestionsByCategory.set(question.category, list);
+  }
+  const freeAnswers = (organization.adoptionFormFreeQuestions ?? [])
+    .map((freeQuestion, index) => ({ label: freeQuestion.label, value: application.answers[`libre_${index + 1}`] }))
+    .filter((freeAnswer): freeAnswer is { label: string; value: string } => typeof freeAnswer.value === "string");
 
   const [animalsList, documentsList, helloAssoLinksList] = await Promise.all([
     listAnimals({ organizationId: organization.id }),
@@ -148,114 +175,6 @@ export default async function CandidatureDetailPage(
 
       <Card>
         <CardHeader>
-          <CardTitle>Logement</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl>
-            <InfoRow label="Zone" value={application.housingZone ? HOUSING_ZONE_LABELS[application.housingZone] : "—"} />
-            <InfoRow label="Type" value={application.housingType ? HOUSING_TYPE_LABELS[application.housingType] : "—"} />
-            {application.housingType === "appartement" ? (
-              <InfoRow
-                label="Superficie"
-                value={application.apartmentAreaM2 ? `${application.apartmentAreaM2} m²` : "—"}
-              />
-            ) : (
-              <>
-                <InfoRow
-                  label="Jardin"
-                  value={
-                    <>
-                      {application.gardenAreaM2 ? `${application.gardenAreaM2} m²` : "—"}
-                      {application.fenceHeight ? ` — clôture : ${application.fenceHeight}` : ""}
-                    </>
-                  }
-                />
-                <InfoRow label="Accès jardin / mise en liberté" value={application.gardenAccessDetails || "—"} />
-              </>
-            )}
-            <InfoRow
-              label="Statut résidence"
-              value={
-                <>
-                  {application.residencyStatus ? RESIDENCY_STATUS_LABELS[application.residencyStatus] : "—"}
-                  {application.residencyDuration ? ` — depuis ${application.residencyDuration}` : ""}
-                </>
-              }
-            />
-            <InfoRow
-              label="Situation"
-              value={application.livingSituation ? LIVING_SITUATION_LABELS[application.livingSituation] : "—"}
-            />
-          </dl>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Foyer</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl>
-            <InfoRow
-              label="Composition"
-              value={`${application.familySize ?? "—"} personne(s), dont ${application.childrenCount ?? 0} enfant(s)`}
-            />
-            <InfoRow label="Allergies" value={application.allergiesDetails || "Non"} />
-            <InfoRow
-              label="Niveau d'activité"
-              value={application.activityLevel ? ACTIVITY_LEVEL_LABELS[application.activityLevel] : "—"}
-            />
-            <InfoRow
-              label="Accord familial"
-              value={
-                application.familyAgrees
-                  ? "Oui"
-                  : `Non — ${application.familyDisagreementReason || "raison non précisée"}`
-              }
-            />
-          </dl>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Animaux déjà présents</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm">
-            {application.hasOtherAnimals ? application.otherAnimalsDetails || "Oui" : "Aucun"}
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Organisation du quotidien</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl>
-            <InfoRow label="Référent" value={application.caretakerPerson || "—"} />
-            <InfoRow label="Espace de sommeil" value={application.sleepingArea || "—"} />
-            <InfoRow
-              label="Temps seul par jour"
-              value={application.aloneTimePerDay ? ALONE_TIME_LABELS[application.aloneTimePerDay] : "—"}
-            />
-            {application.desiredSpecies === "chien" && (
-              <>
-                <InfoRow label="Promenades par jour" value={application.dogWalksPerDay ?? "—"} />
-                <InfoRow
-                  label="Sortie entre midi et deux possible"
-                  value={application.dogMiddayWalkPossible ? "Oui" : "Non"}
-                />
-              </>
-            )}
-            <InfoRow label="Weekends / vacances" value={application.vacationPlan || "—"} />
-          </dl>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle>Souhait d&apos;adoption</CardTitle>
         </CardHeader>
         <CardContent>
@@ -265,10 +184,52 @@ export default async function CandidatureDetailPage(
               value={application.desiredSpecies ? SPECIES_LABELS[application.desiredSpecies] : "—"}
             />
             <InfoRow label="Coup de cœur" value={application.specificAnimalName || "—"} />
-            <InfoRow label="Commentaire" value={application.additionalComments || "—"} />
+            {(answeredQuestionsByCategory.get("souhait") ?? []).map((question) => (
+              <InfoRow
+                key={question.key}
+                label={question.label}
+                value={formatAnswerValue(question, application.answers[question.key]!)}
+              />
+            ))}
           </dl>
         </CardContent>
       </Card>
+
+      {Array.from(answeredQuestionsByCategory.entries())
+        .filter(([category]) => category !== "souhait")
+        .map(([category, questions]) => (
+        <Card key={category}>
+          <CardHeader>
+            <CardTitle>{ADOPTION_QUESTION_CATEGORY_LABELS[category]}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl>
+              {questions.map((question) => (
+                <InfoRow
+                  key={question.key}
+                  label={question.label}
+                  value={formatAnswerValue(question, application.answers[question.key]!)}
+                />
+              ))}
+            </dl>
+          </CardContent>
+        </Card>
+      ))}
+
+      {freeAnswers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Autres informations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl>
+              {freeAnswers.map((freeAnswer, index) => (
+                <InfoRow key={index} label={freeAnswer.label} value={freeAnswer.value} />
+              ))}
+            </dl>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

@@ -29,6 +29,11 @@ export interface ContractFieldPosition {
 }
 export type ContractFieldPositions = Record<string, ContractFieldPosition>;
 
+/** One organization-authored free-text question on its adoption form — see adoptionFormFreeQuestions below. */
+export interface AdoptionFormFreeQuestion {
+  label: string;
+}
+
 // ---------------------------------------------------------------------------
 // Enums
 // ---------------------------------------------------------------------------
@@ -169,6 +174,14 @@ export const organizations = pgTable("organizations", {
   sterilizationCampaignModuleEnabled: boolean("sterilization_campaign_module_enabled")
     .default(false)
     .notNull(),
+
+  // Adoption form config — "tronc commun + banque de questions" (see
+  // src/lib/adoption-question-bank.ts for the shared, curated bank these
+  // keys reference). adoptionFormFreeQuestions holds up to two fully
+  // custom, organization-authored questions (free text answers, stored
+  // under synthetic keys "libre_1"/"libre_2" in a submission's answers).
+  adoptionFormQuestionKeys: jsonb("adoption_form_question_keys").$type<string[]>(),
+  adoptionFormFreeQuestions: jsonb("adoption_form_free_questions").$type<AdoptionFormFreeQuestion[]>(),
 
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

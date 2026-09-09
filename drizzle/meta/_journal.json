@@ -253,6 +253,20 @@
       "when": 1788264496080,
       "tag": "0035_careless_puppet_master",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1788895501004,
+      "tag": "0036_crazy_the_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1788900000000,
+      "tag": "0037_drop_old_adoption_columns",
+      "breakpoints": true
     }
   ]
 }

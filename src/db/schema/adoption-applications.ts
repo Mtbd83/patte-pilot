@@ -4,8 +4,7 @@ import {
   varchar,
   text,
   integer,
-  numeric,
-  boolean,
+  jsonb,
   timestamp,
   pgEnum,
   index,
@@ -22,49 +21,16 @@ export const adoptionApplicationStatusEnum = pgEnum("adoption_application_status
   "retire",
 ]);
 
-export const housingTypeEnum = pgEnum("housing_type", [
-  "maison",
-  "appartement",
-  "autre",
-]);
-
-export const housingZoneEnum = pgEnum("housing_zone", [
-  "urbaine",
-  "peri_urbaine",
-  "rurale",
-]);
-
-export const residencyStatusEnum = pgEnum("residency_status", [
-  "proprietaire",
-  "locataire",
-]);
-
-export const livingSituationEnum = pgEnum("living_situation", [
-  "seul",
-  "en_couple",
-  "colocation",
-  "en_famille",
-]);
-
-export const activityLevelEnum = pgEnum("activity_level", [
-  "intense",
-  "modere",
-  "faible",
-]);
-
-export const aloneTimeEnum = pgEnum("alone_time_per_day", [
-  "presque_aucune",
-  "moins_2h",
-  "2h_4h",
-  "4h_6h",
-  "8h_plus",
-]);
-
 /**
- * A submitted adoption application, mirroring the fields of the current
- * Google Form so imports/migration stay straightforward. Kept as one wide
- * table (rather than heavily normalized) since it represents a single
- * point-in-time submission, not data that's queried/updated piecemeal.
+ * A submitted adoption application. Only the identity/contact "tronc
+ * commun" fields (always the same across every organization) are plain
+ * columns — everything else is whatever the submitting organization's
+ * `adoptionFormQuestionKeys`/`adoptionFormFreeQuestions` selection was at
+ * submission time (see src/lib/adoption-question-bank.ts), stored in
+ * `answers` keyed by question key ("libre_1"/"libre_2" for the two free
+ * questions). Kept as one wide-ish table (rather than heavily normalized)
+ * since a submission represents a single point-in-time record, not data
+ * that's queried/updated piecemeal.
  */
 export const adoptionApplications = pgTable(
   "adoption_applications",
@@ -74,7 +40,7 @@ export const adoptionApplications = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
 
-    // Identité du candidat
+    // Identité du candidat — tronc commun, identique pour toutes les organisations.
     lastName: varchar("last_name", { length: 120 }).notNull(),
     firstName: varchar("first_name", { length: 120 }).notNull(),
     city: varchar("city", { length: 120 }).notNull(),
@@ -85,44 +51,23 @@ export const adoptionApplications = pgTable(
     profession: varchar("profession", { length: 150 }),
     spouseProfession: varchar("spouse_profession", { length: 150 }),
 
-    // Logement
-    housingZone: housingZoneEnum("housing_zone"),
-    housingType: housingTypeEnum("housing_type"),
-    gardenAreaM2: numeric("garden_area_m2", { precision: 8, scale: 2 }),
-    apartmentAreaM2: numeric("apartment_area_m2", { precision: 8, scale: 2 }),
-    fenceHeight: varchar("fence_height", { length: 120 }), // texte libre : hauteur ou "non clôturé"
-    gardenAccessDetails: text("garden_access_details"), // accès jardin / mise en liberté pour NAC
-    residencyStatus: residencyStatusEnum("residency_status"),
-    residencyDuration: varchar("residency_duration", { length: 120 }),
-    livingSituation: livingSituationEnum("living_situation"),
-
-    // Foyer
-    familySize: integer("family_size"),
-    childrenCount: integer("children_count").default(0),
-    allergiesDetails: text("allergies_details"), // vide/absent = pas d'allergie ; sinon, précise à quoi
-    activityLevel: activityLevelEnum("activity_level"),
-    familyAgrees: boolean("family_agrees").default(true).notNull(),
-    familyDisagreementReason: text("family_disagreement_reason"),
-
-    // Animaux déjà présents
-    hasOtherAnimals: boolean("has_other_animals").default(false).notNull(),
-    otherAnimalsDetails: text("other_animals_details"), // type / race / âge / stérilisé / dernier vaccin
-
-    // Organisation du quotidien
-    caretakerPerson: varchar("caretaker_person", { length: 200 }),
-    sleepingArea: varchar("sleeping_area", { length: 200 }),
-    aloneTimePerDay: aloneTimeEnum("alone_time_per_day"),
-    dogWalksPerDay: integer("dog_walks_per_day"), // si adoption d'un chien
-    dogMiddayWalkPossible: boolean("dog_midday_walk_possible"),
-    vacationPlan: text("vacation_plan"), // weekends / vacances
-
-    // Souhait d'adoption
+    // Souhait d'adoption — tronc commun (pilote l'affichage conditionnel
+    // ailleurs dans l'app, ex: la fiche animal ciblée).
     desiredSpecies: animalSpeciesEnum("desired_species"),
     specificAnimalName: varchar("specific_animal_name", { length: 120 }), // "coup de cœur"
     targetAnimalId: uuid("target_animal_id").references(() => animals.id, {
       onDelete: "set null",
     }),
-    additionalComments: text("additional_comments"),
+
+    // Banque de questions + questions libres de l'organisation — voir
+    // src/lib/adoption-question-bank.ts. Valeur = texte, ou tableau de
+    // textes pour une question à choix multiple.
+    answers: jsonb("answers").$type<Record<string, string | string[]>>().notNull().default({}),
+
+    // Horodatage du consentement RGPD obligatoire ("j'accepte que mon
+    // profil soit conservé pour être recontacté·e") — jamais facultatif,
+    // jamais personnalisable par organisation.
+    rgpdConsentAt: timestamp("rgpd_consent_at", { withTimezone: true }).notNull(),
 
     status: adoptionApplicationStatusEnum("status").default("en_attente").notNull(),
     reviewNotes: text("review_notes"),
@@ -159,9 +104,3 @@ export const adoptionApplicationsRelations = relations(
 export type AdoptionApplication = typeof adoptionApplications.$inferSelect;
 export type NewAdoptionApplication = typeof adoptionApplications.$inferInsert;
 export type AdoptionApplicationStatus = (typeof adoptionApplicationStatusEnum.enumValues)[number];
-export type HousingType = (typeof housingTypeEnum.enumValues)[number];
-export type HousingZone = (typeof housingZoneEnum.enumValues)[number];
-export type ResidencyStatus = (typeof residencyStatusEnum.enumValues)[number];
-export type LivingSituation = (typeof livingSituationEnum.enumValues)[number];
-export type ActivityLevel = (typeof activityLevelEnum.enumValues)[number];
-export type AloneTime = (typeof aloneTimeEnum.enumValues)[number];

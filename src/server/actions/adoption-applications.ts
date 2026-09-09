@@ -3,28 +3,20 @@
 import { and, desc, eq, gte } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import {
-  adoptionApplications,
-  adoptionApplicationStatusEnum,
-  housingTypeEnum,
-  housingZoneEnum,
-  residencyStatusEnum,
-  livingSituationEnum,
-  activityLevelEnum,
-  aloneTimeEnum,
-  animalSpeciesEnum,
-  organizations,
-} from "@/db/schema";
+import { adoptionApplications, adoptionApplicationStatusEnum, animalSpeciesEnum, organizations } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { requireAdmin, requireAdminOrPermission, requireRole, listOrganizationAdminUserIds, ForbiddenError } from "@/lib/permissions";
 import { sendPushToUsers } from "@/lib/push";
 import { SPECIES_LABELS } from "@/lib/animal-labels";
+import { findAdoptionQuestion, isQuestionVisible } from "@/lib/adoption-question-bank";
 import { getClientIp } from "@/lib/request-ip";
+
+const answersSchema = z.record(z.string(), z.union([z.string(), z.array(z.string())]));
 
 const submitAdoptionApplicationSchema = z.object({
   organizationId: z.string().uuid(),
 
-  // Identité du candidat
+  // Identité du candidat — tronc commun
   lastName: z.string().min(1).max(120),
   firstName: z.string().min(1).max(120),
   city: z.string().min(1).max(120),
@@ -35,42 +27,18 @@ const submitAdoptionApplicationSchema = z.object({
   profession: z.string().max(150).optional(),
   spouseProfession: z.string().max(150).optional(),
 
-  // Logement
-  housingZone: z.enum(housingZoneEnum.enumValues).optional(),
-  housingType: z.enum(housingTypeEnum.enumValues).optional(),
-  gardenAreaM2: z.coerce.number().min(0).optional(),
-  apartmentAreaM2: z.coerce.number().min(0).optional(),
-  fenceHeight: z.string().max(120).optional(),
-  gardenAccessDetails: z.string().optional(),
-  residencyStatus: z.enum(residencyStatusEnum.enumValues).optional(),
-  residencyDuration: z.string().max(120).optional(),
-  livingSituation: z.enum(livingSituationEnum.enumValues).optional(),
-
-  // Foyer
-  familySize: z.coerce.number().int().min(1).optional(),
-  childrenCount: z.coerce.number().int().min(0).default(0),
-  allergiesDetails: z.string().max(500).optional(),
-  activityLevel: z.enum(activityLevelEnum.enumValues).optional(),
-  familyAgrees: z.boolean().default(true),
-  familyDisagreementReason: z.string().optional(),
-
-  // Animaux déjà présents
-  hasOtherAnimals: z.boolean().default(false),
-  otherAnimalsDetails: z.string().optional(),
-
-  // Organisation du quotidien
-  caretakerPerson: z.string().max(200).optional(),
-  sleepingArea: z.string().max(200).optional(),
-  aloneTimePerDay: z.enum(aloneTimeEnum.enumValues).optional(),
-  dogWalksPerDay: z.coerce.number().int().min(0).optional(),
-  dogMiddayWalkPossible: z.boolean().optional(),
-  vacationPlan: z.string().optional(),
-
-  // Souhait d'adoption
+  // Souhait d'adoption — tronc commun
   desiredSpecies: z.enum(animalSpeciesEnum.enumValues).optional(),
   specificAnimalName: z.string().max(120).optional(),
   targetAnimalId: z.string().uuid().optional(),
-  additionalComments: z.string().optional(),
+
+  // Banque de questions + questions libres de l'organisation — la forme
+  // exacte dépend de sa config, revalidée ci-dessous contre l'organisation
+  // elle-même, jamais contre ce que le client prétend avoir affiché.
+  answers: answersSchema.default({}),
+
+  // Consentement RGPD — obligatoire, jamais personnalisable par organisation.
+  rgpdConsent: z.boolean(),
 
   // Honeypot: a field real visitors never see or fill (hidden off-screen in
   // the form) — bots that fill in every input trip it. Never persisted.
@@ -82,18 +50,61 @@ export type SubmitAdoptionApplicationInput = z.input<typeof submitAdoptionApplic
 const RATE_LIMIT_MAX_PER_HOUR = 5;
 
 /**
+ * Keeps only the answers the organization's current form config actually
+ * asks for, and checks every question it marks `required` has a non-empty
+ * answer — a client-sent key for a question the organization never selected
+ * is silently dropped rather than persisted, since the client's own list of
+ * displayed questions can't be trusted. A question that's species-restricted
+ * or a "si oui/si non" follow-up to another question (see isQuestionVisible)
+ * is skipped entirely — neither required nor stored — when its condition
+ * isn't met, the same condition the public form itself uses to hide/show it.
+ */
+function sanitizeAnswers(
+  organization: { adoptionFormQuestionKeys: string[] | null; adoptionFormFreeQuestions: { label: string }[] | null },
+  answers: Record<string, string | string[]>,
+  desiredSpecies: string | undefined,
+): Record<string, string | string[]> {
+  const sanitized: Record<string, string | string[]> = {};
+
+  for (const key of organization.adoptionFormQuestionKeys ?? []) {
+    const question = findAdoptionQuestion(key);
+    if (!question) continue; // a key the bank no longer recognizes — never persisted
+    if (!isQuestionVisible(question, { desiredSpecies, answers })) continue;
+    const value = answers[key];
+    const isEmpty = value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
+    if (question.required && isEmpty) {
+      throw new Error(`Le champ « ${question.label} » est obligatoire.`);
+    }
+    if (!isEmpty) sanitized[key] = value;
+  }
+
+  const freeQuestions = organization.adoptionFormFreeQuestions ?? [];
+  freeQuestions.forEach((_, index) => {
+    const key = `libre_${index + 1}`;
+    const value = answers[key];
+    if (typeof value === "string" && value) sanitized[key] = value;
+  });
+
+  return sanitized;
+}
+
+/**
  * Public: anyone can submit an adoption application for an organization —
  * this is the public-facing adoption form, so deliberately no auth check.
  * Two lightweight anti-spam measures given the total absence of auth here:
  * a honeypot field, and a per-IP rate limit.
  */
 export async function submitAdoptionApplication(input: SubmitAdoptionApplicationInput) {
-  const { honeypot, ...rest } = submitAdoptionApplicationSchema.parse(input);
+  const { honeypot, answers, rgpdConsent, ...rest } = submitAdoptionApplicationSchema.parse(input);
 
   // A filled honeypot means a bot, not a real visitor — silently no-op
   // instead of throwing, so the bot has no signal it was caught.
   if (honeypot) {
     return null;
+  }
+
+  if (!rgpdConsent) {
+    throw new Error("Vous devez accepter que votre profil soit conservé pour être recontacté·e.");
   }
 
   const data = rest;
@@ -102,6 +113,8 @@ export async function submitAdoptionApplication(input: SubmitAdoptionApplication
     where: eq(organizations.id, data.organizationId),
   });
   if (!organization) throw new Error("Organisation introuvable.");
+
+  const sanitizedAnswers = sanitizeAnswers(organization, answers, data.desiredSpecies);
 
   const ipAddress = await getClientIp();
   if (ipAddress) {
@@ -122,8 +135,8 @@ export async function submitAdoptionApplication(input: SubmitAdoptionApplication
     .insert(adoptionApplications)
     .values({
       ...data,
-      gardenAreaM2: data.gardenAreaM2 !== undefined ? data.gardenAreaM2.toString() : undefined,
-      apartmentAreaM2: data.apartmentAreaM2 !== undefined ? data.apartmentAreaM2.toString() : undefined,
+      answers: sanitizedAnswers,
+      rgpdConsentAt: new Date(),
       ipAddress,
     })
     .returning();
@@ -272,4 +285,33 @@ export async function deleteAdoptionApplication(
   if (!application) throw new Error("Candidature introuvable.");
 
   await db.delete(adoptionApplications).where(eq(adoptionApplications.id, applicationId));
+}
+
+const updateAdoptionFormConfigSchema = z.object({
+  organizationId: z.string().uuid(),
+  questionKeys: z.array(z.string()),
+  freeQuestions: z.array(z.object({ label: z.string().min(1).max(200) })).max(2),
+});
+
+/** Admin-only: which bank questions (see src/lib/adoption-question-bank.ts) and free questions appear on this organization's public adoption form. */
+export async function updateAdoptionFormConfig(
+  input: z.infer<typeof updateAdoptionFormConfigSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId, questionKeys, freeQuestions } = updateAdoptionFormConfigSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  // Drops any key the bank no longer recognizes, so a stale client payload
+  // can never persist an unknown/retired question key.
+  const validKeys = questionKeys.filter((key) => findAdoptionQuestion(key));
+
+  const [updated] = await db
+    .update(organizations)
+    .set({ adoptionFormQuestionKeys: validKeys, adoptionFormFreeQuestions: freeQuestions, updatedAt: new Date() })
+    .where(eq(organizations.id, organizationId))
+    .returning();
+  if (!updated) throw new Error("Organisation introuvable.");
+  return updated;
 }

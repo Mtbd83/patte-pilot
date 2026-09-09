@@ -36,7 +36,13 @@ export default async function AdopterPage(
             vous rapidement.
           </p>
         </div>
-        <AdoptionApplicationForm organizationId={organization.id} adoptableAnimals={adoptableAnimals} />
+        <AdoptionApplicationForm
+          organizationId={organization.id}
+          organizationName={organization.name}
+          adoptionFormQuestionKeys={organization.adoptionFormQuestionKeys}
+          adoptionFormFreeQuestions={organization.adoptionFormFreeQuestions}
+          adoptableAnimals={adoptableAnimals}
+        />
       </main>
     </div>
   );

@@ -17,6 +17,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { InlineStatusForm } from "./inline-status-form";
 import { DeleteApplicationButton } from "./delete-application-button";
+import { AdoptionFormConfigDialog } from "./adoption-form-config-dialog";
 
 export default async function CandidaturesPage(
   props: {
@@ -61,20 +62,29 @@ export default async function CandidaturesPage(
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          href={`/organisations/${params.org}`}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft className="size-4" /> {organization.name}
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold">Candidatures d&apos;adoption</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Formulaire public à partager :{" "}
-          <Link href={publicFormPath} target="_blank" className="text-foreground hover:underline">
-            {publicFormPath}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <Link
+            href={`/organisations/${params.org}`}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="size-4" /> {organization.name}
           </Link>
-        </p>
+          <h1 className="mt-1 text-2xl font-semibold">Candidatures d&apos;adoption</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Formulaire public à partager :{" "}
+            <Link href={publicFormPath} target="_blank" className="text-foreground hover:underline">
+              {publicFormPath}
+            </Link>
+          </p>
+        </div>
+        {isAdmin && (
+          <AdoptionFormConfigDialog
+            organizationId={organization.id}
+            currentQuestionKeys={organization.adoptionFormQuestionKeys ?? []}
+            currentFreeQuestions={organization.adoptionFormFreeQuestions ?? []}
+          />
+        )}
       </div>
 
       <Card>

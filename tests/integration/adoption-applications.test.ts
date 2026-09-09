@@ -17,6 +17,7 @@ import {
   listAdoptionApplications,
   getAdoptionApplication,
   updateAdoptionApplicationStatus,
+  updateAdoptionFormConfig,
 } from "@/server/actions/adoption-applications";
 import { ForbiddenError } from "@/lib/permissions";
 
@@ -44,7 +45,21 @@ describe("adoption application server actions", () => {
 
     const [org] = await db
       .insert(organizations)
-      .values({ name: `Test Adoption ${suffix}`, slug: `test-adoption-${suffix}` })
+      .values({
+        name: `Test Adoption ${suffix}`,
+        slug: `test-adoption-${suffix}`,
+        // "logement_type" is required by the bank; "foyer_allergies" is
+        // optional — exercises both the required-field check and normal
+        // storage. "souhait_temperament" is deliberately NOT selected, to
+        // prove an answer for it gets stripped rather than persisted.
+        adoptionFormQuestionKeys: [
+          "logement_type",
+          "foyer_allergies",
+          "quotidien_sortie_midi",
+          "foyer_accord",
+          "foyer_raison_desaccord",
+        ],
+      })
       .returning();
     if (!org) throw new Error("Seed setup failed: organization not created.");
     organizationId = org.id;
@@ -73,10 +88,13 @@ describe("adoption application server actions", () => {
       phone: "0600000000",
       email: "jeanne@example.com",
       desiredSpecies: "chat",
+      answers: { logement_type: "appartement", foyer_accord: "oui" },
+      rgpdConsent: true,
     });
     if (!application) throw new Error("Expected a real application, not a honeypot no-op.");
     expect(application.status).toBe("en_attente");
     expect(application.lastName).toBe("Dupont");
+    expect(application.rgpdConsentAt).toBeInstanceOf(Date);
   });
 
   it("silently no-ops when the honeypot field is filled in", async () => {
@@ -89,6 +107,8 @@ describe("adoption application server actions", () => {
       phone: "0600000000",
       email: "bot@example.com",
       desiredSpecies: "chat",
+      answers: { logement_type: "appartement", foyer_accord: "oui" },
+      rgpdConsent: true,
       honeypot: "https://spam.example",
     });
     expect(result).toBeNull();
@@ -96,6 +116,21 @@ describe("adoption application server actions", () => {
     authMock.mockResolvedValue({ user: { id: adminUserId, email: "admin@example.com" } });
     const applications = await listAdoptionApplications({ organizationId });
     expect(applications.some((a) => a.lastName === "Bot")).toBe(false);
+  });
+
+  it("rejects a submission without RGPD consent", async () => {
+    await expect(
+      submitAdoptionApplication({
+        organizationId,
+        lastName: "Dupont",
+        firstName: "Jeanne",
+        city: "Toulon",
+        phone: "0600000000",
+        email: `no-consent-${randomUUID().slice(0, 8)}@example.com`,
+        answers: { logement_type: "appartement" },
+        rgpdConsent: false,
+      }),
+    ).rejects.toThrow(/conservé/);
   });
 
   it("rejects a submission for a non-existent organization", async () => {
@@ -107,6 +142,7 @@ describe("adoption application server actions", () => {
         city: "Toulon",
         phone: "0600000000",
         email: "jeanne@example.com",
+        rgpdConsent: true,
       }),
     ).rejects.toThrow(/introuvable/);
   });
@@ -120,6 +156,7 @@ describe("adoption application server actions", () => {
         city: "Toulon",
         phone: "0600000000",
         email: "pas-un-email",
+        rgpdConsent: true,
       }),
     ).rejects.toThrow();
   });
@@ -133,59 +170,134 @@ describe("adoption application server actions", () => {
         city: "",
         phone: "0600000000",
         email: "jeanne-no-city@example.com",
+        rgpdConsent: true,
       }),
     ).rejects.toThrow();
   });
 
-  it("stores free-text allergy details instead of a yes/no flag", async () => {
-    const withAllergies = await submitAdoptionApplication({
-      organizationId,
-      lastName: "Dupont",
-      firstName: "Jeanne",
-      city: "Toulon",
-      phone: "0600000000",
-      email: `allergies-${randomUUID().slice(0, 8)}@example.com`,
-      allergiesDetails: "Poils de chat chez le conjoint",
-    });
-    expect(withAllergies?.allergiesDetails).toBe("Poils de chat chez le conjoint");
-
-    const withoutAllergies = await submitAdoptionApplication({
-      organizationId,
-      lastName: "Dupont",
-      firstName: "Jeanne",
-      city: "Toulon",
-      phone: "0600000000",
-      email: `no-allergies-${randomUUID().slice(0, 8)}@example.com`,
-    });
-    expect(withoutAllergies?.allergiesDetails).toBeNull();
+  it("rejects a submission missing an answer for a required bank question", async () => {
+    await expect(
+      submitAdoptionApplication({
+        organizationId,
+        lastName: "Dupont",
+        firstName: "Jeanne",
+        city: "Toulon",
+        phone: "0600000000",
+        email: `missing-required-${randomUUID().slice(0, 8)}@example.com`,
+        answers: {}, // logement_type is required by this organization's config
+        rgpdConsent: true,
+      }),
+    ).rejects.toThrow(/obligatoire/);
   });
 
-  it("stores the apartment surface area separately from the garden area", async () => {
-    const apartment = await submitAdoptionApplication({
+  it("stores answers only for questions the organization selected, silently dropping the rest", async () => {
+    const application = await submitAdoptionApplication({
       organizationId,
       lastName: "Dupont",
       firstName: "Jeanne",
       city: "Toulon",
       phone: "0600000000",
-      email: `apartment-${randomUUID().slice(0, 8)}@example.com`,
-      housingType: "appartement",
-      apartmentAreaM2: 45,
+      email: `answers-${randomUUID().slice(0, 8)}@example.com`,
+      answers: {
+        logement_type: "maison",
+        foyer_accord: "oui",
+        foyer_allergies: "Poils de chat chez le conjoint",
+        // Not in this organization's adoptionFormQuestionKeys — must be dropped.
+        souhait_temperament: "Calme et affectueux",
+      },
+      rgpdConsent: true,
     });
-    expect(apartment?.apartmentAreaM2).toBe("45.00");
-    expect(apartment?.gardenAreaM2).toBeNull();
+    expect(application?.answers).toEqual({
+      logement_type: "maison",
+      foyer_accord: "oui",
+      foyer_allergies: "Poils de chat chez le conjoint",
+    });
+  });
 
-    const house = await submitAdoptionApplication({
+  it("keeps a dog-only question's answer only when the desired species is a dog", async () => {
+    const forACat = await submitAdoptionApplication({
       organizationId,
       lastName: "Dupont",
       firstName: "Jeanne",
       city: "Toulon",
       phone: "0600000000",
-      email: `house-${randomUUID().slice(0, 8)}@example.com`,
-      housingType: "maison",
-      gardenAreaM2: 200,
+      email: `species-cat-${randomUUID().slice(0, 8)}@example.com`,
+      desiredSpecies: "chat",
+      answers: { logement_type: "maison", foyer_accord: "oui", quotidien_sortie_midi: "oui" },
+      rgpdConsent: true,
     });
-    expect(house?.gardenAreaM2).toBe("200.00");
-    expect(house?.apartmentAreaM2).toBeNull();
+    expect(forACat?.answers).toEqual({ logement_type: "maison", foyer_accord: "oui" });
+
+    const forADog = await submitAdoptionApplication({
+      organizationId,
+      lastName: "Dupont",
+      firstName: "Jeanne",
+      city: "Toulon",
+      phone: "0600000000",
+      email: `species-dog-${randomUUID().slice(0, 8)}@example.com`,
+      desiredSpecies: "chien",
+      answers: { logement_type: "maison", foyer_accord: "oui", quotidien_sortie_midi: "oui" },
+      rgpdConsent: true,
+    });
+    expect(forADog?.answers).toEqual({
+      logement_type: "maison",
+      foyer_accord: "oui",
+      quotidien_sortie_midi: "oui",
+    });
+  });
+
+  it("only shows/requires a 'si non, pourquoi' follow-up when its parent question was actually answered 'non'", async () => {
+    // Parent answered "oui" — the follow-up isn't required, and any answer sent for it is dropped.
+    const agreed = await submitAdoptionApplication({
+      organizationId,
+      lastName: "Dupont",
+      firstName: "Jeanne",
+      city: "Toulon",
+      phone: "0600000000",
+      email: `follow-up-agreed-${randomUUID().slice(0, 8)}@example.com`,
+      answers: {
+        logement_type: "maison",
+        foyer_accord: "oui",
+        foyer_raison_desaccord: "Ne devrait jamais être stocké",
+      },
+      rgpdConsent: true,
+    });
+    expect(agreed?.answers).toEqual({ logement_type: "maison", foyer_accord: "oui" });
+
+    // Parent answered "non" — the follow-up becomes required.
+    await expect(
+      submitAdoptionApplication({
+        organizationId,
+        lastName: "Dupont",
+        firstName: "Jeanne",
+        city: "Toulon",
+        phone: "0600000000",
+        email: `follow-up-missing-${randomUUID().slice(0, 8)}@example.com`,
+        answers: { logement_type: "maison", foyer_accord: "non" },
+        rgpdConsent: true,
+      }),
+    ).rejects.toThrow(/obligatoire/);
+
+    // Parent answered "non" and the follow-up is filled in — both are kept.
+    const disagreed = await submitAdoptionApplication({
+      organizationId,
+      lastName: "Dupont",
+      firstName: "Jeanne",
+      city: "Toulon",
+      phone: "0600000000",
+      email: `follow-up-filled-${randomUUID().slice(0, 8)}@example.com`,
+      answers: {
+        logement_type: "maison",
+        foyer_accord: "non",
+        foyer_raison_desaccord: "Le conjoint n'est pas prêt",
+      },
+      rgpdConsent: true,
+    });
+    expect(disagreed?.answers).toEqual({
+      logement_type: "maison",
+      foyer_accord: "non",
+      foyer_raison_desaccord: "Le conjoint n'est pas prêt",
+    });
   });
 
   it("lets a member list and fetch applications, but rejects an outsider", async () => {
@@ -226,5 +338,35 @@ describe("adoption application server actions", () => {
         status: "refuse",
       }),
     ).rejects.toThrow(ForbiddenError);
+  });
+
+  describe("updateAdoptionFormConfig", () => {
+    it("lets an admin set the question bank selection and free questions, rejects a non-admin", async () => {
+      authMock.mockResolvedValue({ user: { id: adminUserId, email: "admin@example.com" } });
+      const updated = await updateAdoptionFormConfig({
+        organizationId,
+        // "questions_qui_n_existe_pas" isn't in the bank — must be dropped.
+        questionKeys: ["logement_type", "animaux_deja_presents", "questions_qui_n_existe_pas"],
+        freeQuestions: [{ label: "Un dernier mot ?" }],
+      });
+      expect(updated.adoptionFormQuestionKeys).toEqual(["logement_type", "animaux_deja_presents"]);
+      expect(updated.adoptionFormFreeQuestions).toEqual([{ label: "Un dernier mot ?" }]);
+
+      authMock.mockResolvedValue({ user: { id: outsiderUserId, email: "outsider@example.com" } });
+      await expect(
+        updateAdoptionFormConfig({ organizationId, questionKeys: [], freeQuestions: [] }),
+      ).rejects.toThrow(ForbiddenError);
+    });
+
+    it("rejects more than two free questions", async () => {
+      authMock.mockResolvedValue({ user: { id: adminUserId, email: "admin@example.com" } });
+      await expect(
+        updateAdoptionFormConfig({
+          organizationId,
+          questionKeys: [],
+          freeQuestions: [{ label: "Un" }, { label: "Deux" }, { label: "Trois" }],
+        }),
+      ).rejects.toThrow();
+    });
   });
 });
