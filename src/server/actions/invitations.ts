@@ -1,7 +1,7 @@
 "use server";
 
 import { randomBytes } from "crypto";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/db";
@@ -50,6 +50,20 @@ export async function createInvitation(input: CreateInvitationInput) {
 
   await requireAdmin(session.user.id, organizationId);
 
+  const normalizedEmail = email.toLowerCase().trim();
+  const existingPending = await db.query.invitations.findFirst({
+    where: and(
+      eq(invitations.organizationId, organizationId),
+      eq(invitations.email, normalizedEmail),
+      eq(invitations.status, "pending"),
+    ),
+  });
+  if (existingPending) {
+    throw new Error(
+      "Une invitation est déjà en attente pour cette adresse — relancez-la ou supprimez-la avant d'en renvoyer une nouvelle.",
+    );
+  }
+
   const organization = await db.query.organizations.findFirst({
     where: eq(organizations.id, organizationId),
   });
@@ -66,7 +80,7 @@ export async function createInvitation(input: CreateInvitationInput) {
     .insert(invitations)
     .values({
       organizationId,
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       roles,
       benevolePermissions: roles.includes("benevole") ? benevolePermissions ?? [] : [],
       token,
@@ -251,4 +265,102 @@ export async function createAccountAndAcceptInvitation(
 
     return { organizationId: invitation.organizationId };
   });
+}
+
+const listPendingInvitationsSchema = z.object({
+  organizationId: z.string().uuid(),
+});
+
+/** Admin-only: pending invitations for the organization, newest first. */
+export async function listPendingInvitations(
+  input: z.infer<typeof listPendingInvitationsSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId } = listPendingInvitationsSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  return db.query.invitations.findMany({
+    where: and(eq(invitations.organizationId, organizationId), eq(invitations.status, "pending")),
+    orderBy: desc(invitations.createdAt),
+  });
+}
+
+const resendInvitationSchema = z.object({
+  organizationId: z.string().uuid(),
+  invitationId: z.string().uuid(),
+});
+
+/**
+ * Admin-only: re-sends a pending invitation's email and extends its expiry
+ * by another INVITATION_TTL_DAYS — the token itself doesn't change, so any
+ * copy of the original email keeps working too.
+ */
+export async function resendInvitation(input: z.infer<typeof resendInvitationSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId, invitationId } = resendInvitationSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  const invitation = await db.query.invitations.findFirst({
+    where: and(eq(invitations.id, invitationId), eq(invitations.organizationId, organizationId)),
+  });
+  if (!invitation) throw new Error("Invitation introuvable.");
+  if (invitation.status !== "pending") throw new Error("Cette invitation n'est plus en attente.");
+
+  const organization = await db.query.organizations.findFirst({ where: eq(organizations.id, organizationId) });
+  if (!organization) throw new Error("Organisation introuvable.");
+
+  const inviter = invitation.invitedByUserId
+    ? await db.query.users.findFirst({ where: eq(users.id, invitation.invitedByUserId) })
+    : null;
+
+  const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const [updated] = await db
+    .update(invitations)
+    .set({ expiresAt })
+    .where(eq(invitations.id, invitationId))
+    .returning();
+  if (!updated) throw new Error("Échec de la relance de l'invitation.");
+
+  const acceptUrl = `${await getRequestOrigin()}/invite/${invitation.token}`;
+
+  await sendEmail({
+    to: invitation.email,
+    subject: `Invitation à rejoindre ${organization.name}`,
+    html: invitationEmailHtml({
+      organizationName: organization.name,
+      inviterName: inviter?.firstName ?? inviter?.email ?? "Un administrateur",
+      acceptUrl,
+      roles: invitation.roles,
+    }),
+    fromName: organization.name,
+    replyTo: organization.contactEmail ?? undefined,
+    organizationSmtp: organizationSmtpConfig(organization),
+  });
+
+  return updated;
+}
+
+const deleteInvitationSchema = z.object({
+  organizationId: z.string().uuid(),
+  invitationId: z.string().uuid(),
+});
+
+/** Admin-only: permanently cancels a pending invitation — e.g. to send a corrected one afterwards. */
+export async function deleteInvitation(input: z.infer<typeof deleteInvitationSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { organizationId, invitationId } = deleteInvitationSchema.parse(input);
+  await requireAdmin(session.user.id, organizationId);
+
+  const invitation = await db.query.invitations.findFirst({
+    where: and(eq(invitations.id, invitationId), eq(invitations.organizationId, organizationId)),
+  });
+  if (!invitation) throw new Error("Invitation introuvable.");
+
+  await db.delete(invitations).where(eq(invitations.id, invitationId));
 }

@@ -7,13 +7,17 @@ import { organizationMembers } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { findOrganizationByIdentifier } from "@/lib/organizations";
 import { getMemberRoles } from "@/lib/permissions";
+import { listPendingInvitations } from "@/server/actions/invitations";
 import { ROLE_LABELS, ROLE_DESCRIPTIONS } from "@/lib/role-labels";
 import { PERMISSION_LABELS, PERMISSION_DESCRIPTIONS } from "@/lib/permission-labels";
 import type { OrgRole, OrgPermission } from "@/db/schema";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { InviteMemberDialog } from "./invite-member-dialog";
 import { MemberRolesForm } from "./member-roles-form";
+import { ResendInvitationButton } from "./resend-invitation-button";
+import { DeleteInvitationButton } from "./delete-invitation-button";
 
 export default async function MembresPage(
   props: {
@@ -43,10 +47,13 @@ export default async function MembresPage(
     );
   }
 
-  const members = await db.query.organizationMembers.findMany({
-    where: eq(organizationMembers.organizationId, organization.id),
-    with: { user: true, roles: true, permissions: true },
-  });
+  const [members, pendingInvitations] = await Promise.all([
+    db.query.organizationMembers.findMany({
+      where: eq(organizationMembers.organizationId, organization.id),
+      with: { user: true, roles: true, permissions: true },
+    }),
+    listPendingInvitations({ organizationId: organization.id }),
+  ]);
 
   const roleValues: OrgRole[] = ["admin", "benevole", "famille_accueil"];
   const permissionValues: OrgPermission[] = [
@@ -125,6 +132,57 @@ export default async function MembresPage(
           ))}
         </TableBody>
       </Table>
+
+      {pendingInvitations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Invitations en attente</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Rôles</TableHead>
+                  <TableHead>Expire le</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingInvitations.map((invitation) => {
+                  const isExpired = invitation.expiresAt < new Date();
+                  return (
+                    <TableRow key={invitation.id}>
+                      <TableCell className="font-medium">{invitation.email}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {invitation.roles.map((role) => (
+                            <Badge key={role} variant="secondary">
+                              {ROLE_LABELS[role]}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={isExpired ? "destructive" : "outline"}>
+                          {new Date(invitation.expiresAt).toLocaleDateString("fr-FR")}
+                          {isExpired && " — expirée"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <ResendInvitationButton organizationId={organization.id} invitationId={invitation.id} />
+                          <DeleteInvitationButton organizationId={organization.id} invitationId={invitation.id} />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

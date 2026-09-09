@@ -459,3 +459,23 @@ export async function resendInvitation(input: z.infer<typeof resendInvitationSch
 
   return updated;
 }
+
+const deleteInvitationSchema = z.object({
+  invitationId: z.string().uuid(),
+});
+
+/** Platform manager only: permanently cancels a pending invitation — e.g. to let the organization send a corrected one. */
+export async function deleteInvitationAsPlatformManager(
+  input: z.infer<typeof deleteInvitationSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+  await requirePlatformManager(session.user.id);
+
+  const { invitationId } = deleteInvitationSchema.parse(input);
+
+  const invitation = await db.query.invitations.findFirst({ where: eq(invitations.id, invitationId) });
+  if (!invitation) throw new Error("Invitation introuvable.");
+
+  await db.delete(invitations).where(eq(invitations.id, invitationId));
+}

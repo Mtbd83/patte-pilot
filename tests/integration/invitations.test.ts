@@ -9,17 +9,22 @@
 jest.mock("@/lib/mailer", () => ({
   sendEmail: jest.fn().mockResolvedValue(undefined),
   invitationEmailHtml: jest.fn().mockReturnValue("<p>mock</p>"),
+  organizationSmtpConfig: jest.fn().mockReturnValue(null),
 }));
 
 jest.mock("@/lib/auth", () => ({
   auth: jest.fn(),
 }));
 
+import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { sendEmail } from "@/lib/mailer";
 import { db } from "@/db";
-import { users, organizations } from "@/db/schema";
-import { createInvitation, acceptInvitation } from "@/server/actions/invitations";
+import { users, organizations, organizationMembers, organizationMemberRoles, invitations } from "@/db/schema";
+import { createInvitation, acceptInvitation, resendInvitation, deleteInvitation } from "@/server/actions/invitations";
 import { getMemberRoles } from "@/lib/permissions";
+import { ForbiddenError } from "@/lib/permissions";
 
 const authMock = auth as unknown as jest.Mock;
 
@@ -97,5 +102,91 @@ describe("invitation flow", () => {
     await expect(acceptInvitation({ token: invitation.token })).rejects.toThrow(
       /autre adresse email/,
     );
+  });
+});
+
+const sendEmailMock = sendEmail as unknown as jest.Mock;
+
+// Isolated from the describe block above (which reuses the real
+// admin@example.com/"Asso Test" dev fixture and must never be touched) —
+// its own uniquely-suffixed org/users, safe to seed and tear down freely.
+describe("invitation management", () => {
+  let organizationId: string;
+  let adminUserId: string;
+  let outsiderUserId: string;
+
+  beforeAll(async () => {
+    const suffix = randomUUID().slice(0, 8);
+
+    const [admin] = await db.insert(users).values({ email: `invite-admin-${suffix}@example.com` }).returning();
+    const [outsider] = await db.insert(users).values({ email: `invite-outsider-${suffix}@example.com` }).returning();
+    if (!admin || !outsider) throw new Error("Seed setup failed: users not created.");
+    adminUserId = admin.id;
+    outsiderUserId = outsider.id;
+
+    const [org] = await db
+      .insert(organizations)
+      .values({ name: `Test Invitations ${suffix}`, slug: `test-invitations-${suffix}` })
+      .returning();
+    if (!org) throw new Error("Seed setup failed: organization not created.");
+    organizationId = org.id;
+
+    const [member] = await db.insert(organizationMembers).values({ organizationId, userId: adminUserId }).returning();
+    if (!member) throw new Error("Seed setup failed: member not created.");
+    await db.insert(organizationMemberRoles).values({ memberId: member.id, role: "admin" });
+  });
+
+  afterAll(async () => {
+    await db.delete(organizations).where(eq(organizations.id, organizationId));
+    await db.delete(users).where(eq(users.id, adminUserId));
+    await db.delete(users).where(eq(users.id, outsiderUserId));
+  });
+
+  beforeEach(() => {
+    sendEmailMock.mockClear();
+    authMock.mockResolvedValue({ user: { id: adminUserId } });
+  });
+
+  it("rejects inviting an email that already has a pending invitation for this organization", async () => {
+    const email = `duplicate-${randomUUID().slice(0, 8)}@example.com`;
+    await createInvitation({ organizationId, email, roles: ["benevole"] });
+
+    await expect(createInvitation({ organizationId, email, roles: ["admin"] })).rejects.toThrow(
+      /déjà en attente/,
+    );
+  });
+
+  it("resends an invitation, extending its expiry, but rejects a non-admin", async () => {
+    const email = `resend-${randomUUID().slice(0, 8)}@example.com`;
+    const invitation = await createInvitation({ organizationId, email, roles: ["benevole"] });
+    sendEmailMock.mockClear();
+
+    authMock.mockResolvedValue({ user: { id: outsiderUserId } });
+    await expect(
+      resendInvitation({ organizationId, invitationId: invitation.id }),
+    ).rejects.toThrow(ForbiddenError);
+
+    authMock.mockResolvedValue({ user: { id: adminUserId } });
+    const updated = await resendInvitation({ organizationId, invitationId: invitation.id });
+
+    expect(updated.expiresAt.getTime()).toBeGreaterThan(invitation.expiresAt.getTime());
+    expect(sendEmailMock).toHaveBeenCalledTimes(1);
+    expect(sendEmailMock.mock.calls[0][0].to).toBe(email);
+  });
+
+  it("deletes a pending invitation, but rejects a non-admin", async () => {
+    const email = `delete-${randomUUID().slice(0, 8)}@example.com`;
+    const invitation = await createInvitation({ organizationId, email, roles: ["benevole"] });
+
+    authMock.mockResolvedValue({ user: { id: outsiderUserId } });
+    await expect(deleteInvitation({ organizationId, invitationId: invitation.id })).rejects.toThrow(
+      ForbiddenError,
+    );
+
+    authMock.mockResolvedValue({ user: { id: adminUserId } });
+    await deleteInvitation({ organizationId, invitationId: invitation.id });
+
+    const gone = await db.query.invitations.findFirst({ where: eq(invitations.id, invitation.id) });
+    expect(gone).toBeUndefined();
   });
 });

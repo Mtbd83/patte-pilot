@@ -38,6 +38,7 @@ import {
   deleteOrganizationAsPlatformManager,
   getOrganizationDetailForPlatformManager,
   resendInvitation,
+  deleteInvitationAsPlatformManager,
 } from "@/server/actions/platform";
 import { ForbiddenError } from "@/lib/permissions";
 
@@ -357,6 +358,32 @@ describe("platform manager server actions", () => {
 
       authMock.mockResolvedValue({ user: { id: managerId } });
       await expect(resendInvitation({ invitationId })).rejects.toThrow("plus en attente");
+    });
+
+    it("deletes an invitation, but rejects a non-manager", async () => {
+      const [invitation] = await db
+        .insert(invitations)
+        .values({
+          organizationId,
+          email: `to-delete-${randomUUID().slice(0, 8)}@example.com`,
+          roles: ["benevole"],
+          token: randomUUID(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          invitedByUserId: managerId,
+        })
+        .returning();
+      if (!invitation) throw new Error("Seed failed.");
+
+      authMock.mockResolvedValue({ user: { id: outsiderId } });
+      await expect(deleteInvitationAsPlatformManager({ invitationId: invitation.id })).rejects.toThrow(
+        ForbiddenError,
+      );
+
+      authMock.mockResolvedValue({ user: { id: managerId } });
+      await deleteInvitationAsPlatformManager({ invitationId: invitation.id });
+
+      const gone = await db.query.invitations.findFirst({ where: eq(invitations.id, invitation.id) });
+      expect(gone).toBeUndefined();
     });
   });
 });

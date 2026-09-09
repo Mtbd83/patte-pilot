@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { ResendInvitationButton } from "./resend-invitation-button";
+import { DeleteInvitationButton } from "./delete-invitation-button";
 
 export default async function PlateformeOrganizationDetailPage(
   props: {
@@ -147,7 +148,10 @@ export default async function PlateformeOrganizationDetailPage(
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <ResendInvitationButton invitationId={invitation.id} />
+                        <div className="flex gap-2">
+                          <ResendInvitationButton invitationId={invitation.id} />
+                          <DeleteInvitationButton invitationId={invitation.id} />
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
