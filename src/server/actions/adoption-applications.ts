@@ -8,7 +8,15 @@ import { auth } from "@/lib/auth";
 import { requireAdmin, requireAdminOrPermission, requireRole, listOrganizationAdminUserIds, ForbiddenError } from "@/lib/permissions";
 import { sendPushToUsers } from "@/lib/push";
 import { SPECIES_LABELS } from "@/lib/animal-labels";
-import { findAdoptionQuestion, isQuestionVisible } from "@/lib/adoption-question-bank";
+import { ADOPTION_STATUS_LABELS } from "@/lib/adoption-labels";
+import {
+  findAdoptionQuestion,
+  isQuestionVisible,
+  formatAnswerValue,
+  groupAnsweredQuestionsByCategory,
+  ADOPTION_QUESTION_CATEGORY_LABELS,
+} from "@/lib/adoption-question-bank";
+import { generateAdoptionApplicationPdf } from "@/lib/adoption-application-pdf";
 import { getClientIp } from "@/lib/request-ip";
 
 const answersSchema = z.record(z.string(), z.union([z.string(), z.array(z.string())]));
@@ -314,4 +322,82 @@ export async function updateAdoptionFormConfig(
     .returning();
   if (!updated) throw new Error("Organisation introuvable.");
   return updated;
+}
+
+const exportAdoptionApplicationPdfSchema = z.object({
+  applicationId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+});
+
+/** Admin, or bénévole with the "candidature" permission: exports one candidature as a shareable, PattePilot-branded PDF — same content as its detail page. */
+export async function exportAdoptionApplicationPdf(
+  input: z.infer<typeof exportAdoptionApplicationPdfSchema>,
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new ForbiddenError("Non authentifié.");
+
+  const { applicationId, organizationId } = exportAdoptionApplicationPdfSchema.parse(input);
+  await requireAdminOrPermission(session.user.id, organizationId, "candidature");
+
+  const [application, organization] = await Promise.all([
+    db.query.adoptionApplications.findFirst({
+      where: and(eq(adoptionApplications.id, applicationId), eq(adoptionApplications.organizationId, organizationId)),
+    }),
+    db.query.organizations.findFirst({
+      where: eq(organizations.id, organizationId),
+      columns: { name: true, adoptionFormFreeQuestions: true },
+    }),
+  ]);
+  if (!application) throw new Error("Candidature introuvable.");
+  if (!organization) throw new Error("Association introuvable.");
+
+  const answeredQuestionsByCategory = groupAnsweredQuestionsByCategory(application.answers);
+
+  const souhaitSection = {
+    title: "Souhait d'adoption",
+    rows: [
+      {
+        label: "Espèce souhaitée",
+        value: application.desiredSpecies ? SPECIES_LABELS[application.desiredSpecies] : "—",
+      },
+      { label: "Coup de cœur", value: application.specificAnimalName || "—" },
+      ...(answeredQuestionsByCategory.get("souhait") ?? []).map((question) => ({
+        label: question.label,
+        value: formatAnswerValue(question, application.answers[question.key]!),
+      })),
+    ],
+  };
+
+  const otherSections = (["logement", "foyer", "animaux", "quotidien"] as const).map((category) => ({
+    title: ADOPTION_QUESTION_CATEGORY_LABELS[category],
+    rows: (answeredQuestionsByCategory.get(category) ?? []).map((question) => ({
+      label: question.label,
+      value: formatAnswerValue(question, application.answers[question.key]!),
+    })),
+  }));
+
+  const freeRows = (organization.adoptionFormFreeQuestions ?? [])
+    .map((freeQuestion, index) => ({ label: freeQuestion.label, value: application.answers[`libre_${index + 1}`] }))
+    .filter((row): row is { label: string; value: string } => typeof row.value === "string");
+
+  const pdfBytes = await generateAdoptionApplicationPdf({
+    info: {
+      organizationName: organization.name,
+      applicantName: `${application.firstName} ${application.lastName}`,
+      statusLabel: ADOPTION_STATUS_LABELS[application.status],
+      submittedOn: new Date(application.createdAt).toLocaleDateString("fr-FR"),
+      city: application.city,
+      phone: application.phone,
+      email: application.email,
+      age: application.age,
+      spouseAge: application.spouseAge,
+      profession: application.profession,
+      spouseProfession: application.spouseProfession,
+    },
+    sections: [souhaitSection, ...otherSections, { title: "Autres informations", rows: freeRows }].filter(
+      (section) => section.rows.length > 0,
+    ),
+  });
+
+  return { pdfBase64: Buffer.from(pdfBytes).toString("base64") };
 }

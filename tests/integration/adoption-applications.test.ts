@@ -18,6 +18,7 @@ import {
   getAdoptionApplication,
   updateAdoptionApplicationStatus,
   updateAdoptionFormConfig,
+  exportAdoptionApplicationPdf,
 } from "@/server/actions/adoption-applications";
 import { ForbiddenError } from "@/lib/permissions";
 
@@ -337,6 +338,24 @@ describe("adoption application server actions", () => {
         organizationId,
         status: "refuse",
       }),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("exports an application as a PDF, but rejects an outsider", async () => {
+    authMock.mockResolvedValue({ user: { id: adminUserId, email: "admin@example.com" } });
+    const applications = await listAdoptionApplications({ organizationId });
+    const application = applications[0]!;
+
+    const { pdfBase64 } = await exportAdoptionApplicationPdf({
+      applicationId: application.id,
+      organizationId,
+    });
+    const pdfBytes = Buffer.from(pdfBase64, "base64");
+    expect(pdfBytes.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+
+    authMock.mockResolvedValue({ user: { id: outsiderUserId, email: "outsider@example.com" } });
+    await expect(
+      exportAdoptionApplicationPdf({ applicationId: application.id, organizationId }),
     ).rejects.toThrow(ForbiddenError);
   });
 

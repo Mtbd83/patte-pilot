@@ -10,9 +10,9 @@ import { listDocuments } from "@/server/actions/documents";
 import { listHelloAssoLinks } from "@/server/actions/helloasso-links";
 import { ADOPTION_STATUS_LABELS, ADOPTION_STATUS_BADGE_VARIANT } from "@/lib/adoption-labels";
 import {
-  ADOPTION_QUESTION_BANK,
   ADOPTION_QUESTION_CATEGORY_LABELS,
-  type AdoptionQuestion,
+  formatAnswerValue,
+  groupAnsweredQuestionsByCategory,
 } from "@/lib/adoption-question-bank";
 import { SPECIES_LABELS } from "@/lib/animal-labels";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { ApplicationStatusForm } from "./application-status-form";
 import { SendCertificateForm } from "./send-certificate-form";
 import { GenerateContractForm } from "./generate-contract-form";
+import { ExportApplicationPdfButton } from "./export-application-pdf-button";
 
 const DOCUMENT_TYPE_LABELS = {
   certificat_engagement: "Certificat d'engagement",
@@ -34,22 +35,6 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
       <dd className="text-right font-medium">{value}</dd>
     </div>
   );
-}
-
-/**
- * Resolves a bank answer's stored value (a raw option key, or an array of
- * them for choix_multiple) back to its human-readable label(s) — the value
- * on its own (e.g. "urbaine") means nothing to someone reading the
- * candidature.
- */
-function formatAnswerValue(question: AdoptionQuestion, value: string | string[]): string {
-  if (question.type === "choix_unique" && typeof value === "string") {
-    return question.options?.find((option) => option.value === value)?.label ?? value;
-  }
-  if (question.type === "choix_multiple" && Array.isArray(value)) {
-    return value.map((v) => question.options?.find((option) => option.value === v)?.label ?? v).join(", ");
-  }
-  return Array.isArray(value) ? value.join(", ") : value;
 }
 
 export default async function CandidatureDetailPage(
@@ -96,17 +81,7 @@ export default async function CandidatureDetailPage(
     organizationId: organization.id,
   });
 
-  // Grouped by the bank's own category — driven by which keys are actually
-  // present in *this* application's answers, not the organization's current
-  // question selection, so a historical candidature stays fully readable
-  // even after the organization later changes what it asks for.
-  const answeredQuestionsByCategory = new Map<AdoptionQuestion["category"], AdoptionQuestion[]>();
-  for (const question of ADOPTION_QUESTION_BANK) {
-    if (application.answers[question.key] === undefined) continue;
-    const list = answeredQuestionsByCategory.get(question.category) ?? [];
-    list.push(question);
-    answeredQuestionsByCategory.set(question.category, list);
-  }
+  const answeredQuestionsByCategory = groupAnsweredQuestionsByCategory(application.answers);
   const freeAnswers = (organization.adoptionFormFreeQuestions ?? [])
     .map((freeQuestion, index) => ({ label: freeQuestion.label, value: application.answers[`libre_${index + 1}`] }))
     .filter((freeAnswer): freeAnswer is { label: string; value: string } => typeof freeAnswer.value === "string");
@@ -125,21 +100,28 @@ export default async function CandidatureDetailPage(
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          href={`/organisations/${params.org}/candidatures`}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft className="size-4" /> Candidatures
-        </Link>
-        <div className="mt-1 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold">
-            {application.firstName} {application.lastName}
-          </h1>
-          <Badge variant={ADOPTION_STATUS_BADGE_VARIANT[application.status]}>
-            {ADOPTION_STATUS_LABELS[application.status]}
-          </Badge>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <Link
+            href={`/organisations/${params.org}/candidatures`}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="size-4" /> Candidatures
+          </Link>
+          <div className="mt-1 flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-semibold">
+              {application.firstName} {application.lastName}
+            </h1>
+            <Badge variant={ADOPTION_STATUS_BADGE_VARIANT[application.status]}>
+              {ADOPTION_STATUS_LABELS[application.status]}
+            </Badge>
+          </div>
         </div>
+        <ExportApplicationPdfButton
+          organizationId={organization.id}
+          applicationId={application.id}
+          applicantName={`${application.firstName} ${application.lastName}`}
+        />
       </div>
 
       <Card>

@@ -409,3 +409,40 @@ export const ADOPTION_QUESTION_BANK: AdoptionQuestion[] = [
 export function findAdoptionQuestion(key: string): AdoptionQuestion | undefined {
   return ADOPTION_QUESTION_BANK.find((q) => q.key === key);
 }
+
+/**
+ * Resolves a bank answer's stored value (a raw option key, or an array of
+ * them for choix_multiple) back to its human-readable label(s) — the value
+ * on its own (e.g. "urbaine") means nothing to someone reading the
+ * candidature. Shared by the candidature detail page and the PDF export so
+ * both render the exact same text for the same answer.
+ */
+export function formatAnswerValue(question: AdoptionQuestion, value: string | string[]): string {
+  if (question.type === "choix_unique" && typeof value === "string") {
+    return question.options?.find((option) => option.value === value)?.label ?? value;
+  }
+  if (question.type === "choix_multiple" && Array.isArray(value)) {
+    return value.map((v) => question.options?.find((option) => option.value === v)?.label ?? v).join(", ");
+  }
+  return Array.isArray(value) ? value.join(", ") : value;
+}
+
+/**
+ * Groups every bank question actually answered in `answers` by its
+ * category, in the bank's own canonical order — driven by which keys are
+ * present in *this* submission, not an organization's current question
+ * selection, so a historical candidature stays fully readable even after
+ * the organization later changes what it asks for.
+ */
+export function groupAnsweredQuestionsByCategory(
+  answers: Record<string, string | string[]>,
+): Map<AdoptionQuestion["category"], AdoptionQuestion[]> {
+  const grouped = new Map<AdoptionQuestion["category"], AdoptionQuestion[]>();
+  for (const question of ADOPTION_QUESTION_BANK) {
+    if (answers[question.key] === undefined) continue;
+    const list = grouped.get(question.category) ?? [];
+    list.push(question);
+    grouped.set(question.category, list);
+  }
+  return grouped;
+}
