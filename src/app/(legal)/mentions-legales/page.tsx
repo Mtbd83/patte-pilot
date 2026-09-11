@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Mentions légales — PattePilot" };
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://pattepilot.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://patte-pilot.fr";
 
 export default function MentionsLegalesPage() {
   return (
