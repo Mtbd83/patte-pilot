@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import {
   PawPrint,
   Home,
@@ -62,10 +63,21 @@ const features = [
   },
 ];
 
-export default async function HomePage() {
+export default async function HomePage(props: {
+  searchParams: Promise<{ pwa?: string }>;
+}) {
+  const searchParams = await props.searchParams;
   const session = await auth();
   const loggedIn = Boolean(session?.user?.id);
   const ctaHref = loggedIn ? "/apres-connexion" : "/connexion";
+
+  // Launched from the installed PWA icon (manifest's start_url carries this
+  // marker) — a logged-in user wants their workspace, not the marketing
+  // page. A normal browser visit to "/" never has this param, so it's
+  // unaffected even when logged in.
+  if (searchParams.pwa && loggedIn) {
+    redirect("/apres-connexion");
+  }
 
   return (
     <div className="min-h-dvh bg-background">

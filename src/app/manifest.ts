@@ -6,7 +6,10 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "PattePilot",
     short_name: "PattePilot",
     description: "Gestion Association Protection Animale",
-    start_url: "/",
+    // The "?pwa=1" marker lets the homepage tell a standalone-app launch
+    // apart from a normal browser visit, so a logged-in user lands straight
+    // in their workspace instead of the marketing page (see src/app/page.tsx).
+    start_url: "/?pwa=1",
     display: "standalone",
     display_override: ["fullscreen", "minimal-ui"],
     background_color: "#ffffff",
