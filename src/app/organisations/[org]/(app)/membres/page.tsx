@@ -79,7 +79,7 @@ export default async function MembresPage(
 
       <InviteMemberDialog organizationId={organization.id} />
 
-      <details className="rounded-md border border-border">
+      <details className="rounded-md border border-border bg-white">
         <summary className="cursor-pointer select-none px-4 py-2 text-sm font-medium">
           Explication des rôles et des droits
         </summary>
@@ -109,7 +109,7 @@ export default async function MembresPage(
         </div>
       </details>
 
-      <Table>
+      <Table className="bg-white">
         <TableHeader>
           <TableRow>
             <TableHead>Email</TableHead>

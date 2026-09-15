@@ -117,7 +117,7 @@ export default async function AnimauxPage(
           ))}
       </div>
 
-      <Table>
+      <Table className="bg-white">
         <TableHeader>
           <TableRow>
             <TableHead>Nom</TableHead>

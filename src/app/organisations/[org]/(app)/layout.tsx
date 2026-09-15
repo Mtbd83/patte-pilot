@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import Image from "next/image";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -59,7 +60,16 @@ export default async function OrganizationLayout(
   const canAccessVeterinaires = isAdmin || roles.includes("famille_accueil");
 
   return (
-    <div className="min-h-dvh bg-background md:flex">
+    <div className="min-h-dvh md:flex">
+      <Image
+        src="/images/closeup-shot-cute-dog-laying-with-cat-isolated-white.jpg"
+        alt=""
+        aria-hidden="true"
+        fill
+        sizes="100vw"
+        className="fixed inset-0 -z-10 object-cover"
+      />
+      <div className="fixed inset-0 -z-10 bg-background/85" />
       <OrgSidebar
         orgSlug={params.org}
         orgName={organization.name}
